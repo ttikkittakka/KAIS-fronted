@@ -4,22 +4,11 @@ import { useEffect, useRef, useState } from 'react';
 import RivePlant, { RivePlantState } from './components/RivePlant';
 
 import { DAILY_KEY, localDay, parseDaily, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
+import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
+import { recommendCares } from './recommend-cares';
 type View = GardenView;
 type PlantState = RivePlantState;
 type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow';
-
-const QUESTIONS = [
-  { title: '오늘 잠은 어땠나요?', helper: '완벽하게 기억하지 않아도 괜찮아요.', options: ['많이 힘들었어요', '조금 뒤척였어요', '그냥 그래요', '괜찮게 잤어요'] },
-  { title: '지금 에너지는\n어느 정도인가요?', helper: '지금 이 순간에 가장 가까운 것을 골라주세요.', options: ['매우 낮음', '낮음', '보통', '괜찮음', '충분함'] },
-  { title: '오늘 식사는 어땠나요?', helper: '잘 챙기지 못한 날도 있는 그대로 괜찮아요.', options: ['거의 못 먹었어요', '조금 먹었어요', '평소와 비슷해요', '든든하게 먹었어요'] },
-  { title: '지금 마음은 어떤가요?', helper: '이름 붙이기 어려운 마음도 괜찮아요.', options: ['많이 지쳐요', '조금 무거워요', '잔잔해요', '괜찮아요', '가벼워요'] },
-];
-
-const CARES = [
-  { id: 'water', icon: 'drop' as IconName, title: '물 한 컵', copy: '몸에 물을 조금 채워줘요.', meta: '1분 · 아주 쉬움' },
-  { id: 'sky', icon: 'cloud' as IconName, title: '하늘 바라보기', copy: '창문을 열고 2분만 바라봐요.', meta: '2분 · 아주 쉬움' },
-  { id: 'walk', icon: 'walk' as IconName, title: '5분 걷기', copy: '멀리 가지 않아도 괜찮아요.', meta: '5분 · 쉬움' },
-];
 
 const CALENDAR = [null, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, null, null, null];
 
@@ -73,7 +62,7 @@ function HomeScreen({ state, go, recorded }: { state: PlantState; go: (v: View) 
 
 function CheckinScreen({ onBack, onDone, initialRecord }: { onBack: () => void; onDone: (state: PlantState, answers: string[], note: string) => void; initialRecord: DailyCheckin | null }) {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, string>>(() => Object.fromEntries(initialRecord?.answers.map((answer, index) => [index, answer]) ?? []));
+  const [answers, setAnswers] = useState<Record<number, string | undefined>>(() => Object.fromEntries(normalizeAnswers(initialRecord?.answers).map((answer, index) => [index, answer])));
   const [note, setNote] = useState(initialRecord?.note ?? '');
   const isNote = step === QUESTIONS.length;
   const question = QUESTIONS[Math.min(step, QUESTIONS.length - 1)];
@@ -88,19 +77,17 @@ function CheckinScreen({ onBack, onDone, initialRecord }: { onBack: () => void; 
     }, 220);
   };
   const finish = () => {
-    const low = QUESTIONS.some((q, i) => {
-      const index = q.options.indexOf(answers[i]);
-      return index >= 0 && index < 2;
-    });
-    if (QUESTIONS.some((q, i) => !q.options.includes(answers[i]))) return;
-    onDone(low ? 'low' : 'normal', QUESTIONS.map((_, i) => answers[i]), note);
+    const values = QUESTIONS.map((_, i) => answers[i]);
+    if (values.some(value => !value)) return;
+    const completed = values as string[];
+    onDone(plantStateForAnswers(completed), completed, note);
   };
   return <section className="screen checkin-screen">
     <TopBar title="오늘의 나" onBack={step > 0 ? () => setStep((old) => old - 1) : onBack}/>
     <div className="progress-head"><span>{Math.min(step + 1, 4)} / 4</span><div className="progress-track"><i style={{ width: `${Math.min(((step + 1) / 4) * 100, 100)}%` }}/></div><small>약 30초</small></div>
     {!isNote ? <div className="question-panel" key={step}>
       <div className="question-mark">{['☾','◐','○','♡'][step]}</div><p className="question-kicker">오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map((line) => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
-      <div className="choice-list">{question.options.map((option, index) => <button key={option} className={answers[step] === option ? 'selected' : ''} onClick={() => choose(option)}><span className="choice-dot">{index + 1}</span><strong>{option}</strong>{answers[step] === option && <Icon name="check" size={18}/>}</button>)}</div>
+      <div className="choice-list">{question.options.map((option, index) => <button key={option.value} className={answers[step] === option.value ? 'selected' : ''} onClick={() => choose(option.value)}><span className="choice-dot">{index + 1}</span><strong>{option.label}</strong>{answers[step] === option.value && <Icon name="check" size={18}/>}</button>)}</div>
     </div> : <div className="question-panel note-panel">
       <div className="question-mark">✎</div><p className="question-kicker">마지막으로, 선택 사항이에요</p><h2>오늘을 한마디로<br/>남겨볼까요?</h2><p className="question-helper">잘 정리된 문장이 아니어도 괜찮아요.</p>
       <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={120} placeholder="마음에 남은 순간을 적어보세요."/><span className="text-count">{note.length} / 120</span><button className="primary-button" onClick={finish}>오늘의 나를 살펴봤어요</button><button className="text-button" onClick={finish}>건너뛰어도 괜찮아요</button>
@@ -108,17 +95,19 @@ function CheckinScreen({ onBack, onDone, initialRecord }: { onBack: () => void; 
   </section>;
 }
 
-function CareScreen({ state, completed, completedIds, onComplete, goHome }: { state: PlantState; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; goHome: () => void }) {
+function CareScreen({ state, answers, completed, completedIds, onComplete, goHome }: { state: PlantState; answers?: string[]; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; goHome: () => void }) {
   const [started, setStarted] = useState<string | null>(null);
+  const recommendation = recommendCares(answers);
+  const allCaredFor = recommendation.cares.every(care => completedIds.includes(care.id));
   if (completed) return <section className="screen completion-screen">
     <div className="completion-scene"><span className="droplet d1"/><span className="droplet d2"/><span className="spark s1">✦</span><span className="spark s2">✦</span><Plant state={state} celebrate className="plant-art lifted"/></div>
-    <div className="completion-copy"><span className="completion-check"><Icon name="check" size={22}/></span><p className="eyebrow">작은 변화가 도착했어요</p><h1>오늘의 나를 위해<br/>하나를 해냈어요.</h1><p>아주 작은 돌봄도 충분해요.<br/>식물의 잎이 살짝 고개를 들었어요.</p></div>
+    <div className="completion-copy"><span className="completion-check"><Icon name="check" size={22}/></span><p className="eyebrow">작은 변화가 도착했어요</p><h1>{allCaredFor ? <>오늘 나를 위해<br/>잠깐 시간을 썼어요.</> : <>오늘의 나를 위해<br/>하나를 해냈어요.</>}</h1><p>아주 작은 돌봄도 충분해요.<br/>식물의 잎이 살짝 고개를 들었어요.</p></div>
     <div className="completion-actions"><button className="primary-button" onClick={goHome}>정원에서 변화 보기</button><p>내일도, 생각날 때 다시 만나요.</p></div>
   </section>;
   return <section className="screen care-screen">
     <TopBar title="오늘의 작은 돌봄" onBack={goHome}/>
-    <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{state === 'low' ? <>오늘은 조금<br/>지친 날이네요.</> : <>오늘의 나를<br/>살펴봤어요.</>}</h2><p>그래서 오늘은 이것만 해볼까요?</p></div>
-    <div className="care-list">{CARES.map((care) => <article className="care-card" key={care.id}><div className={`care-icon ${care.id}`}><Icon name={care.icon}/></div><div className="care-copy"><h3>{care.title}</h3><p>{care.copy}</p><span>{care.meta}</span></div><button disabled={completedIds.includes(care.id)} onClick={() => started === care.id ? onComplete(care.id) : setStarted(care.id)}>{completedIds.includes(care.id) ? '돌봄 완료' : started === care.id ? '완료했어요' : '해볼게요'}</button></article>)}</div>
+    <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{recommendation.title.split('\n').map((line, index) => <span key={line}>{index > 0 && <br/>}{line}</span>)}</h2><p>이 중 하나만 해도 괜찮아요.</p></div>
+    <div className="care-list">{recommendation.cares.map((care) => <article className="care-card" key={care.id}><div className={`care-icon ${care.tone}`}><Icon name={care.icon}/></div><div className="care-copy"><h3>{care.title}</h3><p>{care.copy}</p><span>{care.meta}</span></div><button disabled={completedIds.includes(care.id)} onClick={() => started === care.id ? onComplete(care.id) : setStarted(care.id)}>{completedIds.includes(care.id) ? '돌봄 완료' : started === care.id ? '완료했어요' : '해볼게요'}</button></article>)}</div>
     <button className="rest-choice" onClick={goHome}>오늘은 아무것도 하지 않아도 괜찮아요.</button><div className="care-plant"><Plant state={state} className="plant-art"/></div>
   </section>;
 }
@@ -229,6 +218,7 @@ export default function HomePage() {
   const completeCare = (id: string) => {
     const record = readToday();
     if (!record) { show('checkin', true, null); return; }
+    if (!recommendCares(record.answers).cares.some(care => care.id === id)) return;
     if (record.completedCareIds.includes(id)) return;
     if (save({ ...record, completedCareIds: [...record.completedCareIds, id] })) setCompletedCare(id);
   };
@@ -242,7 +232,7 @@ export default function HomePage() {
       {view === 'onboarding' && <Onboarding start={goHome}/>}
       {view === 'home' && <HomeScreen state={plantState} go={go} recorded={!!daily}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily}/>}
-      {view === 'care' && daily && <CareScreen state={plantState} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} goHome={goHome}/>}
+      {view === 'care' && daily && <CareScreen state={plantState} answers={daily.answers} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} goHome={goHome}/>}
       {view === 'garden' && <GardenScreen state={plantState} go={go}/>}
     </>
   </div></main>;

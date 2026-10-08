@@ -1,6 +1,7 @@
 ﻿import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { localDay, parseDaily, resolveView } from '../src/app/daily-checkin.ts';
+import { loadTs } from './helpers/load-ts.mjs';
+const { localDay, parseDaily, resolveView } = loadTs(new URL('../src/app/daily-checkin.ts', import.meta.url));
 
 const record = { version: 1, date: localDay(), answers: ['잠', '에너지', '식사', '마음'], note: '쉬었어요', plantState: 'low', completedCareIds: ['water'] };
 test('reload restores existing data without migration', () => {
@@ -28,4 +29,9 @@ test('invalid or incomplete data does not mark the day completed', () => {
 test('day key uses local calendar day across midnight', () => {
   assert.equal(localDay(new Date(2026, 9, 6, 23, 59)), '2026-10-06');
   assert.equal(localDay(new Date(2026, 9, 7, 0, 0)), '2026-10-07');
+});
+
+test('expanded care IDs and internal answer values survive reload', () => {
+  const current = { ...record, answers: ['very_low', 'very_low', 'very_low', 'very_low'], completedCareIds: ['rest', 'water', 'music'] };
+  assert.deepEqual(parseDaily(JSON.stringify(current)), current);
 });

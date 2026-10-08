@@ -1,3 +1,5 @@
+import { isCareId } from './cares';
+
 export type GardenView = 'onboarding' | 'home' | 'checkin' | 'care' | 'garden';
 export type DailyCheckin = {
   version: 1;
@@ -21,7 +23,7 @@ export function parseDaily(raw: string | null, date = localDay()): DailyCheckin 
       !data.answers.every((value: unknown) => typeof value === 'string' && value.length > 0) ||
       typeof data.note !== 'string' || !['low', 'normal'].includes(data.plantState) ||
       !Array.isArray(data.completedCareIds) ||
-      !data.completedCareIds.every((id: unknown) => typeof id === 'string' && ['water', 'sky', 'walk'].includes(id))) return null;
+      !data.completedCareIds.every(isCareId)) return null;
     return data as DailyCheckin;
   } catch { return null; }
 }
