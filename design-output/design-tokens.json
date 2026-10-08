@@ -1,0 +1,45 @@
+{
+  "color": {
+    "paper": "#F7F5EE",
+    "surface": "#FFFDF8",
+    "forest": "#3F5D46",
+    "ink": "#293D32",
+    "muted": "#626E63",
+    "sage": "#DFE8DC",
+    "sky": "#E6EDF0",
+    "gold": "#F1DFAC"
+  },
+  "spacing": [
+    4,
+    8,
+    12,
+    16,
+    24,
+    32,
+    48
+  ],
+  "radius": {
+    "card": 20,
+    "button": 18,
+    "section": 24
+  },
+  "typography": {
+    "display": {
+      "size": 28,
+      "lineHeight": 40
+    },
+    "title": {
+      "size": 26,
+      "lineHeight": 36
+    },
+    "body": {
+      "size": 16,
+      "lineHeight": 26
+    },
+    "caption": {
+      "size": 13,
+      "lineHeight": 20
+    }
+  },
+  "touchTarget": 48
+}

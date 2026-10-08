@@ -53,9 +53,9 @@ function BottomNav({ active, go }: { active: 'home' | 'garden'; go: (v: View) =>
 
 function Onboarding({ start }: { start: () => void }) {
   return <section className="screen onboarding-screen">
-    <button className="skip-button" onClick={start}>건너뛰기</button>
-    <div className="onboarding-visual"><span className="sun-orb"/><span className="floating-leaf leaf-a">⌁</span><span className="floating-leaf leaf-b">⌁</span><Plant state="normal" className="plant-art" /></div>
-    <div className="onboarding-copy"><span className="eyebrow">A LITTLE GARDEN FOR ME</span><h1>나를 돌보는 작은<br/>정원을 만들어볼까요?</h1><p>당신의 상태에 따라<br/>식물의 모습도 조금씩 달라져요.</p></div>
+
+    <div className="onboarding-visual"><RivePlant idleOnly className="plant-art" label="작은 정원에서 기다리는 식물" /></div>
+    <div className="onboarding-copy"><h1>오늘의 나를<br/>만나러 가볼까요?</h1><p>작은 정원에서<br/>천천히 나를 돌봐요.</p></div>
     <div className="onboarding-action"><button className="primary-button" onClick={start}>시작하기 <Icon name="arrow" size={18}/></button><p>천천히 시작해도 괜찮아요.</p></div>
   </section>;
 }
@@ -65,7 +65,7 @@ function HomeScreen({ state, go, recorded }: { state: PlantState; go: (v: View) 
     <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정"><Icon name="settings" size={20}/></button>}/>
     <div className="garden-scene"><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">10월 1일 · 목요일</span><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/></div>
     <div className="today-copy"><span className="eyebrow">오늘의 모습</span><h2>{state === 'low' ? '조금 지쳐 보여요.' : '편안하게 기다리고 있어요.'}</h2><p>{state === 'low' ? '오늘은 천천히 가도 괜찮아요.' : '오늘의 나를 가볍게 살펴볼까요?'}</p></div>
-    <button className="primary-button home-cta" onClick={() => go('checkin')}><span className="soft-icon"><Icon name="note" size={18}/></span>{recorded ? '오늘의 작은 돌봄 다시 보기' : '오늘의 나 기록하기'}</button>
+    <button className="primary-button home-cta" onClick={() => go(recorded ? 'care' : 'checkin')}><span className="soft-icon"><Icon name="note" size={18}/></span>{recorded ? '오늘의 작은 돌봄 다시 보기' : '오늘의 나 기록하기'}</button>
     <div className="gentle-note"><span>✦</span><p><strong>다시 찾아와줘서 반가워요.</strong><br/>쉬어간 시간도 이 정원에 포근히 남아 있어요.</p></div>
     <BottomNav active="home" go={go}/>
   </section>;
@@ -139,10 +139,10 @@ function GardenScreen({ state, go }: { state: PlantState; go: (v: View) => void 
 }
 
 export default function HomePage() {
-  const [view, setView] = useState<View>('home');
+  const [view, setView] = useState<View>('onboarding');
   const [daily, setDaily] = useState<DailyCheckin | null>(null);
   const dailyRef = useRef<DailyCheckin | null>(null);
-  const viewRef = useRef<View>('home');
+  const viewRef = useRef<View>('onboarding');
   const [saveError, setSaveError] = useState(false);
   const [completedCare, setCompletedCare] = useState<string | null>(null);
 
@@ -182,8 +182,8 @@ export default function HomePage() {
       if (!active) return;
       const record = readToday();
       const requested = window.location.hash.slice(1);
-      // Fresh entries start at home; unauthorized care links go to check-in.
-      const next = resolveView(initial && !(requested === 'care' && !record) ? 'home' : requested, record);
+      // Every fresh entry shows the welcome screen; Start explicitly opens the garden.
+      const next = resolveView(initial ? 'onboarding' : requested, record);
       updateDaily(record);
       const url = new URL(window.location.href);
       url.hash = next;

@@ -1,0 +1,25 @@
+{
+  "heading": "REAL ROOT CAUSE CHECK",
+  "androidProject": "E:/티키타카 프로젝트/ai-tikitaka/tikiapp/android",
+  "actualHomePath": "MainActivity -> GardenApp -> HomeScreen -> GardenHero -> Compose Image(painterResource(R.drawable.sprout))",
+  "homeEvidence": "app/src/main/java/com/tikiapp/garden/ui/GardenScreens.kt:158",
+  "rive": "No Rive dependency in app/build.gradle.kts; no Rive references or .riv assets found in this project's source.",
+  "view": "FirstFrameRiveAnimationView absent",
+  "rendering": "Compose Image; no AndroidView/TextureView integration found",
+  "blackFrameSource": "unknown; reported Rive implementation does not match this project",
+  "textureViewCreated": "N/A: no TextureView implementation",
+  "surfaceTextureAvailable": "N/A",
+  "riveFileLoaded": "N/A",
+  "artboardReady": "N/A",
+  "stateMachineReady": "N/A",
+  "firstRiveFrame": "N/A",
+  "blackFrameDisappears": "Not measured; device not connected",
+  "build": {
+    "wrapper": "Gradle distribution download blocked (Permission denied: getsockopt)",
+    "offlineInstalledGradle": "9.4.1; assembleDebug failed: SDK location not found",
+    "apkProduced": false
+  },
+  "productionChanges": [],
+  "deviceTestsPerformed": 0,
+  "nextRequiredEvidence": "Actual path of FirstFrameRiveAnimationView.kt from the running Android app's source."
+}

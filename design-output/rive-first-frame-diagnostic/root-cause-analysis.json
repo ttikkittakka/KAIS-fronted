@@ -1,0 +1,30 @@
+{
+  "status": "Investigation incomplete; no production code changed in this investigation.",
+  "homeRiveImplementation": "android/app/src/main/java/com/littlegarden/app/ui/home/HomeScreen.kt -> rive/Plant.kt -> rive/FirstFrameRiveAnimationView.kt",
+  "library": "app.rive:rive-android",
+  "version": "11.9.2",
+  "renderingImplementation": "Compose AndroidView -> RiveAnimationView -> RiveTextureView -> TextureView. Surface wraps SurfaceTexture; it is not a SurfaceView.",
+  "usesAndroidView": true,
+  "usesSurfaceView": false,
+  "usesTextureView": true,
+  "riveInitialBackground": "No explicit black background found in application code. Pinned RiveTextureView source sets isOpaque=false. Actual native render-target initial contents have not been captured.",
+  "asset": "android/app/src/main/res/raw/plant_original.riv",
+  "artboard": "Artboard 1",
+  "animation": "idle or low_energy; autoplay=false at resource setup, lifecycle coroutine starts playback.",
+  "stateMachine": "Android Plant component does not select a state machine.",
+  "previousFixLimitation": "surface.timestamp > 0 and activeArtboard != null prove buffer acquisition and artboard presence, not that the acquired buffer contains a correctly rendered plant.",
+  "blackFrameAppearsAt": "UNVERIFIED: no device frame capture available.",
+  "firstVisibleRiveFrameOccursAt": "UNVERIFIED: no device frame capture available.",
+  "offlineWebDiagnostic": {
+    "script": "scripts/diagnose-rive-first-frames.mjs",
+    "asset": "public/plant-final.riv",
+    "observation": "Mock Canvas/WASM trace emits opaque rectangular paths for basic and lowlow_ver. state machines; idle animation emits plant paths.",
+    "limitations": "Not Android. Mock Canvas, no WebGL/image meshes. Not evidence of the reported Android root cause."
+  },
+  "verificationBlockedBy": [
+    "Android SDK/ADB path access denied; Android build and emulator capture unavailable.",
+    "Browser skill returned no connected browsers.",
+    "Awaiting clarification of the actual running APK/project or web URL."
+  ],
+  "repeatLaunchTestsCompleted": 0
+}

@@ -1,0 +1,440 @@
+[
+  {
+    "path": "식물.riv",
+    "artboards": [
+      {
+        "name": "Artboard 1",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 500,
+          "maxY": 500
+        },
+        "animations": [
+          {
+            "name": "touch",
+            "durationFrames": 60,
+            "durationSeconds": 1,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "new_leaf 뿅",
+            "durationFrames": 135,
+            "durationSeconds": 2.25,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "잎만 통통",
+            "durationFrames": 60,
+            "durationSeconds": 1,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "통통",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "cloud",
+            "durationFrames": 270,
+            "durationSeconds": 4.5,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "low_energy",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "eye",
+            "durationFrames": 329,
+            "durationSeconds": 5.483333333333333,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "idle",
+            "durationFrames": 145,
+            "durationSeconds": 2.4166666666666665,
+            "fps": 60,
+            "loop": 1
+          }
+        ],
+        "machines": [
+          {
+            "name": "lowlow_ver.",
+            "inputs": []
+          },
+          {
+            "name": "basic",
+            "inputs": []
+          },
+          {
+            "name": "base",
+            "inputs": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "path": "식물최종.riv",
+    "artboards": [
+      {
+        "name": "Artboard 1",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 500,
+          "maxY": 500
+        },
+        "animations": [
+          {
+            "name": "touch",
+            "durationFrames": 60,
+            "durationSeconds": 1,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "new_leaf 뿅",
+            "durationFrames": 135,
+            "durationSeconds": 2.25,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "잎만 통통",
+            "durationFrames": 60,
+            "durationSeconds": 1,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "통통",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "cloud",
+            "durationFrames": 270,
+            "durationSeconds": 4.5,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "클리어버전2",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "클리어버전1",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "low_energy",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "eye",
+            "durationFrames": 329,
+            "durationSeconds": 5.483333333333333,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "idle",
+            "durationFrames": 145,
+            "durationSeconds": 2.4166666666666665,
+            "fps": 60,
+            "loop": 1
+          }
+        ],
+        "machines": [
+          {
+            "name": "클리어2",
+            "inputs": []
+          },
+          {
+            "name": "클리어1",
+            "inputs": []
+          },
+          {
+            "name": "lowlow_ver.",
+            "inputs": []
+          },
+          {
+            "name": "basic",
+            "inputs": []
+          },
+          {
+            "name": "base",
+            "inputs": []
+          }
+        ]
+      },
+      {
+        "name": "Watermark",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 1920,
+          "maxY": 1080
+        },
+        "animations": [
+          {
+            "name": "brandmark",
+            "durationFrames": 120,
+            "durationSeconds": 2,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "wordmark",
+            "durationFrames": 120,
+            "durationSeconds": 2,
+            "fps": 60,
+            "loop": 0
+          }
+        ],
+        "machines": [
+          {
+            "name": "State Machine 1",
+            "inputs": []
+          }
+        ]
+      },
+      {
+        "name": "NuRiveBrandmark01",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 800,
+          "maxY": 800
+        },
+        "animations": [
+          {
+            "name": "Timeline 1",
+            "durationFrames": 240,
+            "durationSeconds": 4,
+            "fps": 60,
+            "loop": 0
+          }
+        ],
+        "machines": [
+          {
+            "name": "State Machine 1",
+            "inputs": []
+          }
+        ]
+      },
+      {
+        "name": "NuRiveWordmark01",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 800,
+          "maxY": 400
+        },
+        "animations": [
+          {
+            "name": "Timeline 1",
+            "durationFrames": 240,
+            "durationSeconds": 4,
+            "fps": 60,
+            "loop": 0
+          }
+        ],
+        "machines": [
+          {
+            "name": "State Machine 1",
+            "inputs": []
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "path": "public/plant-final.riv",
+    "artboards": [
+      {
+        "name": "Artboard 1",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 500,
+          "maxY": 500
+        },
+        "animations": [
+          {
+            "name": "touch",
+            "durationFrames": 60,
+            "durationSeconds": 1,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "new_leaf 뿅",
+            "durationFrames": 135,
+            "durationSeconds": 2.25,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "잎만 통통",
+            "durationFrames": 60,
+            "durationSeconds": 1,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "통통",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "cloud",
+            "durationFrames": 270,
+            "durationSeconds": 4.5,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "low_energy",
+            "durationFrames": 141,
+            "durationSeconds": 2.35,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "eye",
+            "durationFrames": 329,
+            "durationSeconds": 5.483333333333333,
+            "fps": 60,
+            "loop": 1
+          },
+          {
+            "name": "idle",
+            "durationFrames": 145,
+            "durationSeconds": 2.4166666666666665,
+            "fps": 60,
+            "loop": 1
+          }
+        ],
+        "machines": [
+          {
+            "name": "lowlow_ver.",
+            "inputs": []
+          },
+          {
+            "name": "basic",
+            "inputs": []
+          },
+          {
+            "name": "base",
+            "inputs": []
+          }
+        ]
+      },
+      {
+        "name": "Watermark",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 1920,
+          "maxY": 1080
+        },
+        "animations": [
+          {
+            "name": "brandmark",
+            "durationFrames": 120,
+            "durationSeconds": 2,
+            "fps": 60,
+            "loop": 0
+          },
+          {
+            "name": "wordmark",
+            "durationFrames": 120,
+            "durationSeconds": 2,
+            "fps": 60,
+            "loop": 0
+          }
+        ],
+        "machines": [
+          {
+            "name": "State Machine 1",
+            "inputs": []
+          }
+        ]
+      },
+      {
+        "name": "NuRiveBrandmark01",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 800,
+          "maxY": 800
+        },
+        "animations": [
+          {
+            "name": "Timeline 1",
+            "durationFrames": 240,
+            "durationSeconds": 4,
+            "fps": 60,
+            "loop": 0
+          }
+        ],
+        "machines": [
+          {
+            "name": "State Machine 1",
+            "inputs": []
+          }
+        ]
+      },
+      {
+        "name": "NuRiveWordmark01",
+        "bounds": {
+          "minX": 0,
+          "minY": 0,
+          "maxX": 800,
+          "maxY": 400
+        },
+        "animations": [
+          {
+            "name": "Timeline 1",
+            "durationFrames": 240,
+            "durationSeconds": 4,
+            "fps": 60,
+            "loop": 0
+          }
+        ],
+        "machines": [
+          {
+            "name": "State Machine 1",
+            "inputs": []
+          }
+        ]
+      }
+    ]
+  }
+]
