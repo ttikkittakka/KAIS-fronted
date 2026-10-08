@@ -1,4 +1,5 @@
 import { isCareId } from './cares';
+import { parseCareHistory, type DailyCareRecommendation } from './daily-cares';
 
 export type GardenView = 'onboarding' | 'home' | 'checkin' | 'care' | 'garden';
 export type DailyCheckin = {
@@ -8,6 +9,7 @@ export type DailyCheckin = {
   note: string;
   plantState: 'low' | 'normal';
   completedCareIds: string[];
+  careRecommendations?: DailyCareRecommendation[];
 };
 
 export const DAILY_KEY = 'little-garden.daily-checkin.v1';
@@ -24,6 +26,8 @@ export function parseDaily(raw: string | null, date = localDay()): DailyCheckin 
       typeof data.note !== 'string' || !['low', 'normal'].includes(data.plantState) ||
       !Array.isArray(data.completedCareIds) ||
       !data.completedCareIds.every(isCareId)) return null;
+    // Damaged recommendation metadata must not discard a valid check-in.
+    if (data.careRecommendations !== undefined) data.careRecommendations = parseCareHistory(data.careRecommendations);
     return data as DailyCheckin;
   } catch { return null; }
 }

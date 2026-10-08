@@ -5,7 +5,8 @@ import RivePlant, { RivePlantState } from './components/RivePlant';
 
 import { DAILY_KEY, localDay, parseDaily, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
-import { recommendCares } from './recommend-cares';
+import { displayCareRecommendation, ensureCareHistory, readCareHistory } from './daily-cares';
+import type { CareRecommendation } from './recommend-cares';
 type View = GardenView;
 type PlantState = RivePlantState;
 type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow';
@@ -95,9 +96,8 @@ function CheckinScreen({ onBack, onDone, initialRecord }: { onBack: () => void; 
   </section>;
 }
 
-function CareScreen({ state, answers, completed, completedIds, onComplete, goHome }: { state: PlantState; answers?: string[]; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; goHome: () => void }) {
+function CareScreen({ state, recommendation, completed, completedIds, onComplete, goHome }: { state: PlantState; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; goHome: () => void }) {
   const [started, setStarted] = useState<string | null>(null);
-  const recommendation = recommendCares(answers);
   const allCaredFor = recommendation.cares.every(care => completedIds.includes(care.id));
   if (completed) return <section className="screen completion-screen">
     <div className="completion-scene"><span className="droplet d1"/><span className="droplet d2"/><span className="spark s1">✦</span><span className="spark s2">✦</span><Plant state={state} celebrate className="plant-art lifted"/></div>
@@ -136,7 +136,15 @@ export default function HomePage() {
   const [completedCare, setCompletedCare] = useState<string | null>(null);
 
   const readToday = () => {
-    try { return parseDaily(localStorage.getItem(DAILY_KEY)); }
+    try {
+      const record = parseDaily(localStorage.getItem(DAILY_KEY));
+      if (!record || record.careRecommendations?.some(entry => entry.date === record.date)) return record;
+      // Upgrade a previously completed v1 record once, outside the render path.
+      const upgraded = { ...record, careRecommendations: ensureCareHistory(record.date, record.answers, record.careRecommendations) };
+      try { localStorage.setItem(DAILY_KEY, JSON.stringify(upgraded)); }
+      catch { setSaveError(true); } // Deterministic fallback remains usable if storage is full.
+      return upgraded;
+    }
     catch { return null; }
   };
   const updateDaily = (value: DailyCheckin | null) => {
@@ -210,21 +218,29 @@ export default function HomePage() {
 
   const startCare = (state: PlantState, answers: string[], note: string) => {
     const existing = readToday();
+    let history = existing?.careRecommendations ?? [];
+    // Yesterday's answers do not unlock care, but its recommendation history survives.
+    if (!existing) {
+      try { history = readCareHistory(localStorage.getItem(DAILY_KEY)); }
+      catch { /* The existing save path reports unavailable storage. */ }
+    }
     const record: DailyCheckin = {
       version: 1, date: localDay(), answers, note, plantState: state, completedCareIds: existing?.completedCareIds ?? [],
     };
+    record.careRecommendations = ensureCareHistory(record.date, answers, history);
     if (save(record)) show('care', true, record);
   };
   const completeCare = (id: string) => {
     const record = readToday();
     if (!record) { show('checkin', true, null); return; }
-    if (!recommendCares(record.answers).cares.some(care => care.id === id)) return;
+    if (!record.careRecommendations?.find(entry => entry.date === record.date)?.ids.some(careId => careId === id)) return;
     if (record.completedCareIds.includes(id)) return;
     if (save({ ...record, completedCareIds: [...record.completedCareIds, id] })) setCompletedCare(id);
   };
   const go = (target: View) => show(target);
   const goHome = () => show('home', viewRef.current === 'onboarding' || viewRef.current === 'checkin');
   const plantState = daily?.plantState ?? 'normal';
+  const todayCares = daily?.careRecommendations?.find(entry => entry.date === daily.date);
 
   return <main className="app-shell"><div className="phone-frame">
     <>
@@ -232,7 +248,7 @@ export default function HomePage() {
       {view === 'onboarding' && <Onboarding start={goHome}/>}
       {view === 'home' && <HomeScreen state={plantState} go={go} recorded={!!daily}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily}/>}
-      {view === 'care' && daily && <CareScreen state={plantState} answers={daily.answers} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} goHome={goHome}/>}
+      {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} goHome={goHome}/>}
       {view === 'garden' && <GardenScreen state={plantState} go={go}/>}
     </>
   </div></main>;

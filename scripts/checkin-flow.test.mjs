@@ -6,6 +6,7 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import { loadTs } from './helpers/load-ts.mjs';
 const daily = loadTs(new URL('../src/app/daily-checkin.ts', import.meta.url));
+const { recommendCares } = loadTs(new URL('../src/app/recommend-cares.ts', import.meta.url));
 
 const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX }
@@ -96,14 +97,15 @@ test('actual question UI displays labels, saves values and restores old selectio
 });
 
 test('actual care cards show all three scenarios and preserve the two-step completion action', () => {
-  for (const [answers, expected] of [
-    [['very_low', 'very_low', 'very_low', 'very_low'], ['3분만 눈 감기', '물 몇 모금', '좋아하는 노래 한 곡']],
-    [['good', 'very_good', 'good', 'very_good'], ['5분 걷기', '하늘 바라보기', '햇빛 잠깐 받기']],
-    [['very_low', 'low'], ['물 몇 모금', '하늘 바라보기', '몸 한 번 펴기']],
+  for (const answers of [
+    ['very_low', 'very_low', 'very_low', 'very_low'],
+    ['good', 'very_good', 'good', 'very_good'],
+    ['very_low', 'low'],
   ]) {
     const completed = [];
-    const app = mount(null, '', 'CareScreen', { state: 'normal', answers, completed: null, completedIds: [], onComplete: id => completed.push(id), goHome() {} });
-    assert.deepEqual(nodes(app.tree(), node => node.type === 'h3').map(textContent), expected);
+    const recommendation = recommendCares(answers, { date: '2026-10-08' });
+    const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), goHome() {} });
+    assert.deepEqual(nodes(app.tree(), node => node.type === 'h3').map(textContent), recommendation.cares.map(care => care.title));
     const button = () => nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1);
     button().props.onClick(); assert.equal(completed.length, 0);
     assert.equal(button().props.children, '완료했어요');
@@ -112,7 +114,9 @@ test('actual care cards show all three scenarios and preserve the two-step compl
 });
 
 test('all recommended cares completed still plays the existing celebration with gentle copy', () => {
-  const app = mount(null, '', 'CareScreen', { state: 'low', answers: ['very_low', 'very_low', 'very_low', 'very_low'], completed: 'music', completedIds: ['rest', 'water', 'music'], onComplete() {}, goHome() {} });
+  const recommendation = recommendCares(['very_low', 'very_low', 'very_low', 'very_low'], { date: '2026-10-08' });
+  const ids = recommendation.cares.map(care => care.id);
+  const app = mount(null, '', 'CareScreen', { state: 'low', recommendation, completed: ids[2], completedIds: ids, onComplete() {}, goHome() {} });
   assert.match(textContent(app.tree()), /오늘 나를 위해잠깐 시간을 썼어요/);
   const plant = nodes(app.tree(), node => node.type?.name === 'Plant')[0];
   assert.equal(plant.props.celebrate, true);
@@ -123,7 +127,10 @@ test('existing user enters home and reviews restored answers without losing care
   app.start();
   assert.ok(app.screen('HomeScreen'));
   app.screen('HomeScreen').props.go('checkin');
-  assert.deepEqual(app.screen('CheckinScreen').props.initialRecord, saved);
+  const restored = app.screen('CheckinScreen').props.initialRecord;
+  assert.deepEqual(restored.answers, saved.answers);
+  assert.equal(restored.note, saved.note);
+  assert.deepEqual(restored.completedCareIds, saved.completedCareIds);
   app.screen('CheckinScreen').props.onDone('normal', saved.answers, saved.note);
   assert.ok(app.screen('CareScreen'));
   assert.deepEqual(JSON.parse(app.raw()).completedCareIds, ['water']);
@@ -166,20 +173,59 @@ test('personalized cares retain completion and plant state through all three act
   const app = mount(); app.start();
   app.screen('HomeScreen').props.go('checkin');
   app.screen('CheckinScreen').props.onDone('low', ['very_low', 'very_low', 'very_low', 'very_low'], '');
-  for (const id of ['rest', 'water', 'music']) {
+  const ids = app.screen('CareScreen').props.recommendation.cares.map(care => care.id);
+  for (const id of ids) {
     const care = app.screen('CareScreen');
-    assert.deepEqual(Array.from(care.props.answers), ['very_low', 'very_low', 'very_low', 'very_low']);
+    assert.deepEqual(care.props.recommendation.cares.map(care => care.id), ids);
     care.props.onComplete(id);
     assert.equal(app.screen('CareScreen').props.completed, id);
     assert.equal(app.screen('CareScreen').props.state, 'low');
     app.screen('CareScreen').props.goHome();
     app.screen('HomeScreen').props.go('care');
   }
-  assert.deepEqual(JSON.parse(app.raw()).completedCareIds, ['rest', 'water', 'music']);
+  assert.deepEqual(JSON.parse(app.raw()).completedCareIds, ids);
   app.screen('CareScreen').props.onComplete('walk');
-  app.screen('CareScreen').props.onComplete('music');
-  assert.deepEqual(JSON.parse(app.raw()).completedCareIds, ['rest', 'water', 'music']);
+  app.screen('CareScreen').props.onComplete(ids[0]);
+  assert.deepEqual(JSON.parse(app.raw()).completedCareIds, ids);
   const reopened = mount(app.raw()); reopened.start();
   reopened.screen('HomeScreen').props.go('care');
-  assert.deepEqual(reopened.screen('CareScreen').props.completedIds, ['rest', 'water', 'music']);
+  assert.deepEqual(reopened.screen('CareScreen').props.completedIds, ids);
+});
+
+test('ten reloads, reentry and an answer edit retain the stored cards, order and title', () => {
+  let app = mount(); app.start();
+  app.screen('HomeScreen').props.go('checkin');
+  app.screen('CheckinScreen').props.onDone('low', ['very_low', 'very_low', 'very_low', 'very_low'], '');
+  const original = app.screen('CareScreen').props.recommendation;
+  for (let i = 0; i < 10; i++) {
+    app = mount(app.raw(), '#care'); app.start();
+    app.screen('HomeScreen').props.go('care');
+    assert.deepEqual(app.screen('CareScreen').props.recommendation, original);
+    app.screen('CareScreen').props.goHome();
+    app.screen('HomeScreen').props.go('garden');
+    app.screen('GardenScreen').props.go('care');
+    assert.deepEqual(app.screen('CareScreen').props.recommendation, original);
+  }
+  app.screen('CareScreen').props.goHome();
+  app.screen('HomeScreen').props.go('checkin');
+  app.screen('CheckinScreen').props.onDone('normal', ['good', 'very_good', 'good', 'very_good'], '다시 기록');
+  assert.deepEqual(app.screen('CareScreen').props.recommendation, original);
+  assert.equal(app.screen('CareScreen').props.state, 'normal');
+});
+
+test('yesterday stays locked until check-in and its recommendation history is carried forward', () => {
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  const date = daily.localDay(yesterday);
+  const old = { ...saved, date, careRecommendations: [{ date, ids: ['rest', 'water', 'music'], title: '어제의 안내' }] };
+  const app = mount(JSON.stringify(old)); app.start();
+  app.screen('HomeScreen').props.go('care');
+  assert.ok(app.screen('CheckinScreen'));
+  assert.equal(app.screen('CareScreen'), null);
+  assert.equal(app.raw(), JSON.stringify(old));
+  app.screen('CheckinScreen').props.onDone('normal', saved.answers, '');
+  const current = JSON.parse(app.raw());
+  assert.equal(current.date, daily.localDay());
+  assert.equal(current.careRecommendations.length, 2);
+  assert.equal(current.careRecommendations[1].date, date);
+  assert.deepEqual(current.completedCareIds, []);
 });
