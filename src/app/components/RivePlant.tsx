@@ -92,13 +92,7 @@ export default function RivePlant({
 
   const content = <>
     <RiveComponent className="rive-plant__canvas" aria-hidden="true" />
-    <span className="rive-plant__placeholder" aria-hidden="true">
-      <svg viewBox="0 0 100 100" fill="none" focusable="false">
-        <circle cx="50" cy="50" r="34" fill="var(--light-green)" opacity=".65" />
-        <path d="M50 70V43m0 9c-2-15-15-19-25-17 1 12 10 20 25 17Zm0-9c2-14 15-19 25-17-1 12-10 20-25 17Z"
-          stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    </span>
+    <span className={`rive-plant__placeholder${state === 'low' ? ' rive-plant__placeholder--low' : ''}`} aria-hidden="true" />
     <span className={error ? 'rive-plant__error' : 'rive-plant__status'} role="status">
       {error ? '식물을 불러오지 못했어요. 새로고침해 주세요.' : !ready ? '식물이 준비되고 있어요.' : ''}
     </span>

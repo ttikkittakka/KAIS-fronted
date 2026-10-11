@@ -36,8 +36,8 @@ function TopBar({ title, onBack, action }: { title: string; onBack?: () => void;
 
 function BottomNav({ active, go }: { active: 'home' | 'garden'; go: (v: View) => void }) {
   return <nav className="bottom-nav" aria-label="주요 메뉴">
-    <button className={active === 'home' ? 'active' : ''} onClick={() => go('home')}><Icon name="leaf"/><span>정원</span></button>
-    <button className={active === 'garden' ? 'active' : ''} onClick={() => go('garden')}><Icon name="note"/><span>기록</span></button>
+    <button className={active === 'home' ? 'active' : ''} onClick={() => go('home')}><span className="nav-symbol" aria-hidden="true">♧</span><span>정원</span></button>
+    <button className={active === 'garden' ? 'active' : ''} onClick={() => go('garden')}><span className="nav-symbol" aria-hidden="true">▤</span><span>기록</span></button>
   </nav>;
 }
 
@@ -52,7 +52,7 @@ function Onboarding({ start }: { start: () => void }) {
 
 function HomeScreen({ state, go, recorded }: { state: PlantState; go: (v: View) => void; recorded: boolean }) {
   return <section className="screen home-screen">
-    <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정"><Icon name="settings" size={20}/></button>}/>
+    <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정"><span aria-hidden="true">⚙</span></button>}/>
     <div className="garden-scene"><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">10월 1일 · 목요일</span><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/></div>
     <div className="today-copy"><span className="eyebrow">오늘의 모습</span><h2>{state === 'low' ? '조금 지쳐 보여요.' : '편안하게 기다리고 있어요.'}</h2><p>{state === 'low' ? '오늘은 천천히 가도 괜찮아요.' : '오늘의 나를 가볍게 살펴볼까요?'}</p></div>
     <button className="primary-button home-cta" onClick={() => go(recorded ? 'care' : 'checkin')}><span className="soft-icon"><Icon name="note" size={18}/></span>{recorded ? '오늘의 작은 돌봄 다시 보기' : '오늘의 나 기록하기'}</button>
@@ -87,7 +87,7 @@ function CheckinScreen({ onBack, onDone, initialRecord }: { onBack: () => void; 
     <TopBar title="오늘의 나" onBack={step > 0 ? () => setStep((old) => old - 1) : onBack}/>
     <div className="progress-head"><span>{Math.min(step + 1, 4)} / 4</span><div className="progress-track"><i style={{ width: `${Math.min(((step + 1) / 4) * 100, 100)}%` }}/></div><small>약 30초</small></div>
     {!isNote ? <div className="question-panel" key={step}>
-      <div className="question-mark">{['☾','◐','○','♡'][step]}</div><p className="question-kicker">오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map((line) => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
+      <div className={`question-mark${step === 0 ? ' question-mark--sleep' : ''}`}>{['☾','◐','○','♡'][step]}</div><p className={`question-kicker${step === 0 ? ' question-kicker--sleep' : ''}`}>오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map((line) => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
       <div className="choice-list">{question.options.map((option, index) => <button key={option.value} className={answers[step] === option.value ? 'selected' : ''} onClick={() => choose(option.value)}><span className="choice-dot">{index + 1}</span><strong>{option.label}</strong>{answers[step] === option.value && <Icon name="check" size={18}/>}</button>)}</div>
     </div> : <div className="question-panel note-panel">
       <div className="question-mark">✎</div><p className="question-kicker">마지막으로, 선택 사항이에요</p><h2>오늘을 한마디로<br/>남겨볼까요?</h2><p className="question-helper">잘 정리된 문장이 아니어도 괜찮아요.</p>
