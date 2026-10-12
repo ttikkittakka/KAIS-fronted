@@ -198,7 +198,7 @@ button { border: 0; background: none; color: inherit; cursor: pointer; }
 .garden-scene {
   margin: 4px 9px 0;
   border-color: transparent;
-  background: linear-gradient(180deg, #e7f4e8 0%, #e8f2d7 70%, #dce8d1 100%);
+  background: linear-gradient(180deg, #ddecf2 0%, #ddecf2 18%, #e1eee9 45%, #e5f0df 65%, #e8f2d7 82%, #dce8d1 100%);
 }
 .garden-scene::before {
   width: 220px; height: 220px; top: -70px; right: -45px;
