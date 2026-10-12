@@ -11,7 +11,7 @@ function evaluateSafety(freeText?: string) {
 }
 
 // 가짜 AI 에이전트: 점수에 따라 맞춤형 멘트를 생성해주는 함수
-function generateMockPlantSpeech(mood: number, energy: number, quests: any[]) {
+function generateMockPlantSpeech(mood: number, energy: number, quests: { title: string }[]) {
   const questTitles = quests.map(q => `'${q.title}'`).join(', ');
 
   if (energy <= 2 || mood <= 2) {
@@ -28,7 +28,7 @@ function generateMockPlantSpeech(mood: number, energy: number, quests: any[]) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { freeText, mood, energy, slept, ate, canGoOut } = body;
+    const { freeText, mood, energy, canGoOut } = body;
 
     const safetyResult = evaluateSafety(freeText);
 
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       explanation: plantMessage 
     }, { status: 200 });
 
-  } catch (error) {
+  } catch {
     return NextResponse.json({ success: false, error: "서버 오류" }, { status: 500 });
   }
 }

@@ -14,7 +14,7 @@ const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', 
 const saved = { version: 1, date: daily.localDay(), answers: ['괜찮게 잤어요', '보통', '든든하게 먹었어요', '잔잔해요'], note: '기존 기록', plantState: 'normal', completedCareIds: ['water'] };
 function mount(raw = null, hash = '', component = 'default', props = {}) {
   const slots = [], effects = [], tasks = [], listeners = new Map();
-  let cursor = 0, first = true, failSave = false;
+  let cursor = 0, first = true, failSave = false, interval;
   const data = new Map(raw ? [[daily.DAILY_KEY, raw]] : []);
   if (raw) { try { const owner = JSON.parse(raw).userId; if (owner) data.set('little-garden.local-owner.v1', owner); } catch {} }
   const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => { if (failSave) throw Error('quota'); data.set(key, value); } }; 
@@ -22,9 +22,10 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
   const window = {
     location: new URL('http://localhost:3000/' + hash),
     history: { state: {}, replaceState(state, _, url) { this.state = state; window.location = new URL(url); }, pushState(state, _, url) { this.replaceState(state, _, url); } },
-    addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener() {}, setInterval() { return 1; }
+    addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener() {}, setInterval(fn) { interval = fn; return 1; }
   };
   const react = {
+    useCallback(fn) { return fn; },
     useState(initial) { const i = cursor++; if (first) slots[i] = typeof initial === 'function' ? initial() : initial; return [slots[i], value => { slots[i] = typeof value === 'function' ? value(slots[i]) : value; }]; },
     useRef(initial) { const i = cursor++; if (first) slots[i] = { current: initial }; return slots[i]; },
     useEffect(effect) { if (first) effects.push(effect); }
@@ -35,7 +36,7 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
     document: { visibilityState: 'visible', addEventListener: window.addEventListener, removeEventListener() {} },
     queueMicrotask: fn => tasks.push(fn), clearInterval() {},
     setTimeout: fn => { tasks.push(fn); return 1; }, clearTimeout() {},
-    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/RecordScreens' ? { ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
+    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
   });
   function render() { cursor = 0; const tree = exports[component](props); first = false; return tree; }
   function find(node, name) {
@@ -47,6 +48,7 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
   const initialTree = render(); effects.forEach(fn => fn()); tasks.splice(0).forEach(fn => fn());
   return {
     tree: render,
+    tick: () => interval?.(),
     advanceChoice: () => tasks.splice(0).forEach(fn => fn()),
     initialOnboarding: !!find(initialTree, 'Onboarding'),
     start: () => find(render(), 'Onboarding').props.start(),
@@ -275,4 +277,22 @@ test('yesterday stays locked until check-in and its recommendation history is ca
   assert.equal(current.careRecommendations.length, 2);
   assert.equal(current.careRecommendations[1].date, date);
   assert.deepEqual(current.completedCareIds, []);
+});
+
+
+test('calendar rollover via timer guards today care and preserves yesterday records and rewards', () => {
+  const OriginalDate=globalThis.Date; const yesterday=daily.localDay();
+  const app=mount();app.start();app.screen('HomeScreen').props.go('checkin');
+  app.screen('CheckinScreen').props.onDone('normal',['good','normal','good','normal'],'어제 남긴 말');app.next();app.next();
+  const id=app.screen('CareScreen').props.recommendation.cares[0].id;app.screen('CareScreen').props.onComplete(id);
+  const nextDay=new OriginalDate();nextDay.setDate(nextDay.getDate()+1);
+  globalThis.Date=class extends OriginalDate { constructor(...args) { super(...(args.length ? args : [nextDay.getTime()])); } };
+  try {
+    app.tick();assert.ok(app.screen('CheckinScreen'));assert.equal(app.screen('CareScreen'),null);
+    app.screen('CheckinScreen').props.onDone('normal',['good','normal','good','normal'],'새 날의 말');app.next();app.next();
+    assert.deepEqual(app.screen('CareScreen').props.completedIds,[]);
+    app.screen('CareScreen').props.goHome();app.screen('HomeScreen').props.go('garden');
+    const rows=app.screen('GardenScreen').props.records;assert.equal(rows.length,2);
+    assert.equal(rows.find(r=>r.date===yesterday).note,'어제 남긴 말');assert.deepEqual(rows.find(r=>r.date===yesterday).completedCareIds,[id]);
+  } finally { globalThis.Date=OriginalDate; }
 });

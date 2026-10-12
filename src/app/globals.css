@@ -264,3 +264,33 @@ button { border: 0; background: none; color: inherit; cursor: pointer; }
 button:disabled { opacity:.55; cursor:wait; }button:focus-visible { outline:2px solid var(--primary); outline-offset:3px; }
 @media (min-width:521px) { .camera-button { display:none; } }
 @media (max-width:360px) { .question-panel { padding-left:18px; padding-right:18px; }.question-panel h2 { font-size:25px; }.record-details { padding-left:10px; padding-right:10px; } }
+
+/* Keep warnings inside the frame and inputs reachable in a smaller visual viewport. */
+.phone-frame { display: flex; flex-direction: column; }
+.phone-frame > .screen { flex: 1; min-height: 0; height: auto; }
+.storage-status { flex: none; margin: 0; padding: 10px 16px; font-size: 12px; line-height: 1.6; background: #fff1d4; color: #785a30; }
+.note-panel textarea.record-input, .record-input { font-size: 16px; scroll-margin-block: 24px 120px; }
+.garden-history-screen { scroll-padding-bottom: 120px; }
+.checkin-screen { scroll-padding-bottom: 24px; padding-bottom: env(safe-area-inset-bottom); }
+.record-error .text-button { display: block; margin-top: 8px; font-size: 12px; }
+.bottom-nav { bottom: max(7px, env(safe-area-inset-bottom)); }
+.home-screen, .garden-history-screen { padding-bottom: calc(106px + env(safe-area-inset-bottom)); }
+button:disabled { cursor: default; }
+@media (max-width: 520px) { .phone-frame { height: var(--app-viewport-height, 100dvh); } }
+
+/* Legible calendar labels and finger-sized controls in the record screens. */
+.garden-history-screen .week-row span { font-size: 11px; color: #67705f; }
+.garden-history-screen .calendar-note { font-size: 11px; line-height: 1.7; color: #67705f; }
+.calendar-controls button, .note-suggestions button { min-width: 44px; min-height: 44px; }
+.editor-actions .text-button, .record-details .text-button, .step-actions .text-button { min-height: 44px; }
+.photo-editor .text-count, .note-panel .text-count, .record-card .text-count { font-size: 11px; color: #67705f; }
+
+/* Storage ownership and touch accessibility; existing scene/animation styles stay intact. */
+.session-screen { padding: 32px 24px; line-height: 1.8; }
+.session-screen h1 { font-size: 23px; font-weight: 400; color: var(--deep-green); }
+.icon-button { width: 44px; height: 44px; }
+.care-card > button, .rest-choice, .record-error .text-button { min-height: 44px; min-width: 44px; }
+@media (max-height: 520px) and (pointer: coarse) {
+  .app-shell { display: block; padding: 0; }
+  .phone-frame { width: min(100%, 520px); margin-inline: auto; height: var(--app-viewport-height, 100dvh); min-height: 0; border: 0; border-radius: 0; }
+}

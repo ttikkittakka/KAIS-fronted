@@ -2,11 +2,25 @@
 
 /* eslint-disable @next/next/no-img-element -- Private blob URLs stay on device and cannot use the server image optimizer. */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { localDay, type DailyCheckin } from '../daily-checkin';
 import { QUESTIONS, normalizeAnswers } from '../questions';
 import { displayCareRecommendation } from '../daily-cares';
-import { cleanupPhotos, deleteStoredPhoto, localOwner, photoOperation, preparePhoto } from '../record-store';
+import { cleanupPhotos, localOwner, newLocalId, photoOperation, preparePhoto, schedulePhotoDeletion } from '../record-store';
+
+// Unconfirmed photos stay in memory across this page's step/history navigation.
+// They are never written to disk before the user presses Save.
+const photoDrafts = new Map<string, Blob>();
+const failedTextDrafts = new Map<string, string>();
+const draftListeners = new Set<() => void>();
+const draftKey = (record: DailyCheckin) => (record.userId ?? 'local') + ':' + record.date;
+function subscribeDrafts(listener: () => void) { draftListeners.add(listener); return () => { draftListeners.delete(listener); }; }
+export function hasUnsavedDrafts() { return photoDrafts.size > 0 || failedTextDrafts.size > 0; }
+function changePhotoDraft(key: string, blob: Blob | null) {
+  if (blob && !photoDrafts.has(key) && photoDrafts.size >= 5) throw new Error('아직 저장하지 않은 사진이 있어요. 먼저 저장하거나 선택을 취소해 주세요.');
+  if (blob) photoDrafts.set(key, blob); else photoDrafts.delete(key);
+  for (const listener of draftListeners) listener();
+}
 
 export function StepHeader({ step }: { step: 1 | 2 | 3 }) {
   return <div className="step-header"><span>STEP {step} / 3</span><strong>{['돌아보기', '기록하기', '성장하기'][step - 1]}</strong><div aria-hidden="true">{[1,2,3].map(n => <i key={n} className={n <= step ? 'filled' : ''}/>)}</div></div>;
@@ -14,66 +28,127 @@ export function StepHeader({ step }: { step: 1 | 2 | 3 }) {
 function PhotoPreview({ id }: { id: string }) {
   const [url, setUrl] = useState('');
   const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     let active = true; let objectUrl = '';
     photoOperation(id, 'read').then(blob => { if (!active) return; if (!blob) { setError(true); return; } objectUrl = URL.createObjectURL(blob); setUrl(objectUrl); }).catch(() => { if (active) setError(true); });
     return () => { active = false; if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [id]);
-  return url ? <img className="record-photo" src={url} alt="이 날 남긴 나의 사진"/> : <p role="status">{error ? '사진을 불러오지 못했어요. 다시 열어주세요.' : '사진을 불러오고 있어요.'}</p>;
+  }, [id, retry]);
+  return url ? <img className="record-photo" src={url} alt="이 날 남긴 나의 사진"/> : <p role="status">{error ? <>사진을 불러오지 못했어요. <button className="text-button" onClick={() => { setError(false); setRetry(n => n + 1); }}>다시 불러오기</button></> : '사진을 불러오고 있어요.'}</p>;
 }
 export function PhotoEditor({ record, onSave, onPending }: { record: DailyCheckin; onSave: (record: DailyCheckin) => boolean; onPending?: (value: boolean) => void }) {
-  const [pending, setPending] = useState<Blob | null>(null);
+  const key = draftKey(record);
+  const pending = useSyncExternalStore(subscribeDrafts, () => photoDrafts.get(key) ?? null, () => null);
   const [preview, setPreview] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [cleanupError, setCleanupError] = useState(false);
+  const [commentFailed, setCommentFailed] = useState(() => failedTextDrafts.has(key + ':comment'));
+  const mounted = useRef(true);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const input = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
-  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+  useEffect(() => {
+    let active = true; let url = '';
+    queueMicrotask(() => {
+      if (!active) return;
+      if (pending) { url = URL.createObjectURL(pending); setPreview(url); }
+      else setPreview('');
+      onPending?.(!!pending);
+    });
+    return () => { active = false; if (url) URL.revokeObjectURL(url); };
+  }, [pending, onPending]);
+  useEffect(() => {
+    if (!pending && !busy) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [pending, busy]);
   async function select(file?: File) {
     if (!file) return;
     setBusy(true); setError(''); onPending?.(true);
-    try { const blob = await preparePhoto(file); setPending(blob); setPreview(URL.createObjectURL(blob)); } catch { onPending?.(false); setError('사진을 준비하지 못했어요. JPG·PNG 등의 사진을 다시 골라주세요. (최대 20MB)'); }
-    finally { setBusy(false); }
+    try {
+      const blob = await preparePhoto(file);
+      changePhotoDraft(key, blob);
+      if (mounted.current) onPending?.(true);
+    } catch (error) {
+      if (mounted.current) { onPending?.(!!pending); setError(error instanceof Error ? error.message + ' JPG·PNG 등의 사진으로 다시 시도해 주세요.' : '사진을 준비하지 못했어요. 다시 골라주세요.'); }
+    } finally { if (mounted.current) setBusy(false); }
+  }
+  async function cleanDetachedPhotos() {
+    try { await cleanupPhotos(); if (mounted.current) setCleanupError(false); }
+    catch { if (mounted.current) setCleanupError(true); }
   }
   async function store() {
-    if (!pending) return;
+    if (!pending || busy) return;
     setBusy(true); setError('');
-    const id = localOwner() + ':' + record.date + ':' + crypto.randomUUID();
     try {
+      const id = localOwner() + ':' + record.date + ':' + newLocalId();
+      schedulePhotoDeletion(id);
+      if (record.photoId) schedulePhotoDeletion(record.photoId);
       await photoOperation(id, 'write', pending);
-      if (!onSave({ ...record, photoId: id })) { await photoOperation(id, 'delete'); throw new Error(); }
-      setPending(null); setPreview(''); onPending?.(false);
-      if (record.photoId) await deleteStoredPhoto(record.photoId);
-    } catch { setError('사진을 저장하지 못했어요. 다시 시도해 주세요.'); }
-    finally { setBusy(false); }
+      if (!onSave({ ...record, photoId: id })) { await cleanDetachedPhotos(); throw new Error('기록을 저장하지 못했어요. 사진 미리보기는 남겨뒀어요.'); }
+      changePhotoDraft(key, null);
+      if (mounted.current) onPending?.(false);
+      await cleanDetachedPhotos();
+    } catch (error) { if (mounted.current) setError(error && typeof error === 'object' && 'name' in error && error.name === 'QuotaExceededError' ? '브라우저 저장 공간이 부족해요. 기존 사진은 그대로 남아 있어요. 저장 공간을 확보한 뒤 미리보기의 저장 버튼으로 다시 시도해 주세요.' : '사진을 저장하지 못했어요. 미리보기의 저장 버튼으로 다시 시도해 주세요.'); }
+    finally { if (mounted.current) setBusy(false); }
   }
   async function remove() {
-    setBusy(true); setError('');
+    if (busy) return;
+    setBusy(true); setError(''); onPending?.(true);
+    let removed = false;
     try {
+      if (record.photoId) schedulePhotoDeletion(record.photoId);
       if (!onSave({ ...record, photoId: undefined, photoComment: '' })) throw new Error();
-      if (record.photoId) await photoOperation(record.photoId, 'delete');
-    } catch { setError('사진 삭제를 마치지 못했어요. 다시 시도해 주세요.'); }
-    finally { setBusy(false); }
+      removed = true;
+      failedTextDrafts.delete(key + ':comment');
+      if (mounted.current) setCommentFailed(false);
+      await cleanDetachedPhotos();
+    } catch { if (mounted.current) setError('사진 삭제를 저장하지 못했어요. 사진과 코멘트는 남겨뒀어요.'); }
+    finally { if (mounted.current) { setBusy(false); onPending?.(!removed && commentFailed); } }
   }
   return <div className="photo-editor">
     <input ref={input} type="file" accept="image/*" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
     <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
-    {pending && preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : record.photoId ? <PhotoPreview key={record.photoId} id={record.photoId}/> : <div className="photo-empty"><span aria-hidden="true">▧</span><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
-    <div className="editor-actions"><button className="secondary-button" disabled={busy} onClick={() => input.current?.click()}>{record.photoId || pending ? '사진 변경' : '사진 선택'}</button><button className="secondary-button camera-button" disabled={busy} onClick={() => camera.current?.click()}>사진 촬영</button></div>
-    {pending && <div className="editor-actions"><button className="primary-button" disabled={busy} onClick={() => void store()}>{busy ? '저장하고 있어요…' : '이 사진 저장하기'}</button><button className="text-button" disabled={busy} onClick={() => { setPending(null); setPreview(''); }}>선택 취소</button></div>}
-    {record.photoId && !pending && <><label className="field-label" htmlFor="photo-comment">사진에 남기는 짧은 말</label><textarea id="photo-comment" className="record-input comment-input" maxLength={100} value={record.photoComment ?? ''} placeholder="이 순간을 한마디로 남긴다면?" onChange={e => onSave({ ...record, photoComment: e.target.value })}/><span className="text-count">{record.photoComment?.length ?? 0} / 100</span><button className="text-button" disabled={busy} onClick={() => void remove()}>사진과 코멘트 삭제</button></>}
-    {busy && <p role="status">사진을 처리하고 있어요.</p>}{error && <p role="alert" className="record-error">{error}<button className="text-button" onClick={() => { void cleanupPhotos().then(() => setError('')).catch(() => setError('사진 정리를 마치지 못했어요. 다시 시도해 주세요.')); }}>사진 정리 다시 시도</button></p>}
-    <p className="privacy-note">사진은 이 기기의 브라우저에만 저장돼요. 다른 사람에게 공개되거나 AI 분석에 사용되지 않아요. 저장할 때 위치 등 원본 메타데이터를 제거해요. 사진 삭제 시 코멘트도 함께 지워져요. 브라우저 데이터를 지우면 기록도 사라져요.</p>
+    {pending ? preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <p role="status">미리보기를 준비하고 있어요.</p> : record.photoId ? <PhotoPreview key={record.photoId} id={record.photoId}/> : <div className="photo-empty"><span aria-hidden="true">▧</span><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
+    <div className="editor-actions"><button className="secondary-button" disabled={busy || commentFailed} onClick={() => input.current?.click()}>{record.photoId || pending ? '사진 변경' : '사진 선택'}</button><button className="secondary-button camera-button" disabled={busy || commentFailed} onClick={() => camera.current?.click()}>사진 촬영</button></div>
+    {pending && <div className="editor-actions"><button className="primary-button" disabled={busy} onClick={() => void store()}>{busy ? '저장하고 있어요…' : '이 사진 저장하기'}</button><button className="text-button" disabled={busy} onClick={() => { changePhotoDraft(key, null); onPending?.(false); }}>선택 취소</button></div>}
+    {record.photoId && !pending && <><label className="field-label" htmlFor="photo-comment">사진에 남기는 짧은 말</label><SavedTextField id="photo-comment" draftScope={key + ':comment'} value={record.photoComment ?? ''} maxLength={100} placeholder="이 순간을 한마디로 남긴다면?" className="comment-input" onSave={value => onSave({ ...record, photoComment: value })} onPending={value => { setCommentFailed(value); onPending?.(value || !!pending || busy); }}/><button className="text-button" disabled={busy} onClick={() => void remove()}>사진과 코멘트 삭제</button></>}
+    {busy && <p role="status">사진을 처리하고 있어요.</p>}{error && <p role="alert" className="record-error">{error}</p>}
+    {cleanupError && <p role="alert" className="record-error">기록 변경은 저장됐지만 사진 파일 정리가 아직 끝나지 않았어요.<button className="text-button" onClick={() => void cleanDetachedPhotos()}>사진 정리 다시 시도</button></p>}
+    <p className="privacy-note">사진은 이 기기의 브라우저에만 저장돼요. 서버로 전송하거나 AI 분석에 사용하지 않아요. 계정별 접근 제어는 없어서 같은 브라우저를 사용하는 사람은 기록을 볼 수 있어요. 저장할 때 위치 등 원본 메타데이터를 제거해요. 사진 삭제 시 코멘트도 함께 지워져요. 브라우저 데이터를 지우면 기록도 사라져요.</p>
   </div>;
 }
 const SUGGESTIONS = ['오늘도 수고했어.', '쉬어도 괜찮아.', '내일 다시 해보자.', '지금 느끼는 마음도 소중해.'];
-export function NoteEditor({ record, onSave }: { record: DailyCheckin; onSave: (record: DailyCheckin) => boolean }) {
-  return <><label className="field-label" htmlFor="daily-note">오늘의 나에게 남기는 말</label><textarea id="daily-note" className="record-input" maxLength={300} value={record.note} placeholder="오늘의 나에게 하고 싶은 말을 적어보세요." onChange={e => onSave({ ...record, note: e.target.value })}/><span className="text-count">{record.note.length} / 300</span><p className="suggestion-label">말이 떠오르지 않을 때, 이렇게 시작해도 좋아요.</p><div className="note-suggestions">{SUGGESTIONS.map(text => <button key={text} onClick={() => onSave({ ...record, note: text })}>{text}</button>)}</div></>;
+export function SavedTextField({ id, draftScope = id, value, maxLength, placeholder, className = '', onSave, onPending, suggestions = [], allowDelete = false }: { id: string; draftScope?: string; value: string; maxLength: number; placeholder: string; className?: string; onSave: (value: string) => boolean; onPending?: (pending: boolean) => void; suggestions?: string[]; allowDelete?: boolean }) {
+  const [draft, setDraft] = useState(() => ({ text: failedTextDrafts.get(draftScope) ?? value, saved: value, failed: failedTextDrafts.has(draftScope) }));
+  // Accept external saved changes without discarding an unsaved local draft.
+  if (value !== draft.saved && !draft.failed) setDraft({ text: value, saved: value, failed: false });
+  useEffect(() => {
+    onPending?.(draft.failed);
+    if (!draft.failed) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [draft.failed, onPending]);
+  const write = (text: string) => {
+    const next = text.slice(0, maxLength);
+    const saved = onSave(next);
+    if (saved) failedTextDrafts.delete(draftScope); else failedTextDrafts.set(draftScope, next);
+    setDraft({ text: next, saved: saved ? next : value, failed: !saved });
+    onPending?.(!saved);
+  };
+  return <><textarea id={id} className={'record-input ' + className} maxLength={maxLength} value={draft.text} placeholder={placeholder} aria-describedby={id + '-status'} onChange={e => write(e.target.value)}/><span id={id + '-status'} className="text-count">{draft.text.length} / {maxLength}</span>{draft.failed && <p role="alert" className="record-error">아직 저장하지 못했어요. 작성한 글은 이 화면에 남겨뒀어요.<button className="text-button" onClick={() => write(draft.text)}>다시 저장</button></p>}{suggestions.length > 0 && <><p className="suggestion-label">말이 떠오르지 않을 때, 이렇게 시작해도 좋아요.</p><div className="note-suggestions">{suggestions.map(text => <button key={text} onClick={() => write(text)}>{text}</button>)}</div></>}{allowDelete && draft.text && <button className="text-button" onClick={() => write('')}>한마디 삭제</button>}</>;
+}
+export function NoteEditor({ record, onSave, onPending, allowDelete = false }: { record: DailyCheckin; onSave: (record: DailyCheckin) => boolean; onPending?: (pending: boolean) => void; allowDelete?: boolean }) {
+  return <><label className="field-label" htmlFor="daily-note">오늘의 나에게 남기는 말</label><SavedTextField id="daily-note" draftScope={draftKey(record) + ':note'} value={record.note} maxLength={300} placeholder="오늘의 나에게 하고 싶은 말을 적어보세요." onSave={value => onSave({ ...record, note: value })} onPending={onPending} suggestions={SUGGESTIONS} allowDelete={allowDelete}/></>;
 }
 export function ReflectionExtras({ kind, record, onSave, onBack, onNext }: { kind: 'photo' | 'growth'; record: DailyCheckin; onSave: (record: DailyCheckin) => boolean; onBack: () => void; onNext: () => void }) {
   const photo = kind === 'photo';
-  const [pendingPhoto, setPendingPhoto] = useState(false);
-  return <section className="screen checkin-screen"><header className="top-bar"><button className="icon-button" aria-label="뒤로 가기" disabled={pendingPhoto} onClick={onBack}>‹</button><h1>오늘의 나</h1></header><StepHeader step={photo ? 2 : 3}/><div className="question-panel note-panel"><div className="question-mark">{photo ? '▧' : '✎'}</div><h2>{photo ? '오늘의 순간을 남겨볼까요?' : '오늘의 나에게 한마디'}</h2><p className="question-helper">{photo ? <>특별한 순간이 아니어도 괜찮아요.<br/>오늘 기억하고 싶은 장면을 남겨보세요.</> : '오늘 하루를 보낸 나에게 어떤 말을 해주고 싶나요?'}</p>{photo ? <><p className="mood-chip">♡ {QUESTIONS[3].options.find(o => o.value === normalizeAnswers(record.answers)[3])?.label}</p><PhotoEditor record={record} onSave={onSave} onPending={setPendingPhoto}/></> : <NoteEditor record={record} onSave={onSave}/>}<div className="step-actions"><button className="primary-button" disabled={pendingPhoto} onClick={onNext}>{photo ? '성장하기로 이어가기' : '오늘의 추천 행동 만나보기'}</button>{!photo && !!record.note && <button className="text-button" onClick={() => { if (onSave({ ...record, note: '' })) onNext(); }}>글 없이 넘어가기</button>}<p className="optional-hint">{photo ? pendingPhoto ? '사진을 저장하거나 선택을 취소하면 이어갈 수 있어요.' : '사진 없이도 이어갈 수 있어요.' : '글 없이도 이어갈 수 있어요.'}</p></div></div></section>;
+  const cachedPhoto = useSyncExternalStore(subscribeDrafts, () => photo && photoDrafts.has(draftKey(record)), () => false);
+  const [pendingPhoto, setPendingPhoto] = useState(() => failedTextDrafts.has(draftKey(record) + (photo ? ':comment' : ':note')));
+  return <section className="screen checkin-screen"><header className="top-bar"><button className="icon-button" aria-label="뒤로 가기" disabled={pendingPhoto && !cachedPhoto} onClick={onBack}>‹</button><h1>오늘의 나</h1></header><StepHeader step={photo ? 2 : 3}/><div className="question-panel note-panel"><div className="question-mark">{photo ? '▧' : '✎'}</div><h2>{photo ? '오늘의 순간을 남겨볼까요?' : '오늘의 나에게 한마디'}</h2><p className="question-helper">{photo ? <>특별한 순간이 아니어도 괜찮아요.<br/>오늘 기억하고 싶은 장면을 남겨보세요.</> : '오늘 하루를 보낸 나에게 어떤 말을 해주고 싶나요?'}</p>{photo ? <><p className="mood-chip">♡ {QUESTIONS[3].options.find(o => o.value === normalizeAnswers(record.answers)[3])?.label}</p><PhotoEditor record={record} onSave={onSave} onPending={setPendingPhoto}/></> : <NoteEditor record={record} onSave={onSave} onPending={setPendingPhoto}/>}<div className="step-actions"><button className="primary-button" disabled={pendingPhoto || cachedPhoto} onClick={onNext}>{photo ? '성장하기로 이어가기' : '오늘의 추천 행동 만나보기'}</button>{!photo && !!record.note && <button className="text-button" onClick={() => { if (onSave({ ...record, note: '' })) onNext(); }}>글 없이 넘어가기</button>}<p className="optional-hint">{photo ? pendingPhoto || cachedPhoto ? '사진을 저장하거나 선택을 취소하면 이어갈 수 있어요.' : '사진 없이도 이어갈 수 있어요.' : pendingPhoto ? '작성한 글을 다시 저장하면 이어갈 수 있어요.' : '글 없이도 이어갈 수 있어요.'}</p></div></div></section>;
 }
 export function RecordsCalendar({ records, onSave }: { records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean }) {
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });

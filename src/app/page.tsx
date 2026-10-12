@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import RivePlant, { RivePlantState } from './components/RivePlant';
 
 import { DAILY_KEY, localDay, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
 import { displayCareRecommendation, ensureCareHistory } from './daily-cares';
-import { cleanupPhotos, emptyRecord, readRecords, RECORDS_KEY, saveRecord } from './record-store';
-import { StepHeader, ReflectionExtras, RecordsCalendar } from './components/RecordScreens';
+import { cleanupPhotos, emptyRecord, readRecords, recordStorageWarning, RECORDS_KEY, saveRecord } from './record-store';
+import { StepHeader, ReflectionExtras, RecordsCalendar, hasUnsavedDrafts } from './components/RecordScreens';
 import type { CareRecommendation } from './recommend-cares';
 type View = GardenView;
 type PlantState = RivePlantState;
@@ -131,24 +131,36 @@ function GardenScreen({ go, records, onSave }: { go: (v: View) => void; records:
   return <section className="screen garden-history-screen"><TopBar title="나의 기록"/><RecordsCalendar records={records} onSave={onSave}/><BottomNav active="garden" go={go}/></section>;
 }
 
+function storageMessage(error: unknown) {
+    const name = error && typeof error === 'object' && 'name' in error ? error.name : '';
+    if (name === 'QuotaExceededError') return '브라우저 저장 공간이 부족해요. 작성한 글이나 사진을 저장하지 못했어요. 이 화면을 닫기 전에 다시 시도해 주세요.';
+    if (name === 'SecurityError') return '브라우저 설정 때문에 기록 저장소를 사용할 수 없어요. 저장 권한을 확인해 주세요.';
+    if (error instanceof Error && /[가-힣]/.test(error.message)) return error.message;
+    return '기록을 저장하지 못했어요. 작성 중인 내용을 확인하고 다시 시도해 주세요.';
+}
+
 export default function HomePage() {
   const [view, setView] = useState<View>('onboarding');
   const [daily, setDaily] = useState<DailyCheckin | null>(null);
   const dailyRef = useRef<DailyCheckin | null>(null);
   const viewRef = useRef<View>('onboarding');
   const [records, setRecords] = useState<DailyCheckin[]>([]);
-  const [saveError, setSaveError] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [completedCare, setCompletedCare] = useState<string | null>(null);
 
-  const readToday = () => {
+  const readToday = useCallback(() => {
     try {
       const all = readRecords();
       setRecords(all);
+      setSaveError(recordStorageWarning());
       const record = all.find(r => r.date === localDay()) ?? null;
       if (!record || !record.answers.every(Boolean) || record.careRecommendations?.some(entry => entry.date === record.date)) return record;
-      return saveRecord({ ...record, careRecommendations: ensureCareHistory(record.date, record.answers, record.careRecommendations) });
-    } catch { setSaveError(true); return null; }
-  };
+      const upgraded = { ...record, careRecommendations: ensureCareHistory(record.date, record.answers, record.careRecommendations) };
+      if (recordStorageWarning()) return upgraded;
+      try { return saveRecord(upgraded); }
+      catch (error) { setSaveError(storageMessage(error)); return upgraded; }
+    } catch (error) { setSaveError(storageMessage(error)); return dailyRef.current?.date === localDay() ? dailyRef.current : null; }
+  }, []);
   const updateDaily = (value: DailyCheckin | null) => {
     dailyRef.current = value;
     setDaily(value);
@@ -171,10 +183,32 @@ export default function HomePage() {
       const saved = saveRecord(record);
       setRecords(readRecords());
       if (saved.date === localDay()) updateDaily(saved);
-      setSaveError(false);
+      setSaveError('');
       return true;
-    } catch { setSaveError(true); return false; }
+    } catch (error) { setSaveError(storageMessage(error)); return false; }
   };
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    let frame = 0;
+    const resize = () => {
+      document.documentElement.style.setProperty('--app-viewport-height', viewport.height + 'px');
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (document.activeElement instanceof HTMLTextAreaElement) document.activeElement.scrollIntoView({ block: 'nearest' });
+      });
+    };
+    resize();
+    viewport.addEventListener('resize', resize);
+    document.addEventListener('focusin', resize);
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener('resize', resize);
+      document.removeEventListener('focusin', resize);
+      document.documentElement.style.removeProperty('--app-viewport-height');
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -192,7 +226,7 @@ export default function HomePage() {
       setView(next);
       setCompletedCare(null);
     };
-    queueMicrotask(() => { sync(true); void cleanupPhotos().catch(() => setSaveError(true)); });
+    queueMicrotask(() => { sync(true); void cleanupPhotos().catch(error => { if (active) setSaveError(storageMessage(error)); }); });
     const onBack = () => sync();
     const onResume = () => { if (document.visibilityState === 'visible') sync(); };
     const onStorage = (event: StorageEvent) => {
@@ -200,9 +234,13 @@ export default function HomePage() {
       dailyRef.current = null;
       sync();
     };
+    let observedDay = localDay();
     const timer = window.setInterval(() => {
-      if (dailyRef.current && dailyRef.current.date !== localDay()) sync();
+      const day = localDay();
+      if (observedDay !== day) { observedDay = day; sync(); }
     }, 30000);
+    const warnDraft = (event: BeforeUnloadEvent) => { if (hasUnsavedDrafts()) { event.preventDefault(); event.returnValue = ''; } };
+    window.addEventListener('beforeunload', warnDraft);
     window.addEventListener('popstate', onBack);
     window.addEventListener('hashchange', onBack);
     window.addEventListener('pageshow', onBack);
@@ -211,13 +249,14 @@ export default function HomePage() {
     return () => {
       active = false;
       clearInterval(timer);
+      window.removeEventListener('beforeunload', warnDraft);
       window.removeEventListener('popstate', onBack);
       window.removeEventListener('hashchange', onBack);
       window.removeEventListener('pageshow', onBack);
       window.removeEventListener('storage', onStorage);
       document.removeEventListener('visibilitychange', onResume);
     };
-  }, []);
+  }, [readToday]);
 
   const startCare = (state: PlantState, answers: string[], note: string) => {
     const existing = readToday();
@@ -253,7 +292,7 @@ export default function HomePage() {
 
   return <main className="app-shell"><div className="phone-frame">
     <>
-      {saveError && <p role="status" style={{ padding: 16 }}>이 브라우저에 기록을 저장하지 못했어요. 이 화면을 닫으면 기록이 사라질 수 있어요.</p>}
+      {saveError && <p role="status" className="storage-status">{saveError}</p>}
       {view === 'onboarding' && <Onboarding start={goHome}/>}
       {view === 'home' && <HomeScreen state={plantState} go={go} recorded={!!daily?.answers.every(Boolean)} completedCount={completedCount} resume={daily?.stage}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
