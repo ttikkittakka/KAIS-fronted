@@ -319,3 +319,38 @@ button:disabled { cursor: default; }
   }
   .phone-frame { height: 100%; padding-top: env(safe-area-inset-top); }
 }
+
+
+/* Small onboarding refinements: keep the original sprout, palette and composition. */
+.onboarding-visual .plant-art {
+  width: 254px;
+  top: auto;
+  bottom: 16px;
+}
+.onboarding-visual::after { content: none; }
+/* The 500px artboard includes transparent space below the pot (bottom at 81.6%).
+   Anchor the shadow inside the plant so it scales and arrives with the character. */
+.onboarding-visual .plant-art::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 49%;
+  top: 81.6%;
+  width: 40%;
+  height: 3%;
+  transform: translate(-50%, -25%);
+  border-radius: 50%;
+  background: rgba(132, 123, 105, .18);
+  filter: blur(3px);
+  pointer-events: none;
+}
+.onboarding-copy h1 { line-height: 1.45; }
+.onboarding-action {
+  padding-top: 24px;
+  margin-bottom: 3.5dvh;
+}
+.onboarding-action .primary-button { box-shadow: 0 8px 20px rgba(63, 93, 70, .16); }
+@media (max-height: 700px) {
+  .onboarding-visual { flex-basis: 38%; min-height: 200px; }
+  .onboarding-visual .plant-art { width: 238px; bottom: 12px; }
+}
