@@ -202,13 +202,27 @@ button { border: 0; background: none; color: inherit; cursor: pointer; }
 }
 .garden-scene::before {
   width: 220px; height: 220px; top: -70px; right: -45px;
-  background: radial-gradient(circle, rgba(242,217,154,.52) 0%, rgba(242,217,154,.22) 45%, transparent 75%);
+  background: radial-gradient(circle, rgba(242,207,122,.68) 0%, rgba(242,217,154,.42) 25%, rgba(242,217,154,.18) 48%, rgba(242,217,154,0) 75%);
   filter: blur(24px);
 }
-.scene-date { width: 124px; background: #fff; }
+.home-screen .top-bar h1 { font-size: 20px; text-align: center; }
+.home-screen .scene-date {
+  width: 124px;
+  height: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  font-size: 12px;
+  line-height: 15px;
+}
 .home-screen .icon-button { border: 0; background: transparent; color: var(--deep-green); font-size: 19px; }
 .soil-floor { background: #cbd8bb; }
 .hero-plant { bottom: 43px; width: 275px; }
+/* Hill crest: 140 - 56 = 84px above the scene bottom.
+   The unchanged 275px artboard has 18.4% transparent space below the pot. */
+.home-screen .hero-plant { bottom: calc(84px - 275px * .184); }
+.home-screen .soil-floor { z-index: 1; }
 .today-copy h2 { font-weight: 400; }
 .home-cta { width: calc(100% - 26px); margin: 0 13px; }
 .gentle-note { margin: 14px 13px 0; }
