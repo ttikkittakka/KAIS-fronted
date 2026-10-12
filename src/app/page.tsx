@@ -3,15 +3,16 @@
 import { useEffect, useRef, useState } from 'react';
 import RivePlant, { RivePlantState } from './components/RivePlant';
 
-import { DAILY_KEY, localDay, parseDaily, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
+import { DAILY_KEY, localDay, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
-import { displayCareRecommendation, ensureCareHistory, readCareHistory } from './daily-cares';
+import { displayCareRecommendation, ensureCareHistory } from './daily-cares';
+import { cleanupPhotos, emptyRecord, readRecords, RECORDS_KEY, saveRecord } from './record-store';
+import { StepHeader, ReflectionExtras, RecordsCalendar } from './components/RecordScreens';
 import type { CareRecommendation } from './recommend-cares';
 type View = GardenView;
 type PlantState = RivePlantState;
 type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow';
 
-const CALENDAR = [null, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, null, null, null];
 
 function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
@@ -50,50 +51,46 @@ function Onboarding({ start }: { start: () => void }) {
   </section>;
 }
 
-function HomeScreen({ state, go, recorded, completedCount }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number }) {
+function HomeScreen({ state, go, recorded, completedCount, resume }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View }) {
   return <section className="screen home-screen">
     <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정"><span aria-hidden="true">⚙</span></button>}/>
-    <div className="garden-scene"><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">10월 1일 · 목요일</span><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/></div>
+    <div className="garden-scene"><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</span><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/></div>
     <div className="today-copy"><span className="eyebrow">오늘의 모습</span><h2>{state === 'low' ? '조금 지쳐 보여요.' : '편안하게 기다리고 있어요.'}</h2><p>{state === 'low' ? '오늘은 천천히 가도 괜찮아요.' : '오늘의 나를 가볍게 살펴볼까요?'}</p></div>
-    <button className="primary-button home-cta" onClick={() => go(recorded ? 'care' : 'checkin')}><span className="soft-icon"><Icon name="note" size={18}/></span>{!recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
+    <button className="primary-button home-cta" onClick={() => go(resume ?? (recorded ? 'care' : 'checkin'))}><span className="soft-icon"><Icon name="note" size={18}/></span>{resume && resume !== 'care' ? '오늘의 나 기록 이어하기' : !recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
     {recorded && <p className="home-care-status">오늘의 작은 돌봄 {completedCount}/3 완료</p>}
     <div className="gentle-note"><span>✦</span><p><strong>다시 찾아와줘서 반가워요.</strong><br/>쉬어간 시간도 이 정원에 포근히 남아 있어요.</p></div>
-    <BottomNav active="home" go={go}/>
+    <div className="daily-value"><span>오늘의 가치</span><strong>자기 존중</strong></div><BottomNav active="home" go={go}/>
   </section>;
 }
 
-function CheckinScreen({ onBack, onDone, initialRecord }: { onBack: () => void; onDone: (state: PlantState, answers: string[], note: string) => void; initialRecord: DailyCheckin | null }) {
-  const [step, setStep] = useState(0);
+function CheckinScreen({ onBack, onDone, onDraft, initialRecord }: { onBack: () => void; onDone: (state: PlantState, answers: string[], note: string) => void; onDraft: (answers: string[]) => boolean; initialRecord: DailyCheckin | null }) {
+  const [step, setStep] = useState(() => { const i = normalizeAnswers(initialRecord?.answers).findIndex(a => !a); return i < 0 ? 0 : i; });
   const [answers, setAnswers] = useState<Record<number, string | undefined>>(() => Object.fromEntries(normalizeAnswers(initialRecord?.answers).map((answer, index) => [index, answer])));
-  const [note, setNote] = useState(initialRecord?.note ?? '');
-  const isNote = step === QUESTIONS.length;
-  const question = QUESTIONS[Math.min(step, QUESTIONS.length - 1)];
+  const question = QUESTIONS[step];
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   const choose = (option: string) => {
     if (timer.current) return;
-    setAnswers((old) => ({ ...old, [step]: option }));
+    const next = { ...answers, [step]: option };
+    const values = QUESTIONS.map((_, i) => next[i] ?? '');
+    if (initialRecord?.answers.every(Boolean) && initialRecord?.stage !== 'checkin') return;
+    if (!onDraft(values)) return;
+    setAnswers(next);
     timer.current = setTimeout(() => {
       timer.current = null;
-      setStep(step + 1);
+      if (step === QUESTIONS.length - 1) onDone(plantStateForAnswers(values), values, initialRecord?.note ?? '');
+      else setStep(step + 1);
     }, 220);
   };
-  const finish = () => {
-    const values = QUESTIONS.map((_, i) => answers[i]);
-    if (values.some(value => !value)) return;
-    const completed = values as string[];
-    onDone(plantStateForAnswers(completed), completed, note);
-  };
+  const back = () => { if (timer.current) { clearTimeout(timer.current); timer.current = null; } if (step > 0) setStep(step - 1); else onBack(); };
   return <section className="screen checkin-screen">
-    <TopBar title="오늘의 나" onBack={step > 0 ? () => setStep((old) => old - 1) : onBack}/>
-    <div className="progress-head"><span>{Math.min(step + 1, 4)} / 4</span><div className="progress-track"><i style={{ width: `${Math.min(((step + 1) / 4) * 100, 100)}%` }}/></div><small>약 30초</small></div>
-    {!isNote ? <div className="question-panel" key={step}>
-      <div className={`question-mark${step === 0 ? ' question-mark--sleep' : ''}`}>{['☾','◐','○','♡'][step]}</div><p className={`question-kicker${step === 0 ? ' question-kicker--sleep' : ''}`}>오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map((line) => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
-      <div className="choice-list">{question.options.map((option, index) => <button key={option.value} className={answers[step] === option.value ? 'selected' : ''} onClick={() => choose(option.value)}><span className="choice-dot">{index + 1}</span><strong>{option.label}</strong>{answers[step] === option.value && <Icon name="check" size={18}/>}</button>)}</div>
-    </div> : <div className="question-panel note-panel">
-      <div className="question-mark">✎</div><p className="question-kicker">마지막으로, 선택 사항이에요</p><h2>오늘을 한마디로<br/>남겨볼까요?</h2><p className="question-helper">잘 정리된 문장이 아니어도 괜찮아요.</p>
-      <textarea value={note} onChange={(e) => setNote(e.target.value)} maxLength={120} placeholder="마음에 남은 순간을 적어보세요."/><span className="text-count">{note.length} / 120</span><button className="primary-button" onClick={finish}>오늘의 나를 살펴봤어요</button><button className="text-button" onClick={finish}>건너뛰어도 괜찮아요</button>
-    </div>}
+    <TopBar title="오늘의 나" onBack={back}/><StepHeader step={1}/>
+    <div className="progress-head"><span>{step + 1} / 4</span><div className="progress-track"><i style={{ width: ((step + 1) / 4) * 100 + '%' }}/></div><small>질문 진행</small></div>
+    <div className="question-panel" key={step}>
+      <div className={'question-mark' + (step === 0 ? ' question-mark--sleep' : '')}>{['☾','◐','○','♡'][step]}</div><p className={'question-kicker' + (step === 0 ? ' question-kicker--sleep' : '')}>오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map(line => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
+      <div className="choice-list">{question.options.map((option, index) => <button key={option.value} className={answers[step] === option.value ? 'selected' : ''} disabled={!!initialRecord?.answers.every(Boolean) && initialRecord?.stage !== 'checkin'} onClick={() => choose(option.value)}><span className="choice-dot">{index + 1}</span><strong>{option.label}</strong>{answers[step] === option.value && <Icon name="check" size={18}/>}</button>)}</div>
+      {initialRecord?.answers.every(Boolean) && initialRecord?.stage !== 'checkin' && <div className="step-actions"><p className="privacy-note">추천 행동과 연결된 돌아보기 응답은 그대로 보관해요.</p><button className="primary-button" onClick={() => onDone(plantStateForAnswers(initialRecord.answers), initialRecord.answers, initialRecord.note)}>기록 이어가기</button></div>}
+    </div>
   </section>;
 }
 
@@ -106,7 +103,7 @@ function CareScreen({ state, recommendation, completed, completedIds, onComplete
   const returnToList = () => { setSelected(null); setStarted(null); onShowList(); };
   if (completed) return <section className="screen completion-screen">
     <div className="completion-scene"><span className="droplet d1"/><span className="droplet d2"/><span className="spark s1">✦</span><span className="spark s2">✦</span><Plant state={state} celebrate className="plant-art lifted"/></div>
-    <div className="completion-copy"><span className="completion-check"><Icon name="check" size={22}/></span><p className="eyebrow">작은 변화가 도착했어요</p><h1>{allCaredFor ? '오늘의 작은 돌봄을 모두 완료했어요! 🌼' : '작은 돌봄을 완료했어요! 🌷'}</h1><p>{allCaredFor ? '오늘도 나를 돌보는 시간을 만들어 주었네요.' : '오늘도 나를 위해 소중한 시간을 내주었네요.'}</p><p className="completion-status">오늘 {completedCount}/3 완료</p></div>
+    <div className="completion-copy"><span className="completion-check"><Icon name="check" size={22}/></span><p className="eyebrow">작은 변화가 도착했어요</p><h1>{allCaredFor ? '오늘의 작은 돌봄을 모두 완료했어요! 🌼' : '작은 돌봄을 완료했어요! 🌷'}</h1><p>{allCaredFor ? '오늘도 나를 돌보는 시간을 만들어 주었네요.' : '오늘도 나를 위해 소중한 시간을 내주었네요.'}</p><p className="kind-message">오늘의 작은 쉼도 소중한 돌봄이에요.</p><p className="completion-status">오늘 {completedCount}/3 완료</p></div>
     <div className="completion-actions"><button className="primary-button" onClick={allCaredFor ? goHome : returnToList}>{allCaredFor ? '정원에서 변화 보기' : '다른 작은 돌봄 이어하기'}</button><button className="secondary-button" onClick={allCaredFor ? returnToList : goHome}>{allCaredFor ? '오늘의 돌봄 다시보기' : '정원에서 변화 보기'}</button></div>
   </section>;
   if (selectedCare) {
@@ -130,19 +127,8 @@ function CareScreen({ state, recommendation, completed, completedIds, onComplete
   </section>;
 }
 
-function MiniPlant() {
-  return <Plant className="calendar-rive" />;
-}
-
-function GardenScreen({ state, go }: { state: PlantState; go: (v: View) => void }) {
-  const entries = [['9/13', '☁', '하늘을 봤어요'], ['9/12', '◌', '물을 마셨어요'], ['9/11', '♧', '천천히 산책했어요'], ['9/10', '♡', '다시 찾아왔어요']];
-  return <section className="screen garden-history-screen">
-    <TopBar title="나의 정원" action={<span className="month-tag">10월</span>}/>
-    <div className="calendar-card"><div className="calendar-head"><div><span className="eyebrow">OCTOBER GARDEN</span><h2>2026년 10월</h2></div><span>‹　›</span></div><div className="week-row">{['월','화','수','목','금','토','일'].map((d) => <span key={d}>{d}</span>)}</div><div className="calendar-grid">{CALENDAR.map((day, index) => <div key={`${day}-${index}`} className={day === 1 ? 'today' : ''}>{day && <><small>{day}</small>{[1,3,5,8,10,12,13,16,19,22,25,28,31].includes(day) && <MiniPlant/>}</>}</div>)}</div><p className="calendar-note">기록하지 않은 날도 정원은 조용히 기다려요.</p></div>
-    <section className="week-garden"><div className="week-plant"><Plant state={state} className="plant-art"/></div><div><span className="eyebrow">이번 주의 식물</span><h2>조금씩 나를<br/>돌봤어요.</h2><p>작은 순간들이 모여<br/>새 잎이 되었어요.</p></div></section>
-    <section className="memory-timeline"><div className="section-heading"><span className="eyebrow">작은 돌봄의 흔적</span><h2>최근의 기억</h2></div>{entries.map((entry, index) => <article key={entry[0]}><time>{entry[0]}</time><span className="memory-icon">{entry[1]}</span><p>{entry[2]}</p>{index < entries.length - 1 && <i/>}</article>)}</section>
-    <BottomNav active="garden" go={go}/>
-  </section>;
+function GardenScreen({ go, records, onSave }: { go: (v: View) => void; records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean }) {
+  return <section className="screen garden-history-screen"><TopBar title="나의 기록"/><RecordsCalendar records={records} onSave={onSave}/><BottomNav active="garden" go={go}/></section>;
 }
 
 export default function HomePage() {
@@ -150,20 +136,18 @@ export default function HomePage() {
   const [daily, setDaily] = useState<DailyCheckin | null>(null);
   const dailyRef = useRef<DailyCheckin | null>(null);
   const viewRef = useRef<View>('onboarding');
+  const [records, setRecords] = useState<DailyCheckin[]>([]);
   const [saveError, setSaveError] = useState(false);
   const [completedCare, setCompletedCare] = useState<string | null>(null);
 
   const readToday = () => {
     try {
-      const record = parseDaily(localStorage.getItem(DAILY_KEY));
-      if (!record || record.careRecommendations?.some(entry => entry.date === record.date)) return record;
-      // Upgrade a previously completed v1 record once, outside the render path.
-      const upgraded = { ...record, careRecommendations: ensureCareHistory(record.date, record.answers, record.careRecommendations) };
-      try { localStorage.setItem(DAILY_KEY, JSON.stringify(upgraded)); }
-      catch { setSaveError(true); } // Deterministic fallback remains usable if storage is full.
-      return upgraded;
-    }
-    catch { return null; }
+      const all = readRecords();
+      setRecords(all);
+      const record = all.find(r => r.date === localDay()) ?? null;
+      if (!record || !record.answers.every(Boolean) || record.careRecommendations?.some(entry => entry.date === record.date)) return record;
+      return saveRecord({ ...record, careRecommendations: ensureCareHistory(record.date, record.answers, record.careRecommendations) });
+    } catch { setSaveError(true); return null; }
   };
   const updateDaily = (value: DailyCheckin | null) => {
     dailyRef.current = value;
@@ -184,8 +168,9 @@ export default function HomePage() {
   };
   const save = (record: DailyCheckin) => {
     try {
-      localStorage.setItem(DAILY_KEY, JSON.stringify(record));
-      updateDaily(record);
+      const saved = saveRecord(record);
+      setRecords(readRecords());
+      if (saved.date === localDay()) updateDaily(saved);
       setSaveError(false);
       return true;
     } catch { setSaveError(true); return false; }
@@ -207,11 +192,11 @@ export default function HomePage() {
       setView(next);
       setCompletedCare(null);
     };
-    queueMicrotask(() => sync(true));
+    queueMicrotask(() => { sync(true); void cleanupPhotos().catch(() => setSaveError(true)); });
     const onBack = () => sync();
     const onResume = () => { if (document.visibilityState === 'visible') sync(); };
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== DAILY_KEY && event.key !== null) return;
+      if (event.key !== DAILY_KEY && event.key !== RECORDS_KEY && event.key !== null) return;
       dailyRef.current = null;
       sync();
     };
@@ -236,17 +221,22 @@ export default function HomePage() {
 
   const startCare = (state: PlantState, answers: string[], note: string) => {
     const existing = readToday();
-    let history = existing?.careRecommendations ?? [];
-    // Yesterday's answers do not unlock care, but its recommendation history survives.
-    if (!existing) {
-      try { history = readCareHistory(localStorage.getItem(DAILY_KEY)); }
-      catch { /* The existing save path reports unavailable storage. */ }
-    }
-    const record: DailyCheckin = {
-      version: 1, date: localDay(), answers, note, plantState: state, completedCareIds: existing?.completedCareIds ?? [],
-    };
+    if (existing?.stage === 'care') { show('care', true, existing); return; }
+    const history = records.flatMap(r => r.careRecommendations ?? []);
+    const record: DailyCheckin = { ...(existing ?? emptyRecord()), answers, note, plantState: state, stage: 'photo' };
     record.careRecommendations = ensureCareHistory(record.date, answers, history);
-    if (save(record)) show('care', true, record);
+    if (save(record)) show('photo', false, record);
+  };
+  const saveDraft = (answers: string[]) => {
+    const existing = readToday() ?? emptyRecord();
+    if (existing.stage === 'care') return true;
+    return save({ ...existing, answers, plantState: plantStateForAnswers(answers), stage: answers.every(Boolean) ? 'photo' : 'checkin', careRecommendations: answers.every(Boolean) ? ensureCareHistory(existing.date, answers, records.flatMap(r => r.careRecommendations ?? [])) : existing.careRecommendations });
+  };
+  const advance = (stage: 'growth' | 'care') => {
+    const record = readToday();
+    if (!record) { show('checkin'); return; }
+    const next = { ...record, stage };
+    if (save(next)) show(stage, false, next);
   };
   const completeCare = (id: string) => {
     const record = readToday();
@@ -265,10 +255,11 @@ export default function HomePage() {
     <>
       {saveError && <p role="status" style={{ padding: 16 }}>이 브라우저에 기록을 저장하지 못했어요. 이 화면을 닫으면 기록이 사라질 수 있어요.</p>}
       {view === 'onboarding' && <Onboarding start={goHome}/>}
-      {view === 'home' && <HomeScreen state={plantState} go={go} recorded={!!daily} completedCount={completedCount}/>}
-      {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily}/>}
+      {view === 'home' && <HomeScreen state={plantState} go={go} recorded={!!daily?.answers.every(Boolean)} completedCount={completedCount} resume={daily?.stage}/>}
+      {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
+      {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
-      {view === 'garden' && <GardenScreen state={plantState} go={go}/>}
+      {view === 'garden' && <GardenScreen go={go} records={records} onSave={save}/>}
     </>
   </div></main>;
 }

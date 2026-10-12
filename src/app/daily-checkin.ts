@@ -1,9 +1,15 @@
 import { isCareId } from './cares';
 import { parseCareHistory, type DailyCareRecommendation } from './daily-cares';
 
-export type GardenView = 'onboarding' | 'home' | 'checkin' | 'care' | 'garden';
+export type GardenView = 'onboarding' | 'home' | 'checkin' | 'care' | 'garden' | 'photo' | 'growth';
 export type DailyCheckin = {
   version: 1;
+  userId?: string;
+  photoId?: string;
+  photoComment?: string;
+  stage?: 'checkin' | 'photo' | 'growth' | 'care';
+  createdAt?: string;
+  updatedAt?: string;
   date: string;
   answers: string[];
   note: string;
@@ -33,6 +39,7 @@ export function parseDaily(raw: string | null, date = localDay()): DailyCheckin 
 }
 
 export function resolveView(view: string, daily: DailyCheckin | null): GardenView {
-  if (view === 'care' && (!daily || daily.date !== localDay())) return 'checkin';
-  return ['onboarding', 'home', 'checkin', 'care', 'garden'].includes(view) ? view as GardenView : 'home';
+  if (['care', 'photo', 'growth'].includes(view) && (!daily || daily.date !== localDay() || !daily.answers.every(Boolean) || daily.answers.length !== 4)) return 'checkin';
+  if (view === 'care' && daily?.stage && daily.stage !== 'care') return daily.stage;
+  return ['onboarding', 'home', 'checkin', 'care', 'garden', 'photo', 'growth'].includes(view) ? view as GardenView : 'home';
 }

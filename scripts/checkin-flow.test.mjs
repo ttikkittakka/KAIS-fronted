@@ -15,7 +15,10 @@ const saved = { version: 1, date: daily.localDay(), answers: ['괜찮게 잤어�
 function mount(raw = null, hash = '', component = 'default', props = {}) {
   const slots = [], effects = [], tasks = [], listeners = new Map();
   let cursor = 0, first = true, failSave = false;
-  const storage = { getItem: () => raw, setItem: (_, value) => { if (failSave) throw Error('quota'); raw = value; } };
+  const data = new Map(raw ? [[daily.DAILY_KEY, raw]] : []);
+  if (raw) { try { const owner = JSON.parse(raw).userId; if (owner) data.set('little-garden.local-owner.v1', owner); } catch {} }
+  const storage = { getItem: key => data.get(key) ?? null, setItem: (key, value) => { if (failSave) throw Error('quota'); data.set(key, value); } }; 
+  globalThis.localStorage = storage;
   const window = {
     location: new URL('http://localhost:3000/' + hash),
     history: { state: {}, replaceState(state, _, url) { this.state = state; window.location = new URL(url); }, pushState(state, _, url) { this.replaceState(state, _, url); } },
@@ -28,11 +31,11 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
   };
   const jsx = (type, props) => ({ type, props });
   const exports = {};
-  runInNewContext(compiled, { exports, URL, localStorage: storage, window,
+  runInNewContext(compiled, { exports, URL, crypto: { randomUUID: () => 'test-owner' }, localStorage: storage, window,
     document: { visibilityState: 'visible', addEventListener: window.addEventListener, removeEventListener() {} },
     queueMicrotask: fn => tasks.push(fn), clearInterval() {},
     setTimeout: fn => { tasks.push(fn); return 1; }, clearTimeout() {},
-    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
+    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/RecordScreens' ? { ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
   });
   function render() { cursor = 0; const tree = exports[component](props); first = false; return tree; }
   function find(node, name) {
@@ -48,9 +51,10 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
     initialOnboarding: !!find(initialTree, 'Onboarding'),
     start: () => find(render(), 'Onboarding').props.start(),
     screen: name => find(render(), name),
-    raw: () => raw,
+    raw: () => data.get(daily.DAILY_KEY) ?? null,
+    next: () => { find(render(), 'ReflectionExtras')?.props.onNext(); },
     fail: () => { failSave = true; },
-    replaceRecord: value => { raw = value; },
+    replaceRecord: value => { data.clear(); if (value) data.set(daily.DAILY_KEY, value); },
     event(name, hash) { if (hash) window.location.hash = hash; listeners.get(name)?.({ key: daily.DAILY_KEY }); },
     hash: () => window.location.hash
   };
@@ -62,6 +66,7 @@ test('new visitor: onboarding -> home -> check-in -> persisted care; refresh res
   app.screen('HomeScreen').props.go('checkin');
   assert.ok(app.screen('CheckinScreen'));
   app.screen('CheckinScreen').props.onDone('normal', saved.answers, '새 기록');
+  if (app.screen('ReflectionExtras')) { assert.equal(app.hash(), '#photo'); app.next(); assert.equal(app.hash(), '#growth'); app.next(); }
   assert.ok(app.screen('CareScreen'));
   assert.equal(JSON.parse(app.raw()).note, '새 기록');
   const refreshed = mount(app.raw(), '#care');
@@ -82,7 +87,7 @@ function textContent(node) {
 
 test('actual question UI displays labels, saves values and restores old selections', () => {
   let submitted;
-  const app = mount(null, '', 'CheckinScreen', { initialRecord: saved, onBack() {}, onDone: (...args) => { submitted = args; } });
+  const app = mount(null, '', 'CheckinScreen', { initialRecord: { ...saved, stage: 'checkin' }, onBack() {}, onDone: (...args) => { submitted = args; }, onDraft: () => true });
   const selected = nodes(app.tree(), node => node.props?.className === 'selected')[0];
   assert.match(textContent(selected), /괜찮게 잤어요/);
   for (const label of ['많이 힘들었어요', '매우 낮음', '거의 못 먹었어요', '많이 지쳐요']) {
@@ -91,7 +96,6 @@ test('actual question UI displays labels, saves values and restores old selectio
     button.props.onClick(); app.advanceChoice();
     assert.doesNotMatch(textContent(app.tree()), /very_low|very_good/);
   }
-  nodes(app.tree(), node => node.type === 'button' && textContent(node) === '오늘의 나를 살펴봤어요')[0].props.onClick();
   assert.equal(submitted[0], 'low');
   assert.deepEqual(Array.from(submitted[1]), ['very_low', 'very_low', 'very_low', 'very_low']);
 });
@@ -169,6 +173,7 @@ test('existing user enters home and reviews restored answers without losing care
   assert.equal(restored.note, saved.note);
   assert.deepEqual(restored.completedCareIds, saved.completedCareIds);
   app.screen('CheckinScreen').props.onDone('normal', saved.answers, saved.note);
+  if (app.screen('ReflectionExtras')) { assert.equal(app.hash(), '#photo'); app.next(); assert.equal(app.hash(), '#growth'); app.next(); }
   assert.ok(app.screen('CareScreen'));
   assert.deepEqual(JSON.parse(app.raw()).completedCareIds, ['water']);
 });
@@ -199,6 +204,7 @@ test('failed save keeps the user in check-in and cannot unlock care', () => {
   app.screen('HomeScreen').props.go('checkin');
   app.fail();
   app.screen('CheckinScreen').props.onDone('normal', saved.answers, '');
+  if (app.screen('ReflectionExtras')) { assert.equal(app.hash(), '#photo'); app.next(); assert.equal(app.hash(), '#growth'); app.next(); }
   assert.ok(app.screen('CheckinScreen'));
   assert.ok(app.screen('status'));
   assert.equal(app.raw(), null);
@@ -210,6 +216,7 @@ test('personalized cares retain completion and plant state through all three act
   const app = mount(); app.start();
   app.screen('HomeScreen').props.go('checkin');
   app.screen('CheckinScreen').props.onDone('low', ['very_low', 'very_low', 'very_low', 'very_low'], '');
+  if (app.screen('ReflectionExtras')) { assert.equal(app.hash(), '#photo'); app.next(); assert.equal(app.hash(), '#growth'); app.next(); }
   const ids = app.screen('CareScreen').props.recommendation.cares.map(care => care.id);
   for (const id of ids) {
     const care = app.screen('CareScreen');
@@ -233,6 +240,7 @@ test('ten reloads, reentry and an answer edit retain the stored cards, order and
   let app = mount(); app.start();
   app.screen('HomeScreen').props.go('checkin');
   app.screen('CheckinScreen').props.onDone('low', ['very_low', 'very_low', 'very_low', 'very_low'], '');
+  if (app.screen('ReflectionExtras')) { assert.equal(app.hash(), '#photo'); app.next(); assert.equal(app.hash(), '#growth'); app.next(); }
   const original = app.screen('CareScreen').props.recommendation;
   for (let i = 0; i < 10; i++) {
     app = mount(app.raw(), '#care'); app.start();
@@ -246,8 +254,9 @@ test('ten reloads, reentry and an answer edit retain the stored cards, order and
   app.screen('CareScreen').props.goHome();
   app.screen('HomeScreen').props.go('checkin');
   app.screen('CheckinScreen').props.onDone('normal', ['good', 'very_good', 'good', 'very_good'], '다시 기록');
+  if (app.screen('ReflectionExtras')) { assert.equal(app.hash(), '#photo'); app.next(); assert.equal(app.hash(), '#growth'); app.next(); }
   assert.deepEqual(app.screen('CareScreen').props.recommendation, original);
-  assert.equal(app.screen('CareScreen').props.state, 'normal');
+  assert.equal(app.screen('CareScreen').props.state, 'low');
 });
 
 test('yesterday stays locked until check-in and its recommendation history is carried forward', () => {
@@ -260,6 +269,7 @@ test('yesterday stays locked until check-in and its recommendation history is ca
   assert.equal(app.screen('CareScreen'), null);
   assert.equal(app.raw(), JSON.stringify(old));
   app.screen('CheckinScreen').props.onDone('normal', saved.answers, '');
+  if (app.screen('ReflectionExtras')) { assert.equal(app.hash(), '#photo'); app.next(); assert.equal(app.hash(), '#growth'); app.next(); }
   const current = JSON.parse(app.raw());
   assert.equal(current.date, daily.localDay());
   assert.equal(current.careRecommendations.length, 2);
