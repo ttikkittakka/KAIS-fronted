@@ -59,7 +59,7 @@ function HomeScreen({ state, go, recorded, completedCount, resume }: { state: Pl
     <button className="primary-button home-cta" onClick={() => go(resume ?? (recorded ? 'care' : 'checkin'))}><span className="soft-icon"><Icon name="note" size={18}/></span>{resume && resume !== 'care' ? '오늘의 나 기록 이어하기' : !recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
     {recorded && <p className="home-care-status">오늘의 작은 돌봄 {completedCount}/3 완료</p>}
     <div className="gentle-note"><span>✦</span><p><strong>다시 찾아와줘서 반가워요.</strong><br/>쉬어간 시간도 이 정원에 포근히 남아 있어요.</p></div>
-    <div className="daily-value"><span>오늘의 가치</span><strong>자기 존중</strong></div><BottomNav active="home" go={go}/>
+    <div className="daily-value"><span>오늘의 가치</span><strong>자기 존중</strong></div>
   </section>;
 }
 
@@ -113,7 +113,7 @@ function CareScreen({ state, recommendation, completed, completedIds, onComplete
       <div className="care-detail-content">
         <div className={`care-icon ${selectedCare.tone}`}><Icon name={selectedCare.icon} size={30}/></div>
         <span className="eyebrow">오늘 나를 위한 작은 시간</span>
-        <h2>{selectedCare.title}</h2><p>{selectedCare.copy}</p><span className="care-detail-meta">{selectedCare.meta}</span>
+        <h2>{selectedCare.title}</h2><p>{selectedCare.instruction ?? selectedCare.copy}</p>{selectedCare.example && <p>예: {selectedCare.example}</p>}{selectedCare.helper && <p>{selectedCare.helper}</p>}<span className="care-detail-meta">{selectedCare.meta}</span>
         {alreadyCompleted && <span className="care-detail-done"><Icon name="check" size={16}/> 완료했어요</span>}
       </div>
       <div className="care-detail-actions">{alreadyCompleted ? <button className="primary-button" onClick={returnToList}>목록으로 돌아가기</button> : <button className="primary-button" onClick={() => started === selectedCare.id ? onComplete(selectedCare.id) : setStarted(selectedCare.id)}>{started === selectedCare.id ? '완료했어요' : '해볼게요'}</button>}</div>
@@ -127,8 +127,8 @@ function CareScreen({ state, recommendation, completed, completedIds, onComplete
   </section>;
 }
 
-function GardenScreen({ go, records, onSave }: { go: (v: View) => void; records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean }) {
-  return <section className="screen garden-history-screen"><TopBar title="나의 기록"/><RecordsCalendar records={records} onSave={onSave}/><BottomNav active="garden" go={go}/></section>;
+function GardenScreen({ records, onSave }: { records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean }) {
+  return <section className="screen garden-history-screen"><TopBar title="나의 기록"/><RecordsCalendar records={records} onSave={onSave}/></section>;
 }
 
 function storageMessage(error: unknown) {
@@ -192,7 +192,11 @@ export default function HomePage() {
     const viewport = window.visualViewport;
     if (!viewport) return;
     let frame = 0;
+    const reposition = () => {
+      document.documentElement.style.setProperty('--app-viewport-top', viewport.offsetTop + 'px');
+    };
     const resize = () => {
+      reposition();
       document.documentElement.style.setProperty('--app-viewport-height', viewport.height + 'px');
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
@@ -201,12 +205,15 @@ export default function HomePage() {
     };
     resize();
     viewport.addEventListener('resize', resize);
+    viewport.addEventListener('scroll', reposition);
     document.addEventListener('focusin', resize);
     return () => {
       cancelAnimationFrame(frame);
       viewport.removeEventListener('resize', resize);
+      viewport.removeEventListener('scroll', reposition);
       document.removeEventListener('focusin', resize);
       document.documentElement.style.removeProperty('--app-viewport-height');
+      document.documentElement.style.removeProperty('--app-viewport-top');
     };
   }, []);
 
@@ -298,7 +305,8 @@ export default function HomePage() {
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
-      {view === 'garden' && <GardenScreen go={go} records={records} onSave={save}/>}
+      {view === 'garden' && <GardenScreen records={records} onSave={save}/>}
+      {(view === 'home' || view === 'garden') && <BottomNav active={view} go={go}/>}
     </>
   </div></main>;
 }

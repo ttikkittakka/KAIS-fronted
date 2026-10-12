@@ -154,3 +154,124 @@ npm run build
 # 별도 터미널의 next start --port 3101 실행 후 (UI 테스트 아님):
 node scripts/stability-http-check.mjs http://localhost:3101
 ~~~
+
+
+## 작은 돌봄 카탈로그 v2 개편 (2026-10-13)
+
+활성 미션 30개, 카테고리 5개×6개. 기존 ID 15개 유지 + 새 ID 15개 추가 + 기존 17개 비활성 = 전체 유효 ID 47개다. 기존 32개 원본은 legacy-cares.ts에 그대로 보존한다. 문구/행동이 실질적으로 바뀐 통합 미션에는 새 ID를 쓴다.
+
+| 번호 | 카테고리 | 미션 | 시간 | ID | 처리 |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 몸 돌보기 | 물 몇 모금 | 1분 | water | 기존 ID 유지 |
+| 2 | 몸 돌보기 | 간단한 것 하나 먹기 | 3분 | snack | 기존 ID 유지 |
+| 3 | 몸 돌보기 | 3분만 눈 감기 | 3분 | rest | 기존 ID 유지 |
+| 4 | 몸 돌보기 | 편안한 곳에 기대기 | 2분 | comfortable-lean | 새 ID |
+| 5 | 몸 돌보기 | 마시기 편한 음료 천천히 즐기기 | 3분 | easy-drink | 새 ID |
+| 6 | 몸 돌보기 | 내 몸에 필요한 것 하나 떠올리기 | 1분 | body-need | 새 ID |
+| 7 | 마음 쉬어가기 | 천천히 숨 내쉬기 | 1분 | breathe | 기존 ID 유지 |
+| 8 | 마음 쉬어가기 | 아무것도 하지 않고 2분 | 2분 | pause | 기존 ID 유지 |
+| 9 | 마음 쉬어가기 | 좋아하는 노래 한 곡 | 3분 | music | 기존 ID 유지 |
+| 10 | 마음 쉬어가기 | 휴대폰 잠깐 내려놓기 | 3분 | phone-down | 기존 ID 유지 |
+| 11 | 마음 쉬어가기 | 부드러운 촉감 느끼기 | 1분 | texture | 기존 ID 유지 |
+| 12 | 마음 쉬어가기 | 지금 들리는 소리 세 가지 찾기 | 1분 | three-sounds | 새 ID |
+| 13 | 나를 이해하기 | 기분 한 단어 적기 | 1분 | mood-word | 기존 ID 유지 |
+| 14 | 나를 이해하기 | 지금 필요한 것 하나 골라보기 | 1분 | choose-need | 새 ID |
+| 15 | 나를 이해하기 | 나에게 다정한 한마디 | 1분 | kind-word | 새 ID |
+| 16 | 나를 이해하기 | 오늘 괜찮았던 순간 떠올리기 | 2분 | okay-moment | 새 ID |
+| 17 | 나를 이해하기 | 하기 싫은 마음도 인정하기 | 1분 | accept-reluctance | 새 ID |
+| 18 | 나를 이해하기 | 지금의 나에게 질문 하나 | 2분 | self-question | 새 ID |
+| 19 | 일상에 작은 변화 | 하늘 바라보기 | 2분 | sky | 기존 ID 유지 |
+| 20 | 일상에 작은 변화 | 몸 한 번 펴기 | 2분 | stretch | 기존 ID 유지 |
+| 21 | 일상에 작은 변화 | 어깨 내려놓기 | 1분 | shoulders | 기존 ID 유지 |
+| 22 | 일상에 작은 변화 | 물건 하나만 제자리로 | 1분 | tidy | 기존 ID 유지 |
+| 23 | 일상에 작은 변화 | 빛과 공기 느끼기 | 1분 | light-air | 새 ID |
+| 24 | 일상에 작은 변화 | 잠깐 걷거나 몸 움직이기 | 2분 | gentle-move | 새 ID |
+| 25 | 세상과 연결되기 | 좋아하는 것 하나 바라보기 | 1분 | favorite | 기존 ID 유지 |
+| 26 | 세상과 연결되기 | 짧은 안부 보내기 | 2분 | hello | 기존 ID 유지 |
+| 27 | 세상과 연결되기 | 고마운 사람 한 명 떠올리기 | 1분 | grateful-person | 새 ID |
+| 28 | 세상과 연결되기 | 안심되는 장소 떠올리기 | 1분 | safe-place | 새 ID |
+| 29 | 세상과 연결되기 | 내가 좋아하는 것 하나 적기 | 1분 | favorite-note | 새 ID |
+| 30 | 세상과 연결되기 | 누군가에게 도움 요청하는 말 생각하기 | 2분 | ask-help | 새 ID |
+
+비활성 ID 대응은 콘텐츠 관계를 설명하기 위한 표이며 **저장된 완료 ID를 새 ID로 치환하지 않는다**. 바뀐 미션의 완료를 자동 인정하거나 보상을 다시 지급하지 않는다.
+
+| 기존 ID | 새 콘텐츠 대응 | 처리 |
+| --- | --- | --- |
+| window | light-air | 비활성·과거 기록 보존 |
+| walk | gentle-move | 비활성·과거 기록 보존 |
+| warm-drink | easy-drink | 비활성·과거 기록 보존 |
+| wash | 직접 대체 없음 | 비활성·과거 기록 보존 |
+| sunlight | light-air | 비활성·과거 기록 보존 |
+| wash-hands | 직접 대체 없음 | 비활성·과거 기록 보존 |
+| brush | 직접 대체 없음 | 비활성·과거 기록 보존 |
+| lean | comfortable-lean | 비활성·과거 기록 보존 |
+| dim-light | 직접 대체 없음 | 비활성·과거 기록 보존 |
+| neck | stretch | 비활성·과거 기록 보존 |
+| shoulder-roll | stretch | 비활성·과거 기록 보존 |
+| stand | gentle-move | 비활성·과거 기록 보존 |
+| short-walk | gentle-move | 비활성·과거 기록 보존 |
+| curtain | light-air | 비활성·과거 기록 보존 |
+| blanket | comfortable-lean | 비활성·과거 기록 보존 |
+| leaf-view | 직접 대체 없음 | 비활성·과거 기록 보존 |
+| emoji | 직접 대체 없음 | 비활성·과거 기록 보존 |
+
+### 추천 규칙
+
+- 신규 추천 후보는 ACTIVE_CARES만 사용한다. 같은 미션을 중복 선택하지 않는다.
+- 가능한 후보 중 아직 선택하지 않은 카테고리를 우선하고, 행동 유사 그룹(similarity)도 겹치지 않게 고른다. 이후 아직 충족하지 않은 응답 필요에 해당하는 미션을 우선한다. 카테고리/유사 그룹 후보가 없을 때만 완화하지만, 현재 카탈로그 400가지 유효 응답×28일에서는 매번 서로 다른 카테고리와 유사 그룹 3개를 반환한다.
+- 가중치는 기본 1 + 해당 질문의 low/very_low 조건마다 5. 예를 들어 body-need는 에너지·식사 둘 다 낮으면 11이다. 최근 3일 추천 ID는 가중치에 0.2를 곱해 반복을 줄인다. 필요/카테고리 균형을 먼저 적용하므로 반복을 완전히 금지하지 않는다.
+- 잠 부족: comfortable-lean, rest, pause, phone-down, breathe. 에너지 부족: water, body-need, music, comfortable-lean, choose-need. 식사 부족: snack, water, body-need, choose-need. 마음이 무거움: kind-word, texture, choose-need, accept-reluctance, safe-place, three-sounds. 각 목록이 해당 조건 +5 대상이다.
+- 편안한 상태 가중치 +5: gentle-move, sky, light-air, hello, okay-moment, favorite. 기존 기준대로 질문을 모두 답하고, 낮은 응답이 하나도 없으며 에너지와 마음이 good/very_good일 때 적용한다.
+- 답변 미완성/잘못된 값, energy=very_low, 또는 sleep=very_low이고 에너지도 낮으면 minimal 행동만 사용한다. gentle-move와 실제 연락 행동 hello는 편안한 상태에서만 후보가 된다. 낮은 상태에서도 사람/장소를 떠올리는 조용한 연결 행동은 가능하다. 음식을 먹거나 세 행동을 모두 수행하도록 강제하지 않는다.
+- 날짜 기반 난수는 결정적이다. 생성한 당일 ID·순서·제목을 저장하므로 재진입/새로고침/응답 수정으로 바꾸지 않는다. 사진·코멘트·일기는 추천 함수에 전달하지 않는다. 임상 진단이나 검증된 치료 규칙을 의미하지 않으며 전문가 검토는 별도다.
+
+### 호환성과 상세 표시
+
+- 신규 추천에 catalogVersion: 2를 추가한다. 일별 기록 version: 1, 날짜 키, 브라우저 저장소, 완료 ID 저장 방식, 동시 편집 잠금은 유지한다.
+- 버전 필드가 없는 기존 추천은 기존 32개 원본 카탈로그에서 이름·설명·시간·아이콘을 읽는다. 이미 생성된 오늘의 추천도 비활성 ID가 있더라도 그대로 보여준다. 이는 기존 목록/완료 상태를 보존하기 위한 의도적인 예외다. 새로 생성하는 날짜의 추천에만 활성 30개를 사용한다.
+- 원본 32개 데이터 복사 일치 확인 완료. 저장/복원 테스트에서 32개 ID 전부의 이름·설명·시간·아이콘·완료 ID 보존 확인. 저장된 ID를 일괄 치환하거나 기록을 삭제하는 마이그레이션은 실행하지 않는다.
+- 새 카탈로그 문구는 버전별로 보존해야 한다. 다음 문구 개편 때 v2 원본을 보관하고 새 카탈로그 버전을 추가한다.
+- page.tsx 변경은 기존 상세 영역에서 instruction, example, helper를 표시하는 한 부분뿐이다. 카드 설명은 copy, 기존 버튼/완료 처리/정원 성장과 캐릭터·애니메이션/CSS는 그대로다. 유지한 미션 ID의 아이콘·톤도 기존 값을 사용한다.
+
+### 검증 결과
+
+- 자동 테스트 **81개 통과**: 앞서 실행한 67개, 기존 저장소의 MVP 테스트 5개, 이번 카탈로그/호환성/상세/기록 테스트 9개. 기존 테스트는 삭제하지 않았고, 개편과 상충하는 기대값(32개 활성·10개 카테고리·폐기 미션 추천)은 원본 보존/신규 30개/새 후보 검사로 갱신했다.
+- TypeScript tsc --noEmit 통과, src와 변경 테스트 ESLint 통과, Next 프로덕션 빌드(TypeScript 포함) 성공. 저장소 전체 lint는 이 결과에 포함하지 않는다.
+- 유효 응답 400조합×28일 = 11,200건(최근 추천 있음/없음 포함): 활성 3개, 중복 없음, 3개 카테고리/유사 그룹. 개별 low/very_low 우선 후보, 모두 낮을 때 최소 부담 및 필요 균형 확인.
+- 새 미션 30개 모두 상세 안내·예시·보조 문구와 기존 해볼게요→완료했어요 이벤트 확인. 과거 walk/warm-drink/emoji의 날짜별 이름·완료 표시 확인. 새로고침·오늘 목록 고정·중복 완료 방지·정원·캐릭터 회귀 테스트 통과.
+- 위 화면 테스트는 React/브라우저 저장 어댑터 자동 테스트다. 연결된 실제 브라우저가 없어 iOS Safari/Android Chrome의 문구 줄바꿈, 상세 페이지 스크롤/버튼 도달성, 실제 화면 이동·애니메이션 및 실제 저장 복원은 이번에 미검증이다. 출시 전 긴 안내/예시가 있는 상세 화면을 작은 모바일 화면에서 확인한다.
+
+변경 파일: src/app/cares.ts, 신규 src/app/legacy-cares.ts, src/app/recommend-cares.ts, src/app/daily-cares.ts, src/app/page.tsx(상세 문구 표시만), scripts/recommend-cares.test.mjs, 신규 scripts/care-catalog.test.mjs, scripts/checkin-flow.test.mjs, scripts/record-screens.test.mjs, README.md.
+
+검증 명령:
+
+~~~sh
+node --test scripts/*.test.mjs
+node node_modules/typescript/bin/tsc --noEmit
+node node_modules/eslint/bin/eslint.js src scripts/care-catalog.test.mjs scripts/checkin-flow.test.mjs scripts/record-screens.test.mjs scripts/recommend-cares.test.mjs
+npm run build
+~~~
+
+
+## 하단 탭 고정·스크롤 분리 (2026-10-13)
+
+정원/기록의 BottomNav가 스크롤 및 screen-in transform 애니메이션이 적용되는 screen 내부에 있었다. 두 화면에서 탭을 제거하고 phone-frame의 공통 자식으로 한 번만 렌더링한다. 탭은 72px의 줄어들지 않는 flex 영역, 화면은 min-height:0의 나머지 영역으로 배치해 화면만 스크롤한다. 탭 자체의 아이콘·문구·색·선택 상태·둥근 카드 스타일은 유지한다.
+
+모바일 app-shell은 보이는 뷰포트에 고정하고 height는 VisualViewport.height(미지원 시 100dvh), top은 VisualViewport.offsetTop을 따른다. 주소창/키보드에 의한 resize와 pan을 각각 처리한다. pan 이벤트는 입력창 scrollIntoView를 다시 호출하지 않아 스크롤 피드백을 피한다. viewport-fit=cover 및 safe-area 상단/좌우, 탭 하단 여백을 적용한다. 기존 화면 전환/캐릭터 애니메이션은 그대로이며 탭은 화면 애니메이션 밖에 둔다. 기존 최소 높이 680px은 짧은 화면에서 프레임이 넘치지 않도록 해제한다.
+
+콘텐츠와 탭은 겹치지 않는 형제 영역이므로 기존 overlay용 106px 하단 패딩 대신 콘텐츠 끝 24px 여백을 둔다. 모바일 셸의 overflow는 hidden, 화면의 overflow-y는 auto다. 정원과 기록에서 같은 규칙을 사용하며 질문·추천·저장·성장 로직은 변경하지 않았다.
+
+자동 검증: 기존 81개 + 탭 구조/선택·이동 2개 + 뷰포트 이벤트 2개 = **85개 테스트 통과**. TypeScript, src 및 변경 테스트 ESLint, 프로덕션 빌드 통과. 기존 재진입 테스트는 이동 콜백의 위치 변경에 맞춰 공통 탭 → 정원 → 추천 순서로 보정했다. 이 결과는 실제 CSS 픽셀 위치 검증이 아니다.
+
+실제 브라우저 연결 목록이 비어 있어 아래 항목은 모두 **실기기 미검증**이다. iOS Safari/Android Chrome에서 각각 확인해야 한다.
+
+1. 정원 최상단/최하단 스크롤에서 탭이 보이는 화면 하단의 동일 위치인지.
+2. 기록의 달력 및 긴 사진·글 기록 끝까지 스크롤했을 때 마지막 내용과 수정/삭제 버튼이 탭 위에서 보이는지.
+3. 짧은 빈 기록과 긴 기록 사이를 바꿔도 탭 높이와 위치가 유지되는지.
+4. 주소창 확장/축소, 세로/가로 회전, 작은 높이에서 앱 셸 밖의 이중 스크롤이 없는지.
+5. 코멘트/한마디의 키보드를 열고 닫거나 입력 커서를 이동해도 입력창·주요 버튼에 스크롤로 도달할 수 있는지.
+6. iPhone 홈 인디케이터/노치와 탭이 겹치지 않는지.
+7. 정원↔기록 전환 시 콘텐츠 애니메이션은 유지되고 탭은 흔들리지 않는지.
+8. 탭의 아이콘·색상·선택 표시 및 기존 질문·추천·완료·정원 흐름에 회귀가 없는지.
+
+이번 변경 파일: src/app/page.tsx, src/app/globals.css, src/app/layout.tsx, scripts/checkin-flow.test.mjs, 신규 scripts/navigation-viewport.test.mjs, README.md.

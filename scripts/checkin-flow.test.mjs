@@ -10,7 +10,7 @@ const { recommendCares } = loadTs(new URL('../src/app/recommend-cares.ts', impor
 
 const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX }
-}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen;';
+}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen; exports.GardenScreen = GardenScreen; exports.BottomNav = BottomNav;';
 const saved = { version: 1, date: daily.localDay(), answers: ['괜찮게 잤어요', '보통', '든든하게 먹었어요', '잔잔해요'], note: '기존 기록', plantState: 'normal', completedCareIds: ['water'] };
 function mount(raw = null, hash = '', component = 'default', props = {}) {
   const slots = [], effects = [], tasks = [], listeners = new Map();
@@ -250,7 +250,8 @@ test('ten reloads, reentry and an answer edit retain the stored cards, order and
     assert.deepEqual(app.screen('CareScreen').props.recommendation, original);
     app.screen('CareScreen').props.goHome();
     app.screen('HomeScreen').props.go('garden');
-    app.screen('GardenScreen').props.go('care');
+    app.screen('BottomNav').props.go('home');
+    app.screen('HomeScreen').props.go('care');
     assert.deepEqual(app.screen('CareScreen').props.recommendation, original);
   }
   app.screen('CareScreen').props.goHome();
@@ -295,4 +296,49 @@ test('calendar rollover via timer guards today care and preserves yesterday reco
     const rows=app.screen('GardenScreen').props.records;assert.equal(rows.length,2);
     assert.equal(rows.find(r=>r.date===yesterday).note,'어제 남긴 말');assert.deepEqual(rows.find(r=>r.date===yesterday).completedCareIds,[id]);
   } finally { globalThis.Date=OriginalDate; }
+});
+
+test('all 30 active mission details render instructions, optional examples and helper before unchanged completion', () => {
+  const { ACTIVE_CARES } = loadTs(new URL('../src/app/cares.ts', import.meta.url));
+  for (const care of ACTIVE_CARES) {
+    const completed = [];
+    const recommendation = { title: '작은 돌봄', cares: [care, ...ACTIVE_CARES.filter(other => other.id !== care.id).slice(0, 2)] };
+    const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
+    nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1).props.onClick();
+    const content = textContent(app.tree());
+    for (const value of [care.title, care.instruction, care.helper, care.meta, ...(care.example ? [care.example] : [])]) assert.ok(content.includes(value), care.id + ': ' + value);
+    const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
+    action().props.onClick(); assert.equal(completed.length, 0); action().props.onClick(); assert.deepEqual(completed, [care.id]);
+  }
+});
+
+// Structural React tests, not browser geometry or physical keyboard tests.
+test('one shared tab bar remains outside both scrolling screens and follows tab selection', () => {
+  const app = mount();
+  assert.equal(nodes(app.tree(), n => n.type?.name === 'BottomNav').length, 0);
+  app.start();
+  let nav = nodes(app.tree(), n => n.type?.name === 'BottomNav');
+  assert.equal(nav.length, 1); assert.equal(nav[0].props.active, 'home');
+  nav[0].props.go('garden');
+  nav = nodes(app.tree(), n => n.type?.name === 'BottomNav');
+  assert.equal(nav.length, 1); assert.equal(nav[0].props.active, 'garden');
+  assert.ok(app.screen('GardenScreen'));
+  nav[0].props.go('home'); assert.ok(app.screen('HomeScreen'));
+  app.screen('HomeScreen').props.go('checkin');
+  assert.equal(nodes(app.tree(), n => n.type?.name === 'BottomNav').length, 0);
+  for (const [component, props] of [['HomeScreen',{state:'normal',go(){},recorded:false,completedCount:0}], ['GardenScreen',{records:[],onSave:()=>true}]]) {
+    const screen = mount(null, '', component, props);
+    assert.equal(nodes(screen.tree(), n => n.type?.name === 'BottomNav' || n.type === 'nav').length, 0);
+  }
+});
+test('shared navigation preserves both labels, icons, selected state and destinations', () => {
+  for (const active of ['home','garden']) {
+    let destination;
+    const app = mount(null, '', 'BottomNav', { active, go: value => { destination = value; } });
+    const buttons = nodes(app.tree(), n => n.type === 'button');
+    assert.deepEqual(buttons.map(textContent), ['♧정원','▤기록']);
+    assert.equal(buttons[active === 'home' ? 0 : 1].props.className, 'active');
+    buttons[0].props.onClick(); assert.equal(destination,'home');
+    buttons[1].props.onClick(); assert.equal(destination,'garden');
+  }
 });

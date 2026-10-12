@@ -85,3 +85,11 @@ test('photo transaction quota failure preserves old photo and pending replacemen
   assert.match(text(app.tree()), /저장 공간이 부족/); assert.equal(props.record.photoId, id); assert.ok(db.files.has(id)); assert.ok(app.button('이 사진 저장하기'));
   app.button('이 사진 저장하기').props.onClick(); await flush(); assert.notEqual(props.record.photoId, id); assert.equal(db.files.size, 1); app.unmount();
 });
+
+test('record calendar still displays retired mission names and their saved completion state', () => {
+  const date = daily.localDay();
+  const record = { ...store.emptyRecord(), answers: ['good','good','good','good'], careRecommendations: [{ date, title: '과거 추천', ids: ['warm-drink','walk','emoji'] }], completedCareIds: ['warm-drink','emoji'] };
+  const app = mount('RecordsCalendar', { records: [record], onSave: () => true });
+  const items = nodes(app.tree(), n => n.type === 'li').map(text);
+  assert.deepEqual(items, ['따뜻한 음료 마시기✓ 완료했어요', '5분 걷기남겨둔 돌봄', '이모지 하나 보내기✓ 완료했어요']);
+});

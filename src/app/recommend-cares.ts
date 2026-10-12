@@ -1,4 +1,4 @@
-import { CARES, type Care, type CareId, type CareTag } from './cares';
+import { ACTIVE_CARES, type Care, type CareId, type CareTag } from './cares';
 import { normalizeAnswers, type AnswerValue } from './questions';
 
 const low = (value: AnswerValue | undefined) => value === 'very_low' || value === 'low';
@@ -6,7 +6,7 @@ const good = (value: AnswerValue | undefined) => value === 'good' || value === '
 const TITLES = {
   energy: ['오늘은 몸을 조금\n쉬게 해줄까요?', '오늘은 조금 천천히\n가도 괜찮아요.', '아주 작은 것 하나만\n해볼까요?'],
   sleep: ['오늘은 조금 천천히\n가도 괜찮아요.', '잠깐 쉬어가는 시간을\n만들어볼까요?'],
-  meal: ['오늘은 몸에 작은 것을\n하나 채워줄까요?', '부담 없는 한 모금부터\n시작해볼까요?'],
+  meal: ['지금 가능한 작은 돌봄을\n하나 골라볼까요?', '내 몸에 필요한 것을\n천천히 살펴볼까요?'],
   mood: ['오늘은 마음에 작은 틈을\n만들어볼까요?', '지금의 나에게 조금\n다정해져볼까요?', '작은 돌봄 하나만\n골라도 좋아요.'],
   comfortable: ['오늘의 좋은 기분을\n조금 이어가볼까요?', '가벼운 마음으로\n하나 골라볼까요?', '오늘은 어떤 작은 돌봄을\n해볼까요?'],
   general: ['오늘 나를 위해\n잠깐 시간을 내볼까요?', '이 중 편안한 것 하나만\n골라도 좋아요.'],
@@ -33,9 +33,9 @@ function contextFor(answers: unknown) {
 
 export function getCareCandidates(answers: unknown) {
   const context = contextFor(answers);
-  return CARES.filter((care: Care) => {
+  return ACTIVE_CARES.filter((care: Care) => {
     if (context.minimalOnly && care.effort !== 'minimal') return false;
-    if ((care.effort === 'active' || care.category === 'connection') && !context.comfortable) return false;
+    if ((care.effort === 'active' || care.comfortableOnly) && !context.comfortable) return false;
     return care.tags.includes('general') || (context.complete && care.tags.some(tag => context.tags.includes(tag)));
   });
 }
@@ -52,7 +52,7 @@ function seededRandom(seed: string) {
   };
 }
 
-export type CareRecommendation = { title: string; cares: (typeof CARES[number])[] };
+export type CareRecommendation = { title: string; cares: Care[] };
 export function recommendCares(answers: unknown, { date, recentIds = [] }: { date: string; recentIds?: readonly CareId[] }): CareRecommendation {
   const context = contextFor(answers);
   const random = seededRandom(`${date}:cares`);
@@ -61,17 +61,18 @@ export function recommendCares(answers: unknown, { date, recentIds = [] }: { dat
   const recent = new Set(recentIds);
   while (selected.length < 3) {
     const remaining = candidates.filter(care => !selected.some(item => item.id === care.id));
-    // Include at least one action directly related to the recorded needs when
-    // such a candidate exists; fill the other slots with suitable variety.
-    const related = selected.length === 0
-      ? remaining.filter((care: Care) => care.tags.some(tag => context.tags.includes(tag))) : [];
-    const eligible = related.length ? related : remaining;
-    // Prefer unused categories, without adding unsuitable actions to fill a slot.
-    const diverse = eligible.filter(care => !selected.some(item => item.category === care.category));
-    const pool = diverse.length ? diverse : eligible;
+    // Balance categories first, then avoid repeating similar actions where possible.
+    const diverse = remaining.filter(care => !selected.some(item => item.category === care.category));
+    const varied = diverse.length ? diverse : remaining;
+    const different = varied.filter(care => !selected.some(item => item.similarity === care.similarity));
+    const eligible = different.length ? different : varied;
+    // Cover unmet needs rather than repeatedly selecting for the same answer.
+    const uncovered = context.tags.filter(tag => !selected.some(care => (care.weights?.[tag] ?? 0) > 0));
+    const related = eligible.filter(care => uncovered.some(tag => (care.weights?.[tag] ?? 0) > 0));
+    const pool = related.length ? related : eligible;
     if (!pool.length) break;
-    // These are selection probabilities, not an assessment/score of the user.
-    const weights = pool.map((care: Care) => (care.tags.some(tag => context.tags.includes(tag)) ? 3 : 1) * (recent.has(care.id as CareId) ? 0.2 : 1));
+    // Preference weights, never a clinical assessment: base 1 + 5 per matching need.
+    const weights = pool.map(care => (1 + context.tags.reduce((sum, tag) => sum + (care.weights?.[tag] ?? 0), 0)) * (recent.has(care.id as CareId) ? 0.2 : 1));
     let draw = random() * weights.reduce((sum, weight) => sum + weight, 0);
     const index = weights.findIndex(weight => { draw -= weight; return draw < 0; });
     selected.push(pool[index < 0 ? pool.length - 1 : index]);

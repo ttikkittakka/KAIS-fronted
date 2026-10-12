@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { loadTs } from './helpers/load-ts.mjs';
 const { recommendCares, getCareCandidates } = loadTs(new URL('../src/app/recommend-cares.ts', import.meta.url));
 const { QUESTIONS, normalizeAnswers, plantStateForAnswers } = loadTs(new URL('../src/app/questions.ts', import.meta.url));
-const { CARES } = loadTs(new URL('../src/app/cares.ts', import.meta.url));
+const { CARES, ACTIVE_CARES, LEGACY_CARES } = loadTs(new URL('../src/app/cares.ts', import.meta.url));
 const date = '2026-10-08';
 const depleted = ['very_low', 'very_low', 'very_low', 'very_low'];
 const comfortable = ['good', 'very_good', 'good', 'very_good'];
@@ -11,9 +11,9 @@ const comfortable = ['good', 'very_good', 'good', 'very_good'];
 test('depleted users get a broad minimal-effort pool; active and social actions require a comfortable state', () => {
   const gentle = getCareCandidates(depleted);
   assert.ok(gentle.length >= 10);
-  assert.ok(gentle.every(care => care.effort === 'minimal' && care.category !== 'connection'));
+  assert.ok(gentle.every(care => care.effort === 'minimal' && !care.comfortableOnly));
   const active = getCareCandidates(comfortable).map(care => care.id);
-  for (const id of ['walk', 'short-walk', 'hello', 'emoji']) assert.ok(active.includes(id));
+  for (const id of ['gentle-move', 'hello']) assert.ok(active.includes(id));
 });
 
 test('sleep and meal needs constrain otherwise energetic combinations', () => {
@@ -21,7 +21,7 @@ test('sleep and meal needs constrain otherwise energetic combinations', () => {
   assert.ok(sleepy.every(care => care.effort === 'minimal'));
   const hungry = getCareCandidates(['good', 'good', 'very_low', 'good']);
   assert.ok(hungry.some(care => care.id === 'snack'));
-  assert.ok(!hungry.some(care => care.effort === 'active' || care.category === 'connection'));
+  assert.ok(!hungry.some(care => care.effort === 'active' || care.comfortableOnly));
   for (let i = 1; i <= 28; i++) {
     const result = recommendCares(['good', 'good', 'very_low', 'good'], { date: `2026-10-${String(i).padStart(2, '0')}` });
     assert.ok(result.cares.some(care => care.tags.includes('low_meal')));
@@ -52,7 +52,7 @@ test('all 400 answer combinations are deterministic, diverse, and preserve plant
       assert.deepEqual(result, recommendCares(answers, { date }));
       const hasLow = answers.some(a => a === 'low' || a === 'very_low');
       assert.equal(plantStateForAnswers(answers), hasLow ? 'low' : 'normal');
-      if (hasLow) assert.ok(!candidates.some(c => c.effort === 'active' || c.category === 'connection'));
+      if (hasLow) assert.ok(!candidates.some(c => c.effort === 'active' || c.comfortableOnly));
       if (e.value === 'very_low') assert.ok(result.cares.every(c => c.meta.includes('아주 쉬움')));
       combinations++;
     }
@@ -61,9 +61,11 @@ test('all 400 answer combinations are deterministic, diverse, and preserve plant
 
 test('question labels remain distinct from internal values and legacy answers restore', () => {
   assert.deepEqual(normalizeAnswers(['괜찮게 잤어요', '충분함', '든든하게 먹었어요', '가벼워요']), ['good', 'very_good', 'good', 'very_good']);
-  assert.equal(CARES.length, 32);
-  assert.equal(new Set(CARES.map(c => c.id)).size, 32);
-  assert.equal(new Set(CARES.map(c => c.category)).size, 10);
+  assert.equal(LEGACY_CARES.length, 32);
+  assert.equal(ACTIVE_CARES.length, 30);
+  assert.equal(new Set(CARES.map(c => c.id)).size, CARES.length);
+  assert.equal(new Set(LEGACY_CARES.map(c => c.category)).size, 10);
+  assert.equal(new Set(ACTIVE_CARES.map(c => c.category)).size, 5);
   for (const question of QUESTIONS) {
     assert.equal(new Set(question.options.map(o => o.value)).size, question.options.length);
     assert.ok(question.options.every(o => o.label !== o.value));
