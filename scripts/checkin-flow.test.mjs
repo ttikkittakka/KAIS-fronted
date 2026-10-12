@@ -10,7 +10,7 @@ const { recommendCares } = loadTs(new URL('../src/app/recommend-cares.ts', impor
 
 const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX }
-}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen;';
+}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen;';
 const saved = { version: 1, date: daily.localDay(), answers: ['괜찮게 잤어요', '보통', '든든하게 먹었어요', '잔잔해요'], note: '기존 기록', plantState: 'normal', completedCareIds: ['water'] };
 function mount(raw = null, hash = '', component = 'default', props = {}) {
   const slots = [], effects = [], tasks = [], listeners = new Map();
@@ -96,7 +96,7 @@ test('actual question UI displays labels, saves values and restores old selectio
   assert.deepEqual(Array.from(submitted[1]), ['very_low', 'very_low', 'very_low', 'very_low']);
 });
 
-test('actual care cards show all three scenarios and preserve the two-step completion action', () => {
+test('care cards open details before the two-step completion action', () => {
   for (const answers of [
     ['very_low', 'very_low', 'very_low', 'very_low'],
     ['good', 'very_good', 'good', 'very_good'],
@@ -104,23 +104,60 @@ test('actual care cards show all three scenarios and preserve the two-step compl
   ]) {
     const completed = [];
     const recommendation = recommendCares(answers, { date: '2026-10-08' });
-    const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), goHome() {} });
+    const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
     assert.deepEqual(nodes(app.tree(), node => node.type === 'h3').map(textContent), recommendation.cares.map(care => care.title));
-    const button = () => nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1);
-    button().props.onClick(); assert.equal(completed.length, 0);
-    assert.equal(button().props.children, '완료했어요');
-    button().props.onClick(); assert.equal(completed.length, 1);
+    const cardButton = nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1);
+    cardButton.props.onClick();
+    assert.match(textContent(app.tree()), /해볼게요/);
+    const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
+    action().props.onClick(); assert.equal(completed.length, 0);
+    assert.equal(textContent(action()), '완료했어요');
+    action().props.onClick(); assert.equal(completed.length, 1);
   }
 });
 
-test('all recommended cares completed still plays the existing celebration with gentle copy', () => {
+test('completion offers the appropriate two choices and keeps the existing celebration', () => {
   const recommendation = recommendCares(['very_low', 'very_low', 'very_low', 'very_low'], { date: '2026-10-08' });
   const ids = recommendation.cares.map(care => care.id);
-  const app = mount(null, '', 'CareScreen', { state: 'low', recommendation, completed: ids[2], completedIds: ids, onComplete() {}, goHome() {} });
-  assert.match(textContent(app.tree()), /오늘 나를 위해잠깐 시간을 썼어요/);
-  const plant = nodes(app.tree(), node => node.type?.name === 'Plant')[0];
-  assert.equal(plant.props.celebrate, true);
-  assert.equal(plant.props.state, 'low');
+  for (const count of [1, 2, 3]) {
+    let destination = '';
+    const app = mount(null, '', 'CareScreen', { state: 'low', recommendation, completed: ids[count - 1], completedIds: ids.slice(0, count), onComplete() {}, onShowList() { destination = 'list'; }, goHome() { destination = 'home'; } });
+    const tree = app.tree();
+    assert.match(textContent(tree), new RegExp(`오늘 ${count}/3 완료`));
+    const buttons = nodes(tree, node => node.type === 'button');
+    assert.equal(buttons.length, 2);
+    assert.deepEqual(buttons.map(textContent), count === 3 ? ['정원에서 변화 보기', '오늘의 돌봄 다시보기'] : ['다른 작은 돌봄 이어하기', '정원에서 변화 보기']);
+    buttons[0].props.onClick(); assert.equal(destination, count === 3 ? 'home' : 'list');
+    buttons[1].props.onClick(); assert.equal(destination, count === 3 ? 'list' : 'home');
+    const plant = nodes(tree, node => node.type?.name === 'Plant')[0];
+    assert.equal(plant.props.celebrate, true);
+    assert.equal(plant.props.state, 'low');
+  }
+});
+
+test('garden entry label follows today’s completion count', () => {
+  for (const [count, expected] of [[0, '오늘의 작은 돌봄 시작하기'], [1, '남은 작은 돌봄 이어하기'], [2, '남은 작은 돌봄 이어하기'], [3, '오늘의 돌봄 돌아보기']]) {
+    const app = mount(null, '', 'HomeScreen', { state: 'normal', go() {}, recorded: true, completedCount: count });
+    assert.match(textContent(app.tree()), new RegExp(expected));
+    assert.match(textContent(app.tree()), new RegExp(`오늘의 작은 돌봄 ${count}/3 완료`));
+  }
+});
+
+test('completed care remains reviewable without another completion action', () => {
+  const recommendation = recommendCares(['very_low', 'very_low', 'very_low', 'very_low'], { date: '2026-10-08' });
+  const id = recommendation.cares[0].id;
+  let completedAgain = false;
+  const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [id], onComplete() { completedAgain = true; }, onShowList() {}, goHome() {} });
+  const card = nodes(app.tree(), node => node.type === 'article')[0];
+  assert.match(textContent(card), /완료했어요/);
+  card.props.children.at(-1).props.onClick();
+  assert.match(textContent(app.tree()), /완료했어요/);
+  assert.doesNotMatch(textContent(app.tree()), /해볼게요/);
+  const buttons = nodes(app.tree(), node => node.type === 'button');
+  assert.deepEqual(buttons.map(textContent), ['목록으로 돌아가기']);
+  buttons[0].props.onClick();
+  assert.equal(completedAgain, false);
+  assert.equal(nodes(app.tree(), node => node.type === 'article').length, 3);
 });
 test('existing user enters home and reviews restored answers without losing care history', () => {
   const app = mount(JSON.stringify(saved), '#care');

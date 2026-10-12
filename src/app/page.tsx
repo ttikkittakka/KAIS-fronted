@@ -50,12 +50,13 @@ function Onboarding({ start }: { start: () => void }) {
   </section>;
 }
 
-function HomeScreen({ state, go, recorded }: { state: PlantState; go: (v: View) => void; recorded: boolean }) {
+function HomeScreen({ state, go, recorded, completedCount }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number }) {
   return <section className="screen home-screen">
     <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정"><span aria-hidden="true">⚙</span></button>}/>
     <div className="garden-scene"><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">10월 1일 · 목요일</span><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/></div>
     <div className="today-copy"><span className="eyebrow">오늘의 모습</span><h2>{state === 'low' ? '조금 지쳐 보여요.' : '편안하게 기다리고 있어요.'}</h2><p>{state === 'low' ? '오늘은 천천히 가도 괜찮아요.' : '오늘의 나를 가볍게 살펴볼까요?'}</p></div>
-    <button className="primary-button home-cta" onClick={() => go(recorded ? 'care' : 'checkin')}><span className="soft-icon"><Icon name="note" size={18}/></span>{recorded ? '오늘의 작은 돌봄 다시 보기' : '오늘의 나 기록하기'}</button>
+    <button className="primary-button home-cta" onClick={() => go(recorded ? 'care' : 'checkin')}><span className="soft-icon"><Icon name="note" size={18}/></span>{!recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
+    {recorded && <p className="home-care-status">오늘의 작은 돌봄 {completedCount}/3 완료</p>}
     <div className="gentle-note"><span>✦</span><p><strong>다시 찾아와줘서 반가워요.</strong><br/>쉬어간 시간도 이 정원에 포근히 남아 있어요.</p></div>
     <BottomNav active="home" go={go}/>
   </section>;
@@ -96,18 +97,35 @@ function CheckinScreen({ onBack, onDone, initialRecord }: { onBack: () => void; 
   </section>;
 }
 
-function CareScreen({ state, recommendation, completed, completedIds, onComplete, goHome }: { state: PlantState; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; goHome: () => void }) {
+function CareScreen({ state, recommendation, completed, completedIds, onComplete, onShowList, goHome }: { state: PlantState; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; onShowList: () => void; goHome: () => void }) {
+  const [selected, setSelected] = useState<string | null>(null);
   const [started, setStarted] = useState<string | null>(null);
-  const allCaredFor = recommendation.cares.every(care => completedIds.includes(care.id));
+  const completedCount = recommendation.cares.filter(care => completedIds.includes(care.id)).length;
+  const allCaredFor = completedCount === recommendation.cares.length;
+  const selectedCare = recommendation.cares.find(care => care.id === selected);
+  const returnToList = () => { setSelected(null); setStarted(null); onShowList(); };
   if (completed) return <section className="screen completion-screen">
     <div className="completion-scene"><span className="droplet d1"/><span className="droplet d2"/><span className="spark s1">✦</span><span className="spark s2">✦</span><Plant state={state} celebrate className="plant-art lifted"/></div>
-    <div className="completion-copy"><span className="completion-check"><Icon name="check" size={22}/></span><p className="eyebrow">작은 변화가 도착했어요</p><h1>{allCaredFor ? <>오늘 나를 위해<br/>잠깐 시간을 썼어요.</> : <>오늘의 나를 위해<br/>하나를 해냈어요.</>}</h1><p>아주 작은 돌봄도 충분해요.<br/>식물의 잎이 살짝 고개를 들었어요.</p></div>
-    <div className="completion-actions"><button className="primary-button" onClick={goHome}>정원에서 변화 보기</button><p>내일도, 생각날 때 다시 만나요.</p></div>
+    <div className="completion-copy"><span className="completion-check"><Icon name="check" size={22}/></span><p className="eyebrow">작은 변화가 도착했어요</p><h1>{allCaredFor ? '오늘의 작은 돌봄을 모두 완료했어요! 🌼' : '작은 돌봄을 완료했어요! 🌷'}</h1><p>{allCaredFor ? '오늘도 나를 돌보는 시간을 만들어 주었네요.' : '오늘도 나를 위해 소중한 시간을 내주었네요.'}</p><p className="completion-status">오늘 {completedCount}/3 완료</p></div>
+    <div className="completion-actions"><button className="primary-button" onClick={allCaredFor ? goHome : returnToList}>{allCaredFor ? '정원에서 변화 보기' : '다른 작은 돌봄 이어하기'}</button><button className="secondary-button" onClick={allCaredFor ? returnToList : goHome}>{allCaredFor ? '오늘의 돌봄 다시보기' : '정원에서 변화 보기'}</button></div>
   </section>;
+  if (selectedCare) {
+    const alreadyCompleted = completedIds.includes(selectedCare.id);
+    return <section className="screen care-screen care-detail-screen">
+      <TopBar title="오늘의 작은 돌봄" onBack={returnToList}/>
+      <div className="care-detail-content">
+        <div className={`care-icon ${selectedCare.tone}`}><Icon name={selectedCare.icon} size={30}/></div>
+        <span className="eyebrow">오늘 나를 위한 작은 시간</span>
+        <h2>{selectedCare.title}</h2><p>{selectedCare.copy}</p><span className="care-detail-meta">{selectedCare.meta}</span>
+        {alreadyCompleted && <span className="care-detail-done"><Icon name="check" size={16}/> 완료했어요</span>}
+      </div>
+      <div className="care-detail-actions">{alreadyCompleted ? <button className="primary-button" onClick={returnToList}>목록으로 돌아가기</button> : <button className="primary-button" onClick={() => started === selectedCare.id ? onComplete(selectedCare.id) : setStarted(selectedCare.id)}>{started === selectedCare.id ? '완료했어요' : '해볼게요'}</button>}</div>
+    </section>;
+  }
   return <section className="screen care-screen">
     <TopBar title="오늘의 작은 돌봄" onBack={goHome}/>
-    <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{recommendation.title.split('\n').map((line, index) => <span key={line}>{index > 0 && <br/>}{line}</span>)}</h2><p>이 중 하나만 해도 괜찮아요.</p></div>
-    <div className="care-list">{recommendation.cares.map((care) => <article className="care-card" key={care.id}><div className={`care-icon ${care.tone}`}><Icon name={care.icon}/></div><div className="care-copy"><h3>{care.title}</h3><p>{care.copy}</p><span>{care.meta}</span></div><button disabled={completedIds.includes(care.id)} onClick={() => started === care.id ? onComplete(care.id) : setStarted(care.id)}>{completedIds.includes(care.id) ? '돌봄 완료' : started === care.id ? '완료했어요' : '해볼게요'}</button></article>)}</div>
+    <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{recommendation.title.split('\n').map((line, index) => <span key={line}>{index > 0 && <br/>}{line}</span>)}</h2><p>이 중 하나만 해도 괜찮아요.</p><span className="care-progress">오늘의 작은 돌봄 {completedCount}/3 완료</span></div>
+    <div className="care-list">{recommendation.cares.map((care) => { const done = completedIds.includes(care.id); return <article className={`care-card${done ? ' care-card-done' : ''}`} key={care.id}><div className={`care-icon ${care.tone}`}><Icon name={care.icon}/></div><div className="care-copy"><h3>{care.title}</h3><p>{care.copy}</p><span>{done ? '✓ 완료했어요' : care.meta}</span></div><button onClick={() => { setSelected(care.id); setStarted(null); }}>{done ? '다시 보기' : '선택하기'}</button></article>; })}</div>
     <button className="rest-choice" onClick={goHome}>오늘은 아무것도 하지 않아도 괜찮아요.</button><div className="care-plant"><Plant state={state} className="plant-art"/></div>
   </section>;
 }
@@ -241,14 +259,15 @@ export default function HomePage() {
   const goHome = () => show('home', viewRef.current === 'onboarding' || viewRef.current === 'checkin');
   const plantState = daily?.plantState ?? 'normal';
   const todayCares = daily?.careRecommendations?.find(entry => entry.date === daily.date);
+  const completedCount = todayCares?.ids.filter(id => daily?.completedCareIds.includes(id)).length ?? 0;
 
   return <main className="app-shell"><div className="phone-frame">
     <>
       {saveError && <p role="status" style={{ padding: 16 }}>이 브라우저에 기록을 저장하지 못했어요. 이 화면을 닫으면 기록이 사라질 수 있어요.</p>}
       {view === 'onboarding' && <Onboarding start={goHome}/>}
-      {view === 'home' && <HomeScreen state={plantState} go={go} recorded={!!daily}/>}
+      {view === 'home' && <HomeScreen state={plantState} go={go} recorded={!!daily} completedCount={completedCount}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily}/>}
-      {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} goHome={goHome}/>}
+      {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
       {view === 'garden' && <GardenScreen state={plantState} go={go}/>}
     </>
   </div></main>;
