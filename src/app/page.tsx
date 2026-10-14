@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import RivePlant, { RivePlantState } from './components/RivePlant';
-import { SunshineBalance, GardenTools, GardenPreparation, GARDEN_DESTINATIONS } from './components/GardenFeatures';
+import { SunshineBalance, GardenTools } from './components/GardenFeatures';
 
 import { DAILY_KEY, localDay, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
@@ -10,7 +10,9 @@ import { displayCareRecommendation, ensureCareHistory } from './daily-cares';
 import { cleanupPhotos, emptyRecord, readRecords, recordStorageWarning, RECORDS_KEY, saveRecord } from './record-store';
 import { StepHeader, ReflectionExtras, RecordsCalendar, hasUnsavedDrafts } from './components/RecordScreens';
 import type { CareRecommendation } from './recommend-cares';
-import { sunshineBalance, type SunshineReason } from './sunshine';
+import { type SunshineReason } from './sunshine';
+import GardenShop, { GardenPlacement } from './components/GardenShop';
+import { SHOP_KEY, shopSnapshot, type ShopState } from './shop-store';
 import { newSunshineNotices, enqueueSunshineNotices, SUNSHINE_NOTICE_MS, type SunshineNotice } from './sunshine-notifications';
 type View = GardenView;
 type PlantState = RivePlantState;
@@ -54,10 +56,10 @@ function Onboarding({ start }: { start: () => void }) {
   </section>;
 }
 
-function HomeScreen({ state, go, recorded, completedCount, resume, balance }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number }) {
+function HomeScreen({ state, go, recorded, completedCount, resume, balance, shop }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number; shop: ShopState | null }) {
   return <section className="screen home-screen">
     <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정"><span aria-hidden="true">⚙</span></button>}/>
-    <div className="garden-scene"><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</span><SunshineBalance balance={balance}/><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/></div>
+    <div className={"garden-scene garden-scene--" + (shop?.placed.find(id => id.endsWith("-garden")) ?? "default-sky")}><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</span><SunshineBalance balance={balance}/><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/><GardenPlacement state={shop}/></div>
     <GardenTools onOpen={go}/>
     <div className="today-copy"><span className="eyebrow">오늘의 모습</span><h2>{state === 'low' ? '조금 지쳐 보여요.' : '편안하게 기다리고 있어요.'}</h2><p>{state === 'low' ? '오늘은 천천히 가도 괜찮아요.' : '오늘의 나를 가볍게 살펴볼까요?'}</p></div>
     <button className="primary-button home-cta" onClick={() => go(resume ?? (recorded ? 'care' : 'checkin'))}><span className="soft-icon"><Icon name="note" size={18}/></span>{resume && resume !== 'care' ? '오늘의 나 기록 이어하기' : !recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
@@ -150,12 +152,16 @@ export default function HomePage() {
   const viewRef = useRef<View>('onboarding');
   const [records, setRecords] = useState<DailyCheckin[]>([]);
   const [saveError, setSaveError] = useState('');
+  const [commerce, setCommerce] = useState<ReturnType<typeof shopSnapshot> | null>(null);
+  const [shopError, setShopError] = useState('');
   const [completedCare, setCompletedCare] = useState<string | null>(null);
   const [sunshineQueue, setSunshineQueue] = useState<SunshineNotice[]>([]);
   const seenSunshineNotices = useRef(new Set<string>());
   const sunshineFeedback = sunshineQueue[0];
 
   const readToday = useCallback(() => {
+    try { setCommerce(shopSnapshot()); setShopError(''); }
+    catch (error) { setCommerce(null); setShopError(error instanceof Error ? error.message : '상점 저장소를 열지 못했어요.'); }
     try {
       const all = readRecords();
       setRecords(all);
@@ -191,6 +197,7 @@ export default function HomePage() {
       const saved = saveRecord(record, reward);
       const updatedRecords = readRecords();
       setRecords(updatedRecords);
+      try { setCommerce(shopSnapshot()); setShopError(''); } catch (error) { setCommerce(null); setShopError(storageMessage(error)); }
       const notices = newSunshineNotices(beforeRecords, updatedRecords);
       if (notices.length) {
         const fresh = enqueueSunshineNotices([], notices, seenSunshineNotices.current);
@@ -251,7 +258,7 @@ export default function HomePage() {
     const onBack = () => sync();
     const onResume = () => { if (document.visibilityState === 'visible') sync(); };
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== DAILY_KEY && event.key !== RECORDS_KEY && event.key !== null) return;
+      if (event.key !== DAILY_KEY && event.key !== RECORDS_KEY && event.key !== SHOP_KEY && event.key !== null) return;
       dailyRef.current = null;
       sync();
     };
@@ -330,12 +337,12 @@ export default function HomePage() {
         </div>}
       </div>
       {view === 'onboarding' && <Onboarding start={goHome}/>}
-      {view === 'home' && <HomeScreen balance={sunshineBalance(records)} state={plantState} go={go} recorded={!!daily?.answers.every(Boolean)} completedCount={completedCount} resume={daily?.stage}/>}
+      {view === 'home' && <HomeScreen balance={commerce?.balance ?? 0} shop={commerce?.state ?? null} state={plantState} go={go} recorded={!!daily?.answers.every(Boolean)} completedCount={completedCount} resume={daily?.stage}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
       {view === 'garden' && <GardenScreen records={records} onSave={save}/>}
-      {(view === 'shop' || view === 'decorate') && <section className="screen garden-preparation-screen"><TopBar title={GARDEN_DESTINATIONS[view].title} onBack={goHome}/><GardenPreparation kind={view} onReturn={goHome}/></section>}
+      {(view === 'shop' || view === 'decorate') && <section className="screen shop-screen"><TopBar title={view === 'shop' ? '작은 정원 상점' : '나의 보관함'} onBack={goHome}/><GardenShop key={view} inventory={view === 'decorate'} snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go(view === 'shop' ? 'decorate' : 'shop')}/></section>}
       {(view === 'home' || view === 'garden' || view === 'shop' || view === 'decorate') && <BottomNav active={view === 'garden' ? 'garden' : 'home'} go={go}/>}
     </>
   </div></main>;

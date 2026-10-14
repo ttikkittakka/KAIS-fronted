@@ -21,7 +21,7 @@ function GardenToolIcon({ kind }: { kind: GardenDestination }) {
 export function GardenTools({ onOpen }: { onOpen: (destination: GardenDestination) => void }) {
   return <div className="garden-tools" role="group" aria-label="정원 메뉴">
     <button type="button" onClick={() => onOpen('shop')}><GardenToolIcon kind="shop"/>상점</button>
-    <button type="button" onClick={() => onOpen('decorate')}><GardenToolIcon kind="decorate"/>정원 꾸미기</button>
+    <button type="button" onClick={() => onOpen('decorate')}><GardenToolIcon kind="decorate"/>보관함 · 꾸미기</button>
   </div>;
 }
 

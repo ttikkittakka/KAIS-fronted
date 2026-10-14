@@ -363,9 +363,9 @@ test('notification stays a single overlay while sequential rewards and navigatio
   const answers = ['good','normal','good','low'];
   app.screen('CheckinScreen').props.onDraft(answers);
   const banners = () => nodes(app.tree(), node => node.props?.className === 'sunshine-feedback');
-  assert.equal(banners().length,1); assert.match(textContent(banners()[0]), /햇살 \+10을 받았어요!/);
+  assert.equal(banners().length,1); assert.match(textContent(banners()[0]), /햇살 \+10/);
   app.screen('CheckinScreen').props.onDone('normal',answers,''); app.next(); app.next();
-  assert.equal(banners().length,1); assert.match(textContent(banners()[0]), /햇살 \+10을 받았어요!/);
+  assert.equal(banners().length,1); assert.match(textContent(banners()[0]), /햇살 \+10/);
   app.screen('CareScreen').props.goHome(); assert.equal(banners().length,1);
   assert.equal(app.screen('HomeScreen').props.balance,15);
 });

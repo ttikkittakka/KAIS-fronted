@@ -124,7 +124,9 @@ test('low state, celebration and return to the baseline preserve existing playba
 
 test('idle-only introduction retains its animation and noninteractive wrapper', () => {
   const app = mount({ idleOnly: true }); app.load();
-  assert.equal(app.params().animations, 'idle');
+  assert.equal(app.params().animations, undefined);
+  assert.equal(app.params().autoplay, false);
+  assert.equal(app.played.at(-1), 'idle');
   assert.equal(app.params().stateMachine, undefined);
   app.emit('advance'); const tree = app.frame();
   assert.equal(tree.type, 'div');
