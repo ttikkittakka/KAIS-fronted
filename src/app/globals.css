@@ -450,7 +450,30 @@ button:disabled { cursor: default; }
 .shop-price { padding:14px 16px; border-radius:18px; background:#f1f3e9; text-align:left; font-size:13px; }.shop-price div { display:flex; justify-content:space-between; gap:12px; padding:6px 0; }.shop-price dd { margin:0; text-align:right; }
 .shop-error { background:#fff1df; color:#75552f; padding:12px; border-radius:14px; font-size:12px; line-height:1.8; }
 .shop-empty { padding:30px 6px; text-align:center; font-size:13px; color:var(--secondary); }.shop-storage-note { margin-top:26px; }
-.garden-placements { position:absolute; z-index:3; bottom:12px; left:12px; right:12px; display:flex; align-items:flex-end; justify-content:center; gap:8px; pointer-events:none; }
-.garden-placed { display:flex; flex-direction:column; align-items:center; font-size:25px; }.garden-placed--character { font-size:36px; }.garden-placed small { font-size:8px; padding:2px 4px; border-radius:8px; background:#fffdf5dd; color:#52634f; }
+.garden-placements { position:absolute; z-index:1; inset:0; pointer-events:none; container-type:inline-size; }
+.garden-placed { position:absolute; transform:translate(-50%,-50%); display:flex; align-items:center; justify-content:center; overflow:hidden; font-size:min(7cqw,28px); line-height:1; }
+.garden-placed--character { font-size:min(9cqw,36px); }
+.garden-placed[data-slot="path"] { font-size:min(4cqw,14px); }
 .garden-scene.garden-scene--sunset-garden { background:linear-gradient(180deg,#efcee0 0%,#f8dfc1 70%,#e8dbc6 100%); }
 .garden-scene.garden-scene--starlight-garden { background:radial-gradient(circle at 22% 20%,#fff8d9 0 2px,transparent 3px),radial-gradient(circle at 72% 30%,#fff8d9 0 1px,transparent 2px),linear-gradient(180deg,#8d94be 0%,#c5c1db 70%,#e8dbc6 100%); }
+
+/* Slot selection stays outside the preview: no touch targets overlap the sprout. */
+.garden-editor { padding:0 14px 28px; }.garden-editor h2 { margin:12px 4px 0; font-size:18px; font-weight:500; line-height:1.5; }
+.garden-editor .shop-caption, .garden-editor .shop-asset-note { margin:12px 4px; font-size:12px; line-height:1.7; color:var(--secondary); }
+.garden-editor-preview { padding:0; }.garden-editor-preview .garden-scene { margin:4px 0 0; }
+.garden-slot-choices { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; padding:12px 0; margin:12px 0; border:0; min-width:0; }
+.garden-slot-choices legend { font-size:13px; padding:0 4px; color:var(--deep-green); }
+.garden-slot-choices button { min-height:58px; border:1px solid var(--line); border-radius:16px; padding:10px; background:#fffdf7; font:inherit; color:var(--deep-green); cursor:pointer; display:flex; flex-direction:column; gap:5px; text-align:left; }
+.garden-slot-choices button[aria-pressed="true"] { background:#eaf0df; border-color:#809b72; }.garden-slot-choices strong { font-size:13px; font-weight:500; }.garden-slot-choices span { font-size:11px; line-height:1.5; }
+.garden-editor-actions { display:flex; flex-direction:column; gap:10px; margin-top:16px; }.garden-editor-actions .primary-button { width:100%; }.garden-editor-actions button { min-height:44px; }.garden-editor-actions button:disabled { opacity:.45; cursor:default; }
+.garden-change-list { padding:12px 12px 12px 30px; border-radius:16px; background:#f0f3e8; font-size:12px; line-height:1.9; }
+
+/* Cumulative activity gifts are optional and never change the daily care list. */
+.growth-progress { width:calc(100% - 26px); margin:12px 13px 0; padding:13px 16px; display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--line); border-radius:18px; background:#f7f4e7; color:var(--deep-green); font:inherit; font-size:11px; cursor:pointer; text-align:left; }
+.growth-progress strong { font-size:12px; white-space:nowrap; font-weight:500; }
+.growth-content { padding:0 20px 28px; }.growth-intro { font-size:18px; line-height:1.7; }.growth-intro strong { font-weight:500; }
+.growth-reward-card { padding:18px; border:1px solid var(--line); border-radius:22px; background:#fffdf5; margin:18px 0; }
+.growth-reward-card h2 { font-size:19px; line-height:1.6; font-weight:500; margin:10px 0; }.growth-reward-card p { font-size:12px; line-height:1.8; color:var(--secondary); }.growth-reward-card summary { cursor:pointer; min-height:44px; display:list-item; align-content:center; font-size:14px; }
+.growth-gifts { list-style:none; padding:0; margin:18px 0; }.growth-gifts li { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin:14px 0; }.growth-gifts li > span { font-size:28px; }.growth-gifts strong { display:block; font-size:13px; font-weight:500; }.growth-gifts small { display:block; font-size:10px; color:var(--secondary); margin-top:4px; }.growth-gifts button { min-height:44px; }
+.growth-extra { border-top:1px solid var(--line); margin-top:16px; padding-top:8px; }
+.garden-scene.garden-scene--anniversary-sky { background:linear-gradient(165deg,#d8d8f2 0%,#d6eee8 35%,#e9e4f5 60%,#e8f2d7 82%,#dce8d1 100%); }

@@ -1,5 +1,5 @@
 export type ShopCategory = 'character' | 'decoration' | 'background';
-export type ShopItem = { id: string; name: string; category: ShopCategory; price: number; icon: string; description: string; defaultOwned?: boolean };
+export type ShopItem = { id: string; name: string; category: ShopCategory; price: number; icon: string; description: string; defaultOwned?: boolean; rewardDays?: 50 | 100 };
 export const SHOP_CATEGORIES: { id: ShopCategory; label: string }[] = [
   { id: 'character', label: '캐릭터' }, { id: 'decoration', label: '꾸미기' }, { id: 'background', label: '배경' },
 ];
@@ -14,4 +14,10 @@ export const SHOP_CATALOG: readonly ShopItem[] = [
   { id: 'sunset-garden', name: '노을 정원', category: 'background', price: 180, icon: '🌅', description: '살구빛과 연보라빛 노을이 정원을 감싸요.' },
   { id: 'starlight-garden', name: '별빛 정원', category: 'background', price: 220, icon: '🌙', description: '부드러운 보랏빛 밤하늘에 작은 별이 반짝여요.' },
 ];
-export const shopItem = (id: string) => SHOP_CATALOG.find(item => item.id === id);
+export const GROWTH_ITEMS: readonly ShopItem[] = [
+  { id: 'anniversary-friend', name: '누리 · 50일 친구', category: 'character', price: 0, icon: '🌟', rewardDays: 50, description: '함께한 50일을 기억하는 별빛 친구예요. 햇살로 구매할 수 없는 기념 선물이에요.' },
+  { id: 'anniversary-sky', name: '오로라 정원 · 100일', category: 'background', price: 0, icon: '🌌', rewardDays: 100, description: '민트빛과 연보라빛이 천천히 어우러지는 100일 기념 하늘이에요.' },
+  { id: 'anniversary-flower', name: '백일의 꽃', category: 'decoration', price: 0, icon: '🪷', rewardDays: 100, description: '차곡차곡 쌓인 시간을 담은 기념 꽃이에요. 꽃자리에 놓을 수 있어요.' },
+];
+export const ALL_GARDEN_ITEMS = [...SHOP_CATALOG, ...GROWTH_ITEMS];
+export const shopItem = (id: string) => ALL_GARDEN_ITEMS.find(item => item.id === id);

@@ -2,7 +2,7 @@ import type { SunshineLedger } from './sunshine';
 import { isCareId } from './cares';
 import { parseCareHistory, type DailyCareRecommendation } from './daily-cares';
 
-export type GardenView = 'onboarding' | 'home' | 'checkin' | 'care' | 'garden' | 'photo' | 'growth' | 'shop' | 'decorate';
+export type GardenView = 'onboarding' | 'home' | 'checkin' | 'care' | 'garden' | 'photo' | 'growth' | 'shop' | 'decorate' | 'rewards' | 'extra-care';
 export type DailyCheckin = {
   version: 1;
   sunshine?: SunshineLedger;
@@ -43,5 +43,5 @@ export function parseDaily(raw: string | null, date = localDay()): DailyCheckin 
 export function resolveView(view: string, daily: DailyCheckin | null): GardenView {
   if (['care', 'photo', 'growth'].includes(view) && (!daily || daily.date !== localDay() || !daily.answers.every(Boolean) || daily.answers.length !== 4)) return 'checkin';
   if (view === 'care' && daily?.stage && daily.stage !== 'care') return daily.stage;
-  return ['onboarding', 'home', 'checkin', 'care', 'garden', 'photo', 'growth', 'shop', 'decorate'].includes(view) ? view as GardenView : 'home';
+  return ['onboarding', 'home', 'checkin', 'care', 'garden', 'photo', 'growth', 'shop', 'decorate', 'rewards', 'extra-care'].includes(view) ? view as GardenView : 'home';
 }

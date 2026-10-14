@@ -36,7 +36,7 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
     document: { visibilityState: 'visible', addEventListener: window.addEventListener, removeEventListener() {} },
     queueMicrotask: fn => tasks.push(fn), clearInterval() {},
     setTimeout: fn => { tasks.push(fn); return 1; }, clearTimeout() {},
-    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
+    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/GrowthRewards' ? { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
   });
   function render() { cursor = 0; const tree = exports[component](props); first = false; return tree; }
   function find(node, name) {
@@ -47,6 +47,12 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
   }
   const initialTree = render(); effects.forEach(fn => fn()); tasks.splice(0).forEach(fn => fn());
   return {
+    seedArchive(entries) {
+      const store = loadTs(new URL('../src/app/record-store.ts', import.meta.url));
+      const owner = store.localOwner();
+      data.set(store.RECORDS_KEY, JSON.stringify(entries.map(record => ({ ...record, userId: owner }))));
+      listeners.get('storage')?.({ key: store.RECORDS_KEY });
+    },
     tree: render,
     tick: () => interval?.(),
     advanceChoice: () => tasks.splice(0).forEach(fn => fn()),
@@ -368,4 +374,18 @@ test('notification stays a single overlay while sequential rewards and navigatio
   assert.equal(banners().length,1); assert.match(textContent(banners()[0]), /햇살 \+10/);
   app.screen('CareScreen').props.goHome(); assert.equal(banners().length,1);
   assert.equal(app.screen('HomeScreen').props.balance,15);
+});
+
+test('50th committed activity auto-grants once and home links to persisted rewards', () => {
+  const app = mount();
+  const history = Array.from({ length: 49 }, (_, i) => ({ ...saved, date: new Date(Date.UTC(2010, 0, i + 1)).toISOString().slice(0,10), answers: ['good','normal','good','low'], completedCareIds: [] }));
+  app.seedArchive(history); app.start();
+  assert.equal(app.screen('HomeScreen').props.growthSnapshot.activeDays,49);
+  app.screen('HomeScreen').props.go('checkin');
+  app.screen('CheckinScreen').props.onDraft(['good','normal','good','low']);
+  app.screen('CheckinScreen').props.onBack();
+  const home = app.screen('HomeScreen'); assert.equal(home.props.growthSnapshot.activeDays,50); assert.equal(home.props.growthSnapshot.state.rewards.length,1);
+  home.props.go('rewards'); const rewards = app.screen('GrowthRewardsScreen'); assert.equal(rewards.props.snapshot.state.rewards[0].id,'days-50');
+  rewards.props.onRetry(); assert.equal(app.screen('GrowthRewardsScreen').props.snapshot.state.rewards.length,1);
+  rewards.props.onPlace('anniversary-friend'); assert.equal(app.hash(),'#decorate');
 });
