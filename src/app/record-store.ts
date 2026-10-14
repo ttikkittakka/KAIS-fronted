@@ -1,3 +1,4 @@
+import { nextSunshine, validSunshine, type SunshineReason } from './sunshine';
 import { DAILY_KEY, localDay, parseDaily, type DailyCheckin } from './daily-checkin';
 import { parseCareHistory } from './daily-cares';
 import { normalizeAnswers } from './questions';
@@ -34,7 +35,7 @@ function validRecord(value: unknown, owner: string): value is DailyCheckin {
   if (!value || typeof value !== 'object') return false;
   const r = value as DailyCheckin;
   const id = r.userId ?? owner;
-  return r.version === 1 && validRecordDate(r.date) &&
+  return r.version === 1 && validRecordDate(r.date) && validSunshine(r.sunshine, r.date) &&
     (r.userId === undefined || (typeof r.userId === 'string' && r.userId.length > 0)) &&
     Array.isArray(r.answers) && r.answers.length === 4 && normalizeAnswers(r.answers).every((v, i) => !!v || r.answers[i] === '') &&
     typeof r.note === 'string' && r.note.length <= 300 &&
@@ -80,7 +81,7 @@ function readSnapshot(): Snapshot {
 }
 export function readRecords() { return readSnapshot().records; }
 export function recordStorageWarning() { return readSnapshot().warning; }
-export function saveRecord(record: DailyCheckin) {
+export function saveRecord(record: DailyCheckin, reward?: SunshineReason) {
   const owner = localOwner();
   const snapshot = readSnapshot();
   if (snapshot.warning) throw new Error(snapshot.warning);
@@ -88,6 +89,7 @@ export function saveRecord(record: DailyCheckin) {
   const now = new Date().toISOString();
   const previous = snapshot.records.find(r => r.date === record.date);
   const next = { ...record, completedCareIds: Array.from(new Set([...(previous?.completedCareIds ?? []), ...record.completedCareIds])), userId: owner, createdAt: previous?.createdAt ?? now, updatedAt: now };
+  next.sunshine = nextSunshine(previous, next, reward, localDay(), now);
   // Preserve other local namespaces. Never rewrite damaged data as an empty array.
   const others = snapshot.entries.filter(r => r.userId !== owner);
   const records = [next, ...snapshot.records.filter(r => r.date !== next.date)].sort((a, b) => b.date.localeCompare(a.date));

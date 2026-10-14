@@ -342,3 +342,30 @@ test('shared navigation preserves both labels, icons, selected state and destina
     buttons[1].props.onClick(); assert.equal(destination,'garden');
   }
 });
+
+// Hook/browser adapters validate page event wiring, not real browser painting.
+test('page awards sunshine for answers, skipping optional writing and only the first care', () => {
+  const app = mount(); app.start(); app.screen('HomeScreen').props.go('checkin');
+  const answers = ['good', 'normal', 'good', 'low'];
+  assert.equal(app.screen('CheckinScreen').props.onDraft(answers), true);
+  const total = () => JSON.parse(app.raw()).sunshine.transactions.reduce((sum, item) => sum + item.delta, 0);
+  assert.equal(total(), 10);
+  app.screen('CheckinScreen').props.onDone('normal', answers, '');
+  app.next(); app.next(); assert.equal(total(), 15);
+  const ids = app.screen('CareScreen').props.recommendation.cares.map(care => care.id);
+  for (const id of ids) { app.screen('CareScreen').props.onComplete(id); assert.equal(total(),25); }
+  app.screen('CareScreen').props.goHome(); assert.equal(app.screen('HomeScreen').props.balance,25);
+  const restored = mount(app.raw()); restored.start(); assert.equal(restored.screen('HomeScreen').props.balance,25);
+});
+
+test('notification stays a single overlay while sequential rewards and navigation occur', () => {
+  const app = mount(); app.start(); app.screen('HomeScreen').props.go('checkin');
+  const answers = ['good','normal','good','low'];
+  app.screen('CheckinScreen').props.onDraft(answers);
+  const banners = () => nodes(app.tree(), node => node.props?.className === 'sunshine-feedback');
+  assert.equal(banners().length,1); assert.match(textContent(banners()[0]), /햇살 \+10을 받았어요!/);
+  app.screen('CheckinScreen').props.onDone('normal',answers,''); app.next(); app.next();
+  assert.equal(banners().length,1); assert.match(textContent(banners()[0]), /햇살 \+10을 받았어요!/);
+  app.screen('CareScreen').props.goHome(); assert.equal(banners().length,1);
+  assert.equal(app.screen('HomeScreen').props.balance,15);
+});

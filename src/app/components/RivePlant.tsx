@@ -17,8 +17,7 @@ export default function RivePlant({
   const { rive, canvas, RiveComponent } = useRive({
     src: '/plant-final.riv', artboard: 'Artboard 1',
     stateMachine: idleOnly ? undefined : state === 'low' ? 'lowlow_ver.' : 'basic',
-    animations: idleOnly ? 'idle' : undefined,
-    autoplay: true, layout,
+    autoplay: !idleOnly, layout,
     onLoadError: () => setError(true),
   });
 
@@ -78,10 +77,10 @@ export default function RivePlant({
     rive.on(EventType.Loop, finished);
     rive.on(EventType.Stop, finished);
     touch.current = () => play('touch');
-    // The requested artboard/state machine starts in useRive itself. Only
-    // interrupt it for explicit interactions or when its state changes.
+    // Start idle directly: useRive's animations option calls stop() with an
+    // array internally, which is deprecated. State machines autoplay above.
     if (celebrate) play('통통');
-    else if (stateChanged || celebrationEnded) play(baseline);
+    else if (idleOnly || stateChanged || celebrationEnded) play(baseline);
     return () => {
       disposed = true;
       touch.current = () => {};

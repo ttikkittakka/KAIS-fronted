@@ -368,3 +368,61 @@ button:disabled { cursor: default; }
   .onboarding-visual { flex-basis: 38%; min-height: 200px; }
   .onboarding-visual .plant-art { width: 238px; bottom: 12px; }
 }
+
+/* Garden expansion entry points; the scene and shared scrolling shell stay unchanged. */
+.sunshine-balance {
+  position: absolute; top: 20px; right: 20px; z-index: 3;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-width: 56px; height: 29px; padding: 0 10px; border-radius: 999px;
+  background: rgba(255, 248, 225, .9); color: var(--deep-green);
+  font-size: 12px; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.garden-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 13px 0; }
+.garden-tools button {
+  flex: 1 1 120px; min-height: 44px; display: flex; align-items: center;
+  justify-content: center; gap: 7px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 14px;
+  background: rgba(255, 255, 255, .65); color: var(--deep-green); font-size: 13px;
+}
+.garden-tools button:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.garden-preparation-screen { padding-bottom: 24px; scroll-padding-bottom: 24px; }
+.garden-preparation-content { display: grid; gap: 24px; padding: 28px 24px 0; }
+.garden-preparation-card {
+  padding: 28px 20px; border: 1px solid var(--line); border-radius: 24px;
+  background: var(--card); text-align: center;
+}
+.garden-preparation-icon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; border-radius: 16px;
+  background: var(--light-green); color: var(--deep-green); margin-bottom: 16px;
+}
+.garden-preparation-card > p:last-child { margin: 12px 0 0; color: var(--secondary); font-size: 14px; line-height: 1.8; }
+
+/* 450ms in, 2050ms hold, 350ms out; matches SUNSHINE_NOTICE_MS. */
+.sunshine-notifications {
+  position: absolute; z-index: 30; top: calc(env(safe-area-inset-top) + 32px);
+  left: 12px; right: 12px; pointer-events: none;
+  display: flex; justify-content: center;
+}
+.sunshine-feedback {
+  box-sizing: border-box; width: 190px; max-width: 100%; height: 40px;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 0 16px; border: 1px solid rgba(226, 196, 123, .25); border-radius: 9999px;
+  background: rgba(255, 248, 219, .60); color: var(--deep-green);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  text-align: center; white-space: nowrap;
+  box-shadow: 0 3px 12px rgba(92, 82, 52, .06);
+  animation: sunshine-banner 2950ms both;
+}
+.sunshine-feedback-icon { flex-shrink: 0; font-size: 18px; line-height: 1; }
+.sunshine-feedback strong { font-size: 14px; font-weight: 600; line-height: 1.4; }
+@keyframes sunshine-banner {
+  0% { opacity: 0; transform: translateY(calc(-100% - env(safe-area-inset-top) - 44px)); animation-timing-function: cubic-bezier(.22, 1, .36, 1); }
+  /* 550ms entrance, 2000ms hold, 400ms exit (2950ms total). */
+  18.644068% { opacity: 1; transform: translateY(0); }
+  86.440678% { opacity: 1; transform: translateY(0); animation-timing-function: cubic-bezier(.4, 0, 1, 1); }
+  100% { opacity: 0; transform: translateY(calc(-100% - env(safe-area-inset-top) - 44px)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sunshine-feedback { animation: none; transform: none; opacity: 1; }
+}

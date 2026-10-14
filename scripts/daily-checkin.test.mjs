@@ -35,3 +35,16 @@ test('expanded care IDs and internal answer values survive reload', () => {
   const current = { ...record, answers: ['very_low', 'very_low', 'very_low', 'very_low'], completedCareIds: ['rest', 'water', 'music'] };
   assert.deepEqual(parseDaily(JSON.stringify(current)), current);
 });
+
+// Preparation routes must not depend on check-in progress or mutate a saved record.
+test('garden preparation routes preserve unfinished and completed records', () => {
+  for (const daily of [null, record, { ...record, stage: 'photo' }, { ...record, date: '2000-01-01' }]) {
+    const before = JSON.stringify(daily);
+    for (const target of ['shop', 'decorate']) {
+      assert.equal(resolveView(target, daily), target);
+      assert.equal(resolveView('home', daily), 'home');
+      assert.equal(resolveView('garden', daily), 'garden');
+    }
+    assert.equal(JSON.stringify(daily), before);
+  }
+});
