@@ -1,3 +1,5 @@
+import { appStorage } from './app-storage';
+import { testSunshineBalance, simulatedActivityDays, checkTestPurchaseFailure } from './developer-state';
 import { localOwner, readRecords, recordStorageWarning } from './record-store';
 import { sunshineBalance } from './sunshine';
 import { activeDayCount, growthMilestone, missingGrowthGrants, validGrowthGrants, type GrowthGrant, type GrowthRewardId } from './growth-rewards';
@@ -13,7 +15,7 @@ export const ownedItemIds = (state: Pick<ShopState, 'purchases' | 'rewards'>) =>
 export const spentSunshine = (state: ShopState) => state.purchases.reduce((total, p) => total + p.cost, 0);
 export function readShop(): ShopState {
   const owner = localOwner();
-  const raw = localStorage.getItem(SHOP_KEY);
+  const raw = appStorage.getItem(SHOP_KEY);
   if (raw === null) return { version: 3, rewards: [], owner, purchases: [], placed: ['default-sky'], layout: emptyGardenLayout(), revision: 0 };
   try {
     const state = JSON.parse(raw) as Omit<ShopState, 'version'> & { version: 1 | 2 | 3 };
@@ -43,14 +45,14 @@ export function shopSnapshot() {
   const records = readRecords();
   const warning = recordStorageWarning();
   if (warning) throw new Error(warning);
-  const balance = sunshineBalance(records) - spentSunshine(state);
+  const balance = sunshineBalance(records) + testSunshineBalance() - spentSunshine(state);
   if (!Number.isSafeInteger(balance) || balance < 0) throw new Error('햇살 적립 기록과 구매 내역이 맞지 않아요. 데이터를 보호하기 위해 구매를 멈췄어요.');
-  return { state, balance, activeDays: activeDayCount(records) };
+  return { state, balance, activeDays: simulatedActivityDays() ?? activeDayCount(records) };
 }
 function commit(state: ShopState) {
   // One synchronous setItem commits the debit receipt AND item ownership together.
   // The existing document-wide record-session lock serializes writers across tabs.
-  try { localStorage.setItem(SHOP_KEY, JSON.stringify(state)); }
+  try { appStorage.setItem(SHOP_KEY, JSON.stringify(state)); }
   catch { throw new Error('저장 공간이 부족하거나 저장이 차단됐어요. 변경 사항은 저장되지 않았어요. 공간을 확인한 뒤 다시 시도해 주세요.'); }
 }
 export function buyItem(id: string) {
@@ -63,6 +65,7 @@ export function buyItem(id: string) {
   if (snapshot.balance < item.price) throw new Error('햇살이 ' + (item.price - snapshot.balance) + '개 더 필요해요. 작은 돌봄으로 천천히 모아 보아요.');
   const state: ShopState = { ...snapshot.state, purchases: [...snapshot.state.purchases, { itemId: id, cost: item.price, purchasedAt: new Date().toISOString() }] };
   state.revision++;
+  checkTestPurchaseFailure();
   commit(state);
   return { ...snapshot, state, balance: snapshot.balance - item.price };
 }

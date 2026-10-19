@@ -3,7 +3,8 @@ import type { DailyCheckin } from './daily-checkin';
 export const SUNSHINE_REWARDS = { reflection: 10, participation: 5, firstCare: 10 } as const;
 export type SunshineReason = keyof typeof SUNSHINE_REWARDS;
 // Signed deltas allow a future purchase transaction; this version only creates earnings.
-export type SunshineTransaction = { id: string; date: string; reason: SunshineReason; delta: number; createdAt: string };
+export type SunshineEntry<Reason extends string> = { id: string; date: string; reason: Reason; delta: number; createdAt: string };
+export type SunshineTransaction = SunshineEntry<SunshineReason>;
 export type SunshineLedger = { policyVersion: 1; startedAt: string; transactions: SunshineTransaction[] };
 export function sunshineBalance(records: DailyCheckin[]) {
   return records.reduce((balance, record) => balance + (record.sunshine?.transactions.reduce((sum, item) => sum + item.delta, 0) ?? 0), 0);

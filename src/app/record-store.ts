@@ -1,3 +1,4 @@
+import { appStorage, photoDatabaseName, beginStorageOperation } from './app-storage';
 import { nextSunshine, validSunshine, type SunshineReason } from './sunshine';
 import { DAILY_KEY, localDay, parseDaily, type DailyCheckin } from './daily-checkin';
 import { parseCareHistory } from './daily-cares';
@@ -21,9 +22,9 @@ export function newLocalId() {
 }
 // A device namespace, not authentication or account access control.
 export function localOwner() {
-  let id = localStorage.getItem(OWNER_KEY);
+  let id = appStorage.getItem(OWNER_KEY);
   if (id && (id.length > 80 || id.includes(':'))) throw new Error('기기 기록 식별자가 손상됐어요. 기존 데이터를 보호하기 위해 저장을 멈췄어요.');
-  if (!id) { id = newLocalId(); localStorage.setItem(OWNER_KEY, id); }
+  if (!id) { id = newLocalId(); appStorage.setItem(OWNER_KEY, id); }
   return id;
 }
 export function validRecordDate(value: unknown): value is string {
@@ -51,8 +52,8 @@ type Snapshot = { entries: DailyCheckin[]; records: DailyCheckin[]; warning: str
 let cached: { owner: string; raw: string | null; legacy: string | null; snapshot: Snapshot } | undefined;
 function readSnapshot(): Snapshot {
   const owner = localOwner();
-  const raw = localStorage.getItem(RECORDS_KEY);
-  const legacyRaw = localStorage.getItem(DAILY_KEY);
+  const raw = appStorage.getItem(RECORDS_KEY);
+  const legacyRaw = appStorage.getItem(DAILY_KEY);
   if (cached?.owner === owner && cached.raw === raw && cached.legacy === legacyRaw) return cached.snapshot;
   let entries: DailyCheckin[] = [];
   let warning = '';
@@ -96,8 +97,8 @@ export function saveRecord(record: DailyCheckin, reward?: SunshineReason) {
   const entries = [...records, ...others];
   const serialized = JSON.stringify(entries);
   let legacyRaw = cached?.legacy ?? null;
-  localStorage.setItem(RECORDS_KEY, serialized);
-  if (next.date === localDay()) { try { legacyRaw = JSON.stringify(next); localStorage.setItem(DAILY_KEY, legacyRaw); } catch { legacyRaw = cached?.legacy ?? null; /* The archive is authoritative. */ } }
+  appStorage.setItem(RECORDS_KEY, serialized);
+  if (next.date === localDay()) { try { legacyRaw = JSON.stringify(next); appStorage.setItem(DAILY_KEY, legacyRaw); } catch { legacyRaw = cached?.legacy ?? null; /* The archive is authoritative. */ } }
   // Reuse the committed snapshot rather than reparse every historical record on each keystroke.
   cached = { owner, raw: serialized, legacy: legacyRaw, snapshot: { entries, records, warning: '' } };
 
@@ -109,7 +110,7 @@ export function emptyRecord(): DailyCheckin {
 
 async function photoDb() {
   return new Promise<IDBDatabase>((resolve, reject) => {
-    const request = indexedDB.open('little-garden.private-photos.v1', 1);
+    const request = indexedDB.open(photoDatabaseName(), 1);
     let settled = false;
     const timer = setTimeout(() => { settled = true; reject(new Error('사진 저장소 응답이 늦어요. 다시 시도해 주세요.')); }, 10000);
     const fail = (error: unknown) => { if (!settled) { settled = true; clearTimeout(timer); reject(error); } };
@@ -127,6 +128,8 @@ async function photoDb() {
 export async function photoOperation(id: string, operation: 'read' | 'write' | 'delete', blob?: Blob): Promise<Blob | undefined> {
   if (typeof id !== 'string' || !id.startsWith(localOwner() + ':')) throw new Error('사진 기록의 기기 식별자를 확인해 주세요.');
   if (operation === 'write' && (!(blob instanceof Blob) || blob.size > 3 * 1024 * 1024)) throw new Error('사진 크기를 확인해 주세요.');
+  const release = beginStorageOperation();
+  try {
   const db = await photoDb();
   try { return await new Promise((resolve, reject) => {
     const tx = db.transaction('photos', operation === 'read' ? 'readonly' : 'readwrite');
@@ -140,6 +143,7 @@ export async function photoOperation(id: string, operation: 'read' | 'write' | '
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error ?? new Error('사진 저장이 중단됐어요.'));
   }); } finally { db.close(); }
+  } finally { release(); }
 }
 async function decodePhoto(file: File): Promise<{ source: CanvasImageSource; width: number; height: number; close: () => void }> {
   if (typeof createImageBitmap === 'function') {
@@ -159,7 +163,7 @@ async function decodePhoto(file: File): Promise<{ source: CanvasImageSource; wid
     return { source: image, width: image.naturalWidth, height: image.naturalHeight, close: () => { image.src = ''; URL.revokeObjectURL(url); } };
   } catch (error) { URL.revokeObjectURL(url); throw error; }
 }
-export async function preparePhoto(file: File) {
+async function preparePhotoFile(file: File) {
   if (!(file.type.startsWith('image/') || (!file.type && /\.(jpe?g|png|webp|heic|heif)$/i.test(file.name))) || file.size > 20 * 1024 * 1024) throw new Error('20MB 이하의 사진을 골라주세요.');
   const bitmap = await decodePhoto(file);
   try {
@@ -179,8 +183,12 @@ export async function preparePhoto(file: File) {
     return blob;
   } finally { bitmap.close(); }
 }
+export async function preparePhoto(file: File) {
+  const release = beginStorageOperation();
+  try { return await preparePhotoFile(file); } finally { release(); }
+}
 function deletionQueue() {
-  const value: unknown = JSON.parse(localStorage.getItem(PHOTO_TRASH_KEY) ?? '[]');
+  const value: unknown = JSON.parse(appStorage.getItem(PHOTO_TRASH_KEY) ?? '[]');
   if (!Array.isArray(value) || !value.every(id => typeof id === 'string')) throw new Error('사진 정리 목록을 읽지 못했어요.');
   return value as string[];
 }
@@ -188,10 +196,10 @@ function deletionQueue() {
 // keeps referenced photos; if the app closes, the next run removes detached ones.
 export function schedulePhotoDeletion(id: string) {
   if (!id.startsWith(localOwner() + ':')) throw new Error('사진 기록의 기기 식별자를 확인해 주세요.');
-  localStorage.setItem(PHOTO_TRASH_KEY, JSON.stringify(Array.from(new Set([...deletionQueue(), id]))));
+  appStorage.setItem(PHOTO_TRASH_KEY, JSON.stringify(Array.from(new Set([...deletionQueue(), id]))));
 }
 export async function deleteStoredPhoto(id: string) { schedulePhotoDeletion(id); await cleanupPhotos(); }
-export async function cleanupPhotos() {
+async function cleanupPhotosForScope() {
   const queue = deletionQueue();
   const snapshot = readSnapshot();
   if (snapshot.warning) throw new Error(snapshot.warning); // Do not delete files whose references could not be read.
@@ -199,6 +207,11 @@ export async function cleanupPhotos() {
   for (const id of queue) {
     if (!id.startsWith(localOwner() + ':') || references.has(id)) continue;
     await photoOperation(id, 'delete');
-    localStorage.setItem(PHOTO_TRASH_KEY, JSON.stringify(deletionQueue().filter(item => item !== id)));
+    appStorage.setItem(PHOTO_TRASH_KEY, JSON.stringify(deletionQueue().filter(item => item !== id)));
   }
+}
+
+export async function cleanupPhotos() {
+  const release = beginStorageOperation();
+  try { return await cleanupPhotosForScope(); } finally { release(); }
 }

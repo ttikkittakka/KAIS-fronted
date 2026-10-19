@@ -36,7 +36,7 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
     document: { visibilityState: 'visible', addEventListener: window.addEventListener, removeEventListener() {} },
     queueMicrotask: fn => tasks.push(fn), clearInterval() {},
     setTimeout: fn => { tasks.push(fn); return 1; }, clearTimeout() {},
-    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/GrowthRewards' ? { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
+    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/DeveloperSettings' ? { SettingsScreen: function SettingsScreen() {}, DeveloperSettings: function DeveloperSettings() {} } : name === './components/GrowthRewards' ? { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
   });
   function render() { cursor = 0; const tree = exports[component](props); first = false; return tree; }
   function find(node, name) {
@@ -388,4 +388,20 @@ test('50th committed activity auto-grants once and home links to persisted rewar
   home.props.go('rewards'); const rewards = app.screen('GrowthRewardsScreen'); assert.equal(rewards.props.snapshot.state.rewards[0].id,'days-50');
   rewards.props.onRetry(); assert.equal(app.screen('GrowthRewardsScreen').props.snapshot.state.rewards.length,1);
   rewards.props.onPlace('anniversary-friend'); assert.equal(app.hash(),'#decorate');
+});
+
+test('page settings switch dataset immediately and restore test commerce without reload', async () => {
+  const oldEnv = process.env.NODE_ENV; const oldFetch = globalThis.fetch; process.env.NODE_ENV = 'development'; globalThis.fetch = async () => Response.json({ok:true});
+  try {
+    const app = mount(); await new Promise(resolve => setImmediate(resolve)); app.start(); app.screen('HomeScreen').props.go('settings');
+    app.screen('SettingsScreen').props.onDeveloper(); assert.equal(app.hash(),'#developer');
+    await app.screen('DeveloperSettings').props.onToggle(true, '0728'); assert.equal(app.screen('DeveloperSettings').props.enabled,true);
+    const dev = loadTs(new URL('../src/app/developer-state.ts',import.meta.url));
+    const shop = loadTs(new URL('../src/app/shop-store.ts',import.meta.url));
+    dev.grantTestSunshine(1000); shop.buyItem('momo'); shop.placeItem('momo',true);
+    app.screen('DeveloperSettings').props.onRefresh(); assert.equal(app.screen('DeveloperSettings').props.snapshot.balance,850);
+    await app.screen('DeveloperSettings').props.onToggle(false); assert.equal(app.screen('DeveloperSettings').props.enabled,false); assert.equal(app.screen('DeveloperSettings').props.snapshot.balance,0);
+    app.screen('DeveloperSettings').props.onOpen('home'); assert.equal(app.screen('HomeScreen').props.balance,0); assert.deepEqual(app.screen('HomeScreen').props.shop.placed,['default-sky']);
+    app.screen('HomeScreen').props.go('developer'); await app.screen('DeveloperSettings').props.onToggle(true, '0728'); app.screen('DeveloperSettings').props.onOpen('home'); assert.equal(app.screen('HomeScreen').props.balance,850); assert.equal(app.screen('HomeScreen').props.shop.layout['friend-left'],'momo');
+  } finally { globalThis.fetch = oldFetch; if (oldEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = oldEnv; }
 });

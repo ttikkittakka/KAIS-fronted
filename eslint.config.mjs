@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Prebuilt Rive bundles and a separate downloaded CLI project, not app sources.
+    "design-output/rive.js",
+    "public/design-preview/rive.js",
+    "ui-ux-pro-max-skill-main/**",
   ]),
 ]);
 

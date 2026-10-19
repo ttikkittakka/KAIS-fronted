@@ -275,3 +275,13 @@ npm run build
 8. 탭의 아이콘·색상·선택 표시 및 기존 질문·추천·완료·정원 흐름에 회귀가 없는지.
 
 이번 변경 파일: src/app/page.tsx, src/app/globals.css, src/app/layout.tsx, scripts/checkin-flow.test.mjs, 신규 scripts/navigation-viewport.test.mjs, README.md.
+
+## 관리자 테스트 잠금 (개발용 MVP)
+
+개발 서버에서 설정 → 개발자 테스트를 열면 숫자 4자리 비밀번호 입력창이 표시됩니다. 비밀번호는 문자열로 서버의 `POST /api/developer/unlock`에 전송하며, 서버 전용 `ADMIN_TEST_PASSWORD` 환경 변수와 비교합니다. 로컬 `.env.development.local`에 이 값을 설정한 뒤 `npm run dev`를 실행하세요. 환경 파일은 Git에서 제외되므로 다른 개발 환경에서는 별도 설정이 필요합니다. `NEXT_PUBLIC_` 변수로 비밀번호를 설정하지 마세요.
+
+잠금 해제 상태는 해당 페이지 메모리에만 존재합니다. OFF, 새로고침, 새 탭 또는 앱 재실행 후에는 다시 입력해야 합니다. 이전 localStorage의 관리자 ON 값은 무시하며 기존 기록·햇살·캐릭터·정원·테스트 저장소를 지우거나 마이그레이션하지 않습니다. 저장 중에는 기존 데이터 보호를 위해 모드 전환이 차단됩니다.
+
+이 기능은 발표·개발용 잠금이며 운영 관리자 인증이 아닙니다. 클라이언트의 로컬 데이터 조작에 대한 보안 경계가 될 수 없습니다. production 웹 빌드에서는 메뉴, 관리자 데이터 변경 함수와 검증 API를 모두 차단합니다. 독립 네이티브 `android/` 앱에는 관리자 데이터 변경 기능이 구현되어 있지 않으며 이 웹 잠금을 APK에 추가하지 않습니다. 일반 배포 APK에 개발 웹 서버를 연결해 관리자 기능을 노출하지 마세요.
+
+검증: `node --test scripts/developer-lock.test.mjs scripts/developer-mode.test.mjs scripts/developer-settings.test.mjs`.

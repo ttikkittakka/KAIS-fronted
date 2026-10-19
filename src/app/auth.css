@@ -1,0 +1,40 @@
+﻿/* Authentication shares the unchanged garden frame and viewport scrolling.
+   A single open surface replaces the nested card; auto margins share spare
+   height above and below, and collapse to zero when forms need to scroll. */
+.auth-screen { background: radial-gradient(ellipse at 50% 16%, #e6eedc 0%, transparent 48%), var(--background); scroll-padding-block: 24px; }
+.auth-content { min-height: 100%; display: flex; flex-direction: column; gap: 24px; padding: 24px 24px max(24px, env(safe-area-inset-bottom)); text-align: center; font-size: 13px; line-height: 1.65; }
+.auth-brand { margin-top: auto; flex-shrink: 0; }
+.auth-plant { width: 144px; height: 144px; margin: 0 auto; background: url('/figma-plant-normal.svg') center / contain no-repeat; }
+.auth-eyebrow { margin: 4px 0 6px; color: var(--primary); font-size: 10px; letter-spacing: .12em; }
+.auth-brand h1 { margin: 0; font-size: 23px; font-weight: 400; letter-spacing: -.045em; color: var(--deep-green); }
+.auth-intro { margin: 8px 0 0; color: #5f695d; font-size: 13px; }
+.auth-body { flex-shrink: 0; min-width: 0; }
+.auth-body h2 { margin: 0 0 16px; font-size: 20px; font-weight: 400; color: var(--deep-green); }
+.auth-help, .auth-account p { color: #5f695d; font-size: 13px; line-height: 1.65; }
+.auth-form { display: grid; gap: 16px; text-align: left; }
+.auth-form label { display: grid; gap: 6px; font-size: 13px; color: #43563e; font-weight: 400; }
+/* 16px input text avoids focus zoom on mobile. */
+.auth-form input { width: 100%; min-width: 0; min-height: 48px; padding: 10px 14px; border: 1px solid #cbd7c5; border-radius: 14px; background: #fffdf9; color: var(--text); font: inherit; font-size: 16px; scroll-margin-block: 24px; }
+.auth-content .primary-button { width: 100%; min-height: 56px; box-shadow: 0 6px 16px #3f5d4614; }
+.auth-form input:focus-visible, .auth-content button:focus-visible, .auth-dev-banner button:focus-visible { outline: 2px solid var(--deep-green); outline-offset: 3px; }
+.auth-form .auth-help { margin: -4px 0 0; font-size: 12px; }
+.auth-content button:disabled { opacity: .55; cursor: wait; }
+.auth-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 16px; margin-top: 12px; }
+.auth-links button, .auth-secondary, .auth-developer > button { min-height: 44px; padding: 8px 2px; color: #456549; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+.auth-message { margin: 0 0 16px; padding: 12px 14px; background: #edf4e8; border-radius: 14px; color: #36523b; font-size: 13px; line-height: 1.65; overflow-wrap: anywhere; }
+.auth-error { color: #823f38; background: #fff0e9; }
+.auth-footer { margin-bottom: auto; flex-shrink: 0; }
+.auth-footnote { margin: 0; color: #687163; font-size: 11px; line-height: 1.7; }
+.auth-connected-label { display: inline-block; margin-bottom: 12px; padding: 4px 12px; border-radius: 999px; background: var(--light-green); color: var(--deep-green); font-size: 11px; }
+.auth-account h2 { margin: 0 0 8px; font-size: 23px; }
+.auth-account p { margin: 0; }
+.auth-account .auth-email { margin-top: 12px; font-size: 12px; overflow-wrap: anywhere; }
+.auth-account .auth-preparing { margin: 24px 0 8px; font-size: 12px; }
+.auth-developer { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 8px; }
+.auth-developer > button { color: #687163; font-size: 11px; }
+.auth-dev-banner { padding: 12px; text-align: center; color: #3f5d46; background: #e4eddc; font-size: 13px; }
+.auth-dev-banner button { margin-left: 10px; min-height: 44px; text-decoration: underline; }
+@media (max-height: 600px) {
+  .auth-content { gap: 18px; padding-top: 16px; }
+  .auth-plant { width: 96px; height: 96px; }
+}

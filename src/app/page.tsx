@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { dataScope, developerToolsAvailable, setDeveloperMode, DEVELOPER_MODE_KEY, TEST_DATA_KEY, PREVIEW_DATA_KEY } from './app-storage';
+import { SettingsScreen, DeveloperSettings } from './components/DeveloperSettings';
 import RivePlant, { RivePlantState } from './components/RivePlant';
 import { SunshineBalance, GardenTools } from './components/GardenFeatures';
 
@@ -60,7 +62,7 @@ function Onboarding({ start }: { start: () => void }) {
 
 function HomeScreen({ state, go, recorded, completedCount, resume, balance, shop, growthSnapshot }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number; shop: ShopState | null; growthSnapshot: ReturnType<typeof shopSnapshot> | null }) {
   return <section className="screen home-screen">
-    <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정"><span aria-hidden="true">⚙</span></button>}/>
+    <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정" onClick={() => go('settings')}><span aria-hidden="true">⚙</span></button>}/>
     <div className={"garden-scene garden-scene--" + (shop?.layout.background ?? "default-sky")}><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</span><SunshineBalance balance={balance}/><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></div>
     <GardenTools onOpen={go}/>
     <GrowthProgress snapshot={growthSnapshot} onOpen={() => go('rewards')}/>
@@ -150,6 +152,8 @@ function storageMessage(error: unknown) {
 
 export default function HomePage() {
   const [view, setView] = useState<View>('onboarding');
+  const [testEnabled, setTestEnabled] = useState(false);
+  const [datasetEpoch, setDatasetEpoch] = useState(0);
   const [daily, setDaily] = useState<DailyCheckin | null>(null);
   const dailyRef = useRef<DailyCheckin | null>(null);
   const viewRef = useRef<View>('onboarding');
@@ -172,6 +176,8 @@ export default function HomePage() {
     } catch (error) { setCommerce(null); setShopError(error instanceof Error ? error.message : '상점 저장소를 열지 못했어요.'); }
   }, []);
   const readToday = useCallback(() => {
+    try { if (developerToolsAvailable()) setTestEnabled(dataScope() === 'test'); }
+    catch { setShopError('브라우저 저장소에 접근하지 못했어요. 저장 권한을 확인해 주세요.'); setCommerce(null); return null; }
     refreshCommerce();
     try {
       const all = readRecords();
@@ -270,7 +276,7 @@ export default function HomePage() {
     const onBack = () => sync();
     const onResume = () => { if (document.visibilityState === 'visible') sync(); };
     const onStorage = (event: StorageEvent) => {
-      if (event.key !== DAILY_KEY && event.key !== RECORDS_KEY && event.key !== SHOP_KEY && event.key !== null) return;
+      if (event.key !== DAILY_KEY && event.key !== RECORDS_KEY && event.key !== SHOP_KEY && event.key !== DEVELOPER_MODE_KEY && event.key !== TEST_DATA_KEY && event.key !== PREVIEW_DATA_KEY && event.key !== null) return;
       dailyRef.current = null;
       sync();
     };
@@ -333,6 +339,20 @@ export default function HomePage() {
     if (record.completedCareIds.includes(id)) return;
     if (save({ ...record, completedCareIds: [...record.completedCareIds, id] }, 'firstCare')) setCompletedCare(id);
   };
+  const assertNoDrafts = () => {
+    if (hasUnsavedDrafts()) throw new Error('아직 저장하지 않은 사진이나 글이 있어요. 저장하거나 선택을 취소한 뒤 모드를 바꿔 주세요.');
+  };
+  const refreshDataset = () => {
+    dailyRef.current = null;
+    setDaily(null); setRecords([]); setCommerce(null);
+    setSunshineQueue([]); seenSunshineNotices.current.clear();
+    setCompletedCare(null); setDecorationItem(null); setSaveError(''); setShopError(''); setRewardError('');
+    setDatasetEpoch(value => value + 1);
+    updateDaily(readToday());
+  };
+  const toggleTestMode = async (enabled: boolean, password?: string, signal?: AbortSignal) => {
+    assertNoDrafts(); await setDeveloperMode(enabled, password, signal); setTestEnabled(enabled); refreshDataset();
+  };
   const go = (target: View) => show(target);
   const goHome = () => show('home', viewRef.current === 'onboarding' || viewRef.current === 'checkin');
   const plantState = daily?.plantState ?? 'normal';
@@ -354,9 +374,11 @@ export default function HomePage() {
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
       {view === 'garden' && <GardenScreen records={records} onSave={save}/>}
-      {(view === 'shop' || view === 'decorate') && <section className="screen shop-screen"><TopBar title={view === 'shop' ? '작은 정원 상점' : '정원 꾸미기'} onBack={goHome}/><GardenShop key={view + ':' + (decorationItem ?? '')} initialItem={decorationItem} plantState={plantState} inventory={view === 'decorate'} snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go(view === 'shop' ? 'decorate' : 'shop')}/></section>}
+      {(view === 'shop' || view === 'decorate') && <section className="screen shop-screen"><TopBar title={view === 'shop' ? '작은 정원 상점' : '정원 꾸미기'} onBack={goHome}/><GardenShop key={datasetEpoch + ':' + view + ':' + (decorationItem ?? '')} initialItem={decorationItem} plantState={plantState} inventory={view === 'decorate'} snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go(view === 'shop' ? 'decorate' : 'shop')}/></section>}
       {view === 'rewards' && <section className="screen"><TopBar title="함께한 날의 선물" onBack={goHome}/><GrowthRewardsScreen snapshot={commerce} error={shopError || rewardError} onRetry={refreshCommerce} onChange={setCommerce} onPlace={id => { show('decorate'); setDecorationItem(id); }} onExtra={() => go('extra-care')}/></section>}
       {view === 'extra-care' && <section className="screen"><TopBar title="선택형 돌봄" onBack={() => go('rewards')}/><OptionalCareScreen snapshot={commerce} onHome={goHome}/></section>}
+      {view === 'settings' && <section className="screen"><TopBar title="설정" onBack={goHome}/><SettingsScreen onDeveloper={() => go('developer')}/></section>}
+      {view === 'developer' && developerToolsAvailable() && <section className="screen"><TopBar title="개발자 테스트" onBack={() => go('settings')}/><DeveloperSettings enabled={testEnabled} snapshot={commerce} dataError={shopError || rewardError} onToggle={toggleTestMode} onRefresh={refreshDataset} onOpen={go} canReset={assertNoDrafts}/></section>}
       {(view === 'home' || view === 'garden' || view === 'shop' || view === 'decorate' || view === 'rewards' || view === 'extra-care') && <BottomNav active={view === 'garden' ? 'garden' : 'home'} go={go}/>}
     </>
   </div></main>;
