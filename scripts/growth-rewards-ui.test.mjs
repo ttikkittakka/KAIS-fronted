@@ -6,7 +6,7 @@ import ts from 'typescript';
 import { loadTs } from './helpers/load-ts.mjs';
 const compiled=ts.transpileModule(readFileSync(new URL('../src/app/components/GrowthRewards.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX}}).outputText;
 const jsx=(type,props)=>({type,props});const exports={};
-runInNewContext(compiled,{exports,Error,require:name=>name==='react'?{useState:initial=>[initial,()=>{}]}:name==='react/jsx-runtime'?{jsx,jsxs:jsx}:loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
+runInNewContext(compiled,{exports,Error,require:name=>name==='react'?{useState:initial=>[initial,()=>{}]}:name==='react/jsx-runtime'?{jsx,jsxs:jsx}:name==='./GardenPlacement'?{ItemArt:props=>jsx('item-art',props)}:loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
 function text(n){if(n==null||typeof n==='boolean')return '';if(Array.isArray(n))return n.map(text).join('');return typeof n==='object'?text(n.props?.children):String(n);}
 function nodes(n,p){if(!n||typeof n!=='object')return [];if(Array.isArray(n))return n.flatMap(x=>nodes(x,p));return [...(p(n)?[n]:[]),...nodes(n.props?.children,p)];}
 const snapshot=days=>({activeDays:days,balance:0,state:{rewards:days>=100?[{id:'days-50'},{id:'days-100'}]:days>=50?[{id:'days-50'}]:[]}});

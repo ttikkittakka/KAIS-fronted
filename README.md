@@ -35,6 +35,39 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## 빠른 실행 (개발 확인용)
+
+```sh
+npm install                 # 처음 한 번
+npm run dev                 # http://localhost:3000
+```
+
+1. 로그인 화면 맨 아래 **개발용 정원 테스트** → PIN 입력 → **테스트 정원 열기**. PIN은 `.env.local`의 `ADMIN_TEST_PASSWORD`(4자리)이며 개발 서버에서만 동작합니다.
+2. 휴대폰 화면 크기로 보려면 브라우저 개발자 도구(F12) → 기기 모드(Ctrl+Shift+M).
+3. 카메라는 HTTPS 또는 localhost에서만 열립니다. 휴대폰에서 `http://<PC IP>:3000`으로 접속하면 앱 내 카메라 대신 기기 기본 촬영/선택 창으로 자동 전환됩니다.
+
+프로덕션 확인: `npm run build` 후 `npm run start`. 테스트: `node --test scripts/*.test.mjs`.
+
+AI 돌봄 설명과 공공서비스 조회를 사용하려면 별도 터미널에서 `cd backend` 후 `npm install`, `npm run dev`를 실행합니다. API 키 설정은 [백엔드 실행 안내](backend/README.md)를 참고하세요.
+
+### 유저 버전 · 개발자 버전
+
+| 버전 | 여는 방법 | 데이터 |
+| --- | --- | --- |
+| 유저 버전 | 이메일로 로그인 → 정원 | 계정마다 따로 (`little-garden.account.<사용자 ID>.*`), 로그인 전 기기 기록과 섞이지 않음 |
+| 개발자 버전 | 로그인 화면의 **개발용 정원 테스트**(PIN), 또는 로그인 후 **설정 → 개발자 코드 입력** | 따로 보관되는 테스트 정원. 기본으로 무제한 모드(햇살 무제한·모든 상호작용 열림·친구 바로 데려오기) |
+
+- 개발자 코드 = `.env.local`의 `ADMIN_TEST_PASSWORD`(4자리). `npm run dev`에서 동작합니다.
+- 배포용 빌드는 `npm run build`가 유저 버전입니다. 개발자 코드 메뉴까지 넣은 개발자 버전 빌드가 필요하면 `NEXT_PUBLIC_DEVELOPER_TOOLS=on npm run build`(서버에도 `ADMIN_TEST_PASSWORD` 필요). 개발자 버전은 기기 안의 테스트 정원만 열며 서버 권한은 주지 않습니다.
+- 설정의 개발자 버전 스위치를 끄면 원래 유저 버전 정원으로 돌아갑니다. 무제한 모드를 끄면 실제처럼 잔액 부족·잠긴 상호작용을 확인할 수 있습니다.
+
+### 홈 · 탭 구성
+
+- 홈은 펫만 화면 가득. 하단 반투명 탭(홈 · 오늘 · 꾸미기 · 기록 · 설정)을 누르거나 좌우로 스와이프해 이동합니다.
+- 홈 왼쪽 위 **도움말 풍선**: 노는 법, 레벨·친밀도·마음 성숙도, 단계별로 열리는 상호작용. 가운데 Lv: 현재 레벨. 오른쪽 위 손 버튼이나 펫을 한 번 누르면 상호작용이 부채처럼 원형으로 펼쳐집니다.
+- 꾸미기 탭: 집 꾸미기(정원 배치) · 옷 입히기(머리·얼굴·목) · 아이템 창(모은 옷·배경·소품). 옷 그림은 `public/wardrobe`, 착용 위치는 `src/app/wardrobe.ts`의 `FIT`(`design-output/wardrobe`에서 맞춤).
+- 지원 제도 신청 도우미(`#support`): 펫에게 "지원 제도 도와줘"라고 말하거나 메뉴의 **도움 찾기**. 운영 절차와 동의·보관 정책은 `design-output/support/SERVICE.md`, DB는 `supabase/migrations/202611190001_support_applications.sql`.
+
 ## 오늘의 나 기록하기
 
 돌아보기(기존 4개 질문) → 기록하기(사진 한 장·100자 코멘트) → 성장하기(300자 한마디) → 기존 추천 행동 3개 흐름입니다. 사진과 글은 선택 사항입니다. 질문 응답과 글은 입력할 때 저장되며, 사진은 미리보기 후 저장 버튼으로 확정합니다.

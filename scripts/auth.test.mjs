@@ -104,7 +104,7 @@ const source = readFileSync(new URL('../src/app/components/AuthBoundary.tsx', im
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 function boundary(environment = 'development') {
   let snapshot = { phase: 'loading', user: null, busy: false, message: '', error: false, epoch: 0 };
-  const slots = []; let cursor = 0; const exports = {}; let unlocks = 0;
+  const slots = []; let cursor = 0; const exports = {}; let unlocks = 0; const scopes = [];
   const submissions = [];
   const store = { getSnapshot: () => snapshot, subscribe() {}, submit(...args) { submissions.push(args); return Promise.resolve(false); } };
   const jsx = (type, props) => ({ type, props });
@@ -119,7 +119,8 @@ function boundary(environment = 'development') {
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
       if (name.includes('auth-store')) return { createAuthStore: () => store, INITIAL_AUTH: snapshot };
       if (name.includes('auth-client')) return { getAuthClient() {} };
-      if (name.includes('app-storage')) return { async setDeveloperMode() { unlocks++; } };
+      if (name.includes('app-storage')) return { async setDeveloperMode() { unlocks++; }, setAccountScope(id) { scopes.push(id); }, developerToolsAvailable: () => environment === 'development' };
+      if (name.endsWith('/safety')) return loadTs(new URL('../src/app/safety.ts', import.meta.url));
       throw Error(name);
     },
   });
@@ -128,6 +129,7 @@ function boundary(environment = 'development') {
     update(value) { snapshot = { ...snapshot, ...value }; },
     render() { cursor = 0; return exports.default({ children: child }); },
     unlocks: () => unlocks,
+    scope: () => scopes.at(-1),
     submissions,
   };
 }
@@ -138,29 +140,32 @@ function find(node, predicate) {
   return null;
 }
 
-test('connected screen offers account switching without exposing an unsafe garden entry', () => {
+const A = '00000000-0000-4000-8000-00000000000a', B = '00000000-0000-4000-8000-00000000000b';
+test('user version: a signed-in account opens its own account-scoped garden; it stays during a logout attempt and closes after', () => {
   const app = boundary('production');
-  app.update({ phase: 'signed-in', user: { id: 'A', email: 'A@example.test' } });
-  const screen = app.render();
-  assert.match(JSON.stringify(screen), /반가워요!|계정별 정원을 준비/);
-  assert.doesNotMatch(JSON.stringify(screen), /SENTINEL_NEVER_SHOW|나의 정원으로 가기/);
-  assert.equal(find(screen, n => n.type === 'button' && n.props.className === 'primary-button'), null);
-  const switchAccount = find(screen, n => n.type === 'button' && n.props.children === '다른 계정으로 로그인');
-  assert.ok(switchAccount);
-  switchAccount.props.onClick();
-  assert.deepEqual(app.submissions, [['logout']]);
-  app.update({ busy: true, error: true, message: '로그아웃을 다시 시도해 주세요.' });
-  const busyScreen = app.render();
-  assert.equal(find(busyScreen, n => n.type === 'button' && n.props.className === 'auth-secondary').props.disabled, true);
-  assert.ok(find(busyScreen, n => n.props?.role === 'alert'));
+  app.update({ phase: 'signed-in', user: { id: A, email: 'A@example.test' } });
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.equal(app.scope(), A);
+  app.update({ busy: true });
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/, 'no flash to the login screen while logging out; a failure is reported in Settings');
+  assert.equal(app.scope(), A);
+  app.update({ busy: false, error: false, message: '', phase: 'signed-out', user: null });
+  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.equal(app.scope(), null);
 });
-test('actual auth boundary hides local readers during loading, logout, recovery, A/B and production', async () => {
+test('auth boundary shows a garden only to a signed-in account or the developer PIN, never while loading, recovering or signed out', async () => {
   const app = boundary();
-  for (const phase of ['loading', 'signed-out', 'unavailable', 'recovery', 'signed-in']) {
-    for (const id of ['A', 'B']) {
-      app.update({ phase, user: phase === 'signed-in' || phase === 'recovery' ? { id, email: `${id}@example.test` } : null });
+  for (const phase of ['loading', 'signed-out', 'unavailable', 'recovery']) {
+    for (const id of [A, B]) {
+      app.update({ phase, user: phase === 'recovery' ? { id, email: `${id}@example.test` } : null });
       assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+      assert.equal(app.scope(), null);
     }
+  }
+  for (const id of [A, B]) {
+    app.update({ phase: 'signed-in', user: { id, email: `${id}@example.test` } });
+    assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+    assert.equal(app.scope(), id, 'each account reads only its own scope');
   }
   app.update({ phase: 'signed-out', user: null, epoch: 5 });
   find(app.render(), n => n.type === 'button' && n.props.children === '개발용 정원 테스트').props.onClick();
@@ -171,8 +176,9 @@ test('actual auth boundary hides local readers during loading, logout, recovery,
   app.update({ busy: true });
   assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   app.update({ busy: false });
-  app.update({ phase: 'signed-in', user: { id: 'B', email: 'B@example.test' }, epoch: 6 });
-  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  app.update({ phase: 'signed-in', user: { id: B, email: 'B@example.test' }, epoch: 6 });
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.equal(app.scope(), B);
   app.update({ phase: 'signed-out', user: null, epoch: 7 });
   assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   const prod = boundary('production'); prod.update({ phase: 'signed-out' });

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { GROWTH_MILESTONES, OPTIONAL_CARE_MODULES, extraCareUnlocked } from '../growth-rewards';
 import { shopItem } from '../shop-catalog';
 import { acknowledgeGrowthReward, type shopSnapshot } from '../shop-store';
+import { ItemArt } from './GardenPlacement';
 type Snapshot = ReturnType<typeof shopSnapshot>;
 export function GrowthProgress({ snapshot, onOpen }: { snapshot: Snapshot | null; onOpen: () => void }) {
   const pending = snapshot?.state.rewards.some(grant => !grant.seenAt);
@@ -27,7 +28,7 @@ export function GrowthRewardsScreen({ snapshot, error, onRetry, onChange, onPlac
         <p className="eyebrow">누적 {milestone.days}일 · {grant ? '선물 지급 완료' : remaining === 0 && snapshot ? '지급 대기' : '함께 쌓아 가는 중'}</p>
         <h2 id={milestone.id + '-title'}>{grant ? milestone.title : milestone.days + '일의 작은 선물'}</h2>
         <p>{grant ? milestone.description : '서두르지 않아도 괜찮아요. ' + remaining + '일의 돌봄이 더 쌓이면 만날 수 있어요.'}</p>
-        <ul className="growth-gifts">{milestone.itemIds.map(id => { const item = shopItem(id)!; return <li key={id}><span aria-hidden="true">{item.icon}</span><div><strong>{item.name}</strong><small>기념 선물 · 임시 아이콘</small></div>{grant && <button type="button" className="shop-secondary" onClick={() => onPlace(id)}>정원에 배치하기</button>}</li>; })}</ul>
+        <ul className="growth-gifts">{milestone.itemIds.map(id => { const item = shopItem(id)!; return <li key={id}><span className="growth-gift-art"><ItemArt item={item}/></span><div><strong>{item.name}</strong><small>기념 선물</small></div>{grant && <button type="button" className="shop-secondary" onClick={() => onPlace(id)}>정원에 배치하기</button>}</li>; })}</ul>
         {grant && !grant.seenAt && <button type="button" className="shop-secondary" onClick={() => { try { onChange(acknowledgeGrowthReward(grant.id)); setSaveError(''); } catch (cause) { setSaveError(cause instanceof Error ? cause.message : '확인 상태를 저장하지 못했어요.'); } }}>선물 확인했어요</button>}
         {milestone.id === 'days-100' && grant && <div className="growth-extra"><p>기본 돌봄 3개는 그대로예요. 마음이 내킬 때만 추가 공간에 들러도 좋아요.</p><button type="button" className="shop-secondary" onClick={onExtra}>선택형 돌봄 둘러보기</button></div>}
       </section>;

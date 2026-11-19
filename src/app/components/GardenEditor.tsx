@@ -42,7 +42,7 @@ export default function GardenEditor({ snapshot, itemId, plantState, onChange, o
         <div className="soil-floor"/><GardenPlacement layout={draft}/>
       </div>
     </div>
-    <p className="shop-asset-note">새싹이는 중앙 고정 · 추가 친구 최대 3명 · 새 아이템은 임시 아이콘으로 표시돼요.</p>
+    <p className="shop-asset-note">대표 친구는 가운데에 있어요 · 정원 친구는 최대 3명 · 꽃·길·벤치·소품·하늘자리마다 하나씩 놓을 수 있어요.</p>
     {error && <div className="shop-error" role="alert"><p>{error}</p><p>저장된 배치는 그대로 유지돼요.</p><button type="button" onClick={reload}>최신 배치 다시 불러오기</button></div>}
     {saved ? <div className="garden-editor-actions"><p role="status">배치 저장 완료</p><button type="button" className="primary-button" onClick={onHome}>정원으로 돌아가기</button><button type="button" className="shop-secondary" onClick={onClose}>다른 아이템 꾸미기</button></div> : reviewing ? <>
       <ul className="garden-change-list" aria-label="저장할 변경 사항">{changes.map(slot => <li key={slot.id}>{slot.label}: {shopItem(snapshot.state.layout[slot.id] ?? '')?.name ?? '빈자리'} → {shopItem(draft[slot.id] ?? '')?.name ?? '빈자리'}</li>)}</ul>

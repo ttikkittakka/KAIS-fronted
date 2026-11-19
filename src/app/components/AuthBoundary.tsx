@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { getAuthClient } from '../../lib/supabase/auth-client';
 import { createAuthStore, INITIAL_AUTH, type AuthAction } from '../../lib/supabase/auth-store';
-import { setDeveloperMode } from '../app-storage';
+import { developerToolsAvailable, setAccountScope, setDeveloperMode } from '../app-storage';
+import { SAFETY_CONTACTS } from '../safety';
 
 function clearAuthRedirect() {
   const url = new URL(window.location.href);
@@ -21,10 +22,23 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
   const [pinError, setPinError] = useState('');
   const pinLock = useRef(false);
   const panel = useRef<HTMLDivElement>(null);
+  // Unsaved drafts and caches live in memory; after a sign-out or a switch to another person a reload drops them.
+  const signedInAs = useRef<string | null>(null);
+  const currentAccount = state.phase === 'signed-in' ? state.user?.id ?? null : null;
+  useEffect(() => {
+    if (signedInAs.current && signedInAs.current !== currentAccount) window.location.reload();
+    signedInAs.current = currentAccount;
+  }, [currentAccount]);
 
   useEffect(() => {
     const requested = new URL(window.location.href).searchParams.get('auth') === 'recovery';
     return store.start(getAuthClient(), requested);
+  }, [store]);
+  // The garden's settings screen asks for a logout through a window event, so it needs no auth props.
+  useEffect(() => {
+    const logout = () => { void store.submit('logout').then(ok => { if (ok) { setMode('login'); clearAuthRedirect(); } else window.dispatchEvent(new Event('little-garden:logout-failed')); }); };
+    window.addEventListener('little-garden:logout', logout);
+    return () => window.removeEventListener('little-garden:logout', logout);
   }, [store]);
 
   useEffect(() => {
@@ -93,34 +107,37 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
     finally { pinLock.current = false; setPinBusy(false); }
   };
 
-  // No production or authenticated account can mount the legacy record readers.
-  if (process.env.NODE_ENV === 'development' && state.phase === 'signed-out' && !state.busy && developerEpoch === state.epoch) {
-    return <><aside className="auth-dev-banner">개발용 로컬 정원 · Supabase 계정과 연결되지 않아요. <button onClick={() => window.location.reload()}>테스트 나가기</button></aside>{children}</>;
+  // User version: a signed-in account gets its own garden on this device (account-scoped storage). The scope is set
+  // during render, before the garden mounts and reads storage; the key remounts the garden when the account changes.
+  // The legacy unscoped device garden is never shown to an account.
+  const account = state.phase === 'signed-in' ? state.user : null;
+  setAccountScope(account?.id ?? null);
+  if (account) return <Fragment key={account.id}>{children}</Fragment>;
+  // Developer version: the PIN opens the isolated test garden without an account.
+  if (developerToolsAvailable() && state.phase === 'signed-out' && !state.busy && developerEpoch === state.epoch) {
+    return <><aside className="auth-dev-banner">개발자 버전 · 테스트 정원 · Supabase 계정과 연결되지 않아요. <button onClick={() => window.location.reload()}>테스트 나가기</button></aside>{children}</>;
   }
 
   const loading = state.phase === 'loading';
-  const account = state.phase === 'signed-in';
+  const signedIn = state.phase === 'signed-in';
   const recovery = state.phase === 'recovery';
   const available = state.phase === 'signed-out' || recovery;
   return <main className="app-shell" ref={panel}>
     <div className="phone-frame">
     <div className="screen auth-screen">
-    <section className={`auth-content${account ? ' auth-content--connected' : ''}`} aria-labelledby="auth-title" aria-busy={loading || state.busy}>
+    <section className={`auth-content${signedIn ? ' auth-content--connected' : ''}`} aria-labelledby="auth-title" aria-busy={loading || state.busy}>
       <header className="auth-brand">
         <div className="auth-plant" role="img" aria-label="OneStep의 작은 새싹 캐릭터" />
         <p className="auth-eyebrow">오늘도, 나의 속도로</p>
         <h1 id="auth-title">나의 작은 정원</h1>
-        {!account && <p className="auth-intro">나만의 정원에서 오늘의 나를 돌봐요.</p>}
+        {!signedIn && <p className="auth-intro">나만의 정원에서 오늘의 나를 돌봐요.</p>}
       </header>
       <div className="auth-body">
       {loading && <p role="status">로그인 상태를 안전하게 확인하고 있어요.</p>}
-      {state.message && (!account || state.error) && <p className={state.error ? 'auth-message auth-error' : 'auth-message'} role={state.error ? 'alert' : 'status'}>{state.message}</p>}
-      {account && <div className="auth-account" key={state.user?.id}>
-        <span className="auth-connected-label">계정 연결 완료</span>
-        <h2>반가워요!</h2>
-        <p>이제 나만의 작은 정원을 만나볼까요?</p>
+      {state.message && (!signedIn || state.error) && <p className={state.error ? 'auth-message auth-error' : 'auth-message'} role={state.error ? 'alert' : 'status'}>{state.message}</p>}
+      {signedIn && <div className="auth-account" key={state.user?.id}>
+        <span className="auth-connected-label">계정 연결 중</span>
         <p className="auth-email">{state.user?.email}</p>
-        <p className="auth-preparing">계정별 정원을 준비하고 있어요.<br />준비가 끝나면 여기서 정원에 들어갈 수 있어요.</p>
         <button className="auth-secondary" disabled={state.busy} onClick={logout}>{state.busy ? '로그아웃 중…' : '다른 계정으로 로그인'}</button>
       </div>}
       {available && <>
@@ -142,7 +159,9 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
       </div>
       <footer className="auth-footer">
       <p className="auth-footnote">기존 기기 기록은 그대로 보관돼요.<br />로그인한 계정에 자동으로 연결되지 않아요.</p>
-      {process.env.NODE_ENV === 'development' && state.phase === 'signed-out' && <div className="auth-developer">
+      {/* The safety center lives behind login, so the first screen links 109 directly. */}
+      <p className="auth-footnote">지금 많이 힘들다면 <a href={'tel:' + SAFETY_CONTACTS[0].number}>{SAFETY_CONTACTS[0].number} {SAFETY_CONTACTS[0].name}</a> (24시간)</p>
+      {developerToolsAvailable() && state.phase === 'signed-out' && <div className="auth-developer">
         <button disabled={state.busy || pinBusy} onClick={() => setPinOpen(!pinOpen)}>개발용 정원 테스트</button>
         {pinOpen && <form onSubmit={unlockDeveloper} className="auth-form">
           <p className="auth-help">개발용 PIN은 Supabase 로그인 비밀번호와 달라요. 기존 테스트 정원만 열어요.</p>

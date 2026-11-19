@@ -4,6 +4,9 @@ import RecordSessionBoundary from "./components/RecordSessionBoundary";
 import AuthBoundary from "./components/AuthBoundary";
 import "./globals.css";
 import "./auth.css";
+import "./companions.css";
+import "./pet-home.css";
+import "./support.css";
 
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover', interactiveWidget: 'resizes-content' };
 

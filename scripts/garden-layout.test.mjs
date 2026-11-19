@@ -62,3 +62,9 @@ test('slot bounds remain separated at mobile widths and front items stay below t
  const front=rectangles.find(r=>r.id==='friend-front');assert.ok(front.top>390-84);
  }
 });
+test('catalog v2 props and sky items only fit their own new slots',()=>{
+ setup();shop.buyItem('watering-can');shop.buyItem('butterflies');let state=shop.readShop();let layout=state.layout;
+ layout=garden.assignGardenSlot(layout,'watering-can','prop-right');layout=garden.assignGardenSlot(layout,'butterflies','sky-left');
+ state=shop.saveGardenLayout(layout,state.revision).state;assert.equal(state.layout['prop-right'],'watering-can');assert.equal(state.layout['sky-left'],'butterflies');
+ for(const [id,slot] of [['butterflies','prop-left'],['watering-can','sky-right'],['watering-can','flower-left'],['yellow-flower','sky-left']])assert.equal(garden.compatibleSlot(id,slot),false,id+' -> '+slot);
+});

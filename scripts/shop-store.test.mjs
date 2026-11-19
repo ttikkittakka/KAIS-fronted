@@ -14,7 +14,11 @@ function setup(days = 20) {
   data.set(store.RECORDS_KEY,JSON.stringify(records)); return data;
 }
 test('catalog prices and free default background',()=>{
-  setup(); assert.deepEqual(SHOP_CATALOG.map(i=>i.price),[150,200,250,30,60,100,0,180,220]);
+  setup(); const prices=Object.fromEntries(SHOP_CATALOG.map(i=>[i.id,i.price]));
+  // Original prices never change (receipts keep the paid cost); catalog v2 adds ten decorations.
+  for(const [id,price] of Object.entries({momo:150,pori:200,lulu:250,'yellow-flower':30,'pebble-path':60,'small-bench':100,'default-sky':0,'sunset-garden':180,'starlight-garden':220}))assert.equal(prices[id],price,id);
+  assert.deepEqual(SHOP_CATALOG.filter(i=>i.slot&&!['yellow-flower','pebble-path','small-bench'].includes(i.id)).map(i=>[i.id,i.slot,i.price]),[['pink-tulip','flower',40],['sunflower','flower',50],['tree-stump','bench',70],['watering-can','prop',40],['mushroom-lamp','prop',80],['garden-lantern','prop',90],['birdhouse','prop',110],['butterflies','sky',50],['rainbow','sky',120],['hot-air-balloon','sky',150]]);
+  assert.ok(SHOP_CATALOG.every(i=>(i.category==='decoration')===!!i.slot),'every decoration names its slot kind');
   assert.deepEqual(shop.ownedItemIds(shop.readShop()),['default-sky']); assert.deepEqual(shop.readShop().placed,['default-sky']);
 });
 test('purchase atomically owns item, deducts once, survives reload and stale retry',()=>{

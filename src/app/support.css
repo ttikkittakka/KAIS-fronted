@@ -1,0 +1,315 @@
+.support-flow,
+.support-privacy {
+  overflow-wrap: anywhere;
+}
+
+.support-flow .settings-card p,
+.support-privacy .settings-card p {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.support-guide {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 14px;
+}
+
+.support-guide .support-avatar {
+  flex: 0 0 48px;
+  object-fit: contain;
+  border-radius: 50%;
+  background: var(--light-green);
+}
+
+.support-guide h2,
+.support-guide p {
+  margin: 0;
+}
+
+.support-guide p strong {
+  color: var(--deep-green);
+  font-weight: 600;
+}
+
+.support-flow .settings-card .support-test,
+.support-flow .settings-card .support-feedback {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--light-green);
+  color: var(--deep-green);
+}
+
+.support-official h2,
+.support-step > h3 {
+  margin: 12px 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.support-flow button,
+.support-flow .support-text-link,
+.support-privacy .support-text-link,
+.support-inline-policy summary {
+  min-height: 44px;
+}
+
+.support-flow .support-topics button {
+  min-height: 44px;
+}
+
+.support-flow :is(a, button, select, input, textarea, summary, h2):focus-visible,
+.support-privacy .support-text-link:focus-visible {
+  outline: 2px solid var(--deep-green);
+  outline-offset: 3px;
+}
+
+.support-flow .support-text-link,
+.support-privacy .support-text-link {
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 4px;
+  color: var(--deep-green);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.support-choices {
+  min-width: 0;
+  margin: 0 0 14px;
+  padding: 0;
+  border: 0;
+}
+
+.support-choices legend,
+.support-fields label {
+  font-weight: 600;
+}
+
+.support-needs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.support-choice {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: var(--deep-green);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.support-needs .support-choice {
+  margin-top: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.support-choice input[type='checkbox'] {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  accent-color: var(--deep-green);
+  appearance: auto;
+}
+
+.support-fields {
+  display: grid;
+  gap: 14px;
+}
+
+.support-match-fields {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 124px), 1fr));
+  gap: 8px;
+}
+
+.support-fields label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.support-fields label.support-choice {
+  display: flex;
+}
+
+.support-fields :is(input:not([type='checkbox']), select, textarea) {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+
+.support-fields textarea {
+  resize: vertical;
+}
+
+.support-fields :is(input, select, textarea)[aria-invalid='true'] {
+  border-color: #9e3729;
+}
+
+.support-fields textarea:disabled {
+  background: #f3f3ed;
+}
+
+.support-flow .support-step .support-hint {
+  margin: 0 0 5px;
+  font-size: 13px;
+  color: var(--secondary);
+}
+
+.support-flow .settings-card .support-error {
+  margin: 6px 0 0;
+  color: #9e3729;
+  font-weight: 600;
+}
+
+.support-underage {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin-top: 4px;
+}
+
+.support-underage .support-apply {
+  width: 100%;
+}
+
+.support-consents {
+  display: grid;
+  gap: 8px;
+}
+
+.support-consents legend {
+  margin-bottom: 6px;
+}
+
+.support-consent {
+  padding: 6px 10px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.support-consent p {
+  margin: 6px 0 0;
+}
+
+.support-consent .support-choice {
+  padding-inline: 0;
+  font-weight: 600;
+}
+
+.support-consents--optional {
+  margin-top: 20px;
+}
+
+.support-consents--optional .support-consent {
+  background: #f1f5ec;
+}
+
+.support-inline-policy summary {
+  padding-block: 10px;
+  color: var(--deep-green);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.support-inline-policy .support-privacy {
+  padding: 0;
+}
+
+.support-story {
+  display: grid;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.support-details {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.support-details dt {
+  color: var(--deep-green);
+  font-weight: 600;
+}
+
+.support-details dd {
+  margin: 0;
+}
+
+.support-summary {
+  margin-bottom: 14px;
+}
+
+.support-summary div {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.support-summary dd {
+  white-space: pre-wrap;
+}
+
+.support-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.support-actions > * {
+  flex: 1 1 120px;
+}
+
+.support-flow .support-apply,
+.support-flow .support-actions button {
+  padding-inline: 10px;
+  text-align: center;
+}
+
+.support-flow button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.support-history {
+  margin-top: 12px;
+}
+
+.support-status {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--light-green);
+  color: var(--deep-green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.support-confirm {
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}

@@ -38,3 +38,4 @@
   .auth-content { gap: 18px; padding-top: 16px; }
   .auth-plant { width: 96px; height: 96px; }
 }
+.auth-footnote a { color: var(--deep-green); font-weight: 600; }

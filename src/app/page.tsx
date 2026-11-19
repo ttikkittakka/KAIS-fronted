@@ -1,10 +1,22 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { dataScope, developerToolsAvailable, setDeveloperMode, DEVELOPER_MODE_KEY, TEST_DATA_KEY, PREVIEW_DATA_KEY } from './app-storage';
+import { adoptCompanion, chooseCompanion, companion as companionInfo, markLevelSeen, readCompanions, type CompanionId, type CompanionState } from './companions';
+import { CompanionArt, CompanionCollection, CompanionPicker, CompanionStatus } from './components/Companions';
+import { dataScope, developerToolsAvailable, hasConsent, saveConsent, setDeveloperMode, DEVELOPER_MODE_KEY, TEST_DATA_KEY, PREVIEW_DATA_KEY } from './app-storage';
+import SafetyCenter, { HelpLink } from './components/SafetyCenter';
+import CareReason from './components/CareReason';
+import MoodInsights from './components/Insights';
+import CompanionMissions from './components/Missions';
+import TalkToFriend from './components/TalkToFriend';
+import SupportPrograms, { PrivacyPolicy } from './components/SupportPrograms';
 import { SettingsScreen, DeveloperSettings } from './components/DeveloperSettings';
 import RivePlant, { RivePlantState } from './components/RivePlant';
-import { SunshineBalance, GardenTools } from './components/GardenFeatures';
+import { GardenTools } from './components/GardenFeatures';
+import { DressUp, Inventory } from './components/Wardrobe';
+import { petGrowth } from './pet-growth';
+import { readOutfit, wear } from './wardrobe';
+import { shopItem, type OutfitSlot, type ShopItem } from './shop-catalog';
 
 import { DAILY_KEY, localDay, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
@@ -13,21 +25,29 @@ import { cleanupPhotos, emptyRecord, readRecords, recordStorageWarning, RECORDS_
 import { StepHeader, ReflectionExtras, RecordsCalendar, hasUnsavedDrafts } from './components/RecordScreens';
 import type { CareRecommendation } from './recommend-cares';
 import { type SunshineReason } from './sunshine';
+import { GREETING } from './chat';
 import GardenShop from './components/GardenShop';
 import GardenPlacement from './components/GardenPlacement';
 import { GrowthProgress, GrowthRewardsScreen, OptionalCareScreen } from './components/GrowthRewards';
-import { SHOP_KEY, shopSnapshot, syncGrowthRewards, type ShopState } from './shop-store';
+import { SHOP_KEY, ownedItemIds, shopSnapshot, syncGrowthRewards, type ShopState } from './shop-store';
 import { newSunshineNotices, enqueueSunshineNotices, SUNSHINE_NOTICE_MS, type SunshineNotice } from './sunshine-notifications';
 type View = GardenView;
 type PlantState = RivePlantState;
-type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow';
+type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow' | 'diary' | 'heart' | 'home' | 'sun' | 'brush';
+// Night follows the device clock; the default sky turns into a night sky.
+const isNight = (now = new Date()) => now.getHours() < 6 || now.getHours() >= 19;
 
 
 function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
+  if (name === 'home') return <svg {...p}><path d="M4 11.5 12 5l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15V15h-6v5.5H5.5A1.5 1.5 0 0 1 4 19v-7.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
+  if (name === 'sun') return <svg {...p}><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
+  if (name === 'brush') return <svg {...p}><path d="m4 20 4-1 11-11-3-3L5 16l-1 4Zm10-13 3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 3v4M3 5h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
+  if (name === 'diary') return <svg {...p}><path d="M6 4.5h10.5A1.5 1.5 0 0 1 18 6v13.5H7.5A1.5 1.5 0 0 1 6 18V4.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M6 18a1.5 1.5 0 0 1 1.5-1.5H18M10 4.5V10l1.75-1.2L13.5 10V4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+  if (name === 'heart') return <svg {...p}><path d="M12 19.5s-7-4.2-7-9.2A3.8 3.8 0 0 1 12 8a3.8 3.8 0 0 1 7 2.3c0 5-7 9.2-7 9.2Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
   if (name === 'leaf') return <svg {...p}><path d="M12 21v-9m0 2c-1-5-6-6-8-5 0 4 3 7 8 5Zm0-3c1-5 6-6 8-5 0 4-3 7-8 5Z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   if (name === 'note') return <svg {...p}><path d="M6 4.5h12v15H6zM9 9h6m-6 4h6m-6 4h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
-  if (name === 'settings') return <svg {...p}><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6"/><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
+  if (name === 'settings') return <svg {...p}><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.6"/><path d="M10.3 3.5h3.4l.5 2.4 1.6.9 2.3-.8 1.7 2.9-1.8 1.6v1.9l1.8 1.6-1.7 2.9-2.3-.8-1.6.9-.5 2.4h-3.4l-.5-2.4-1.6-.9-2.3.8-1.7-2.9 1.8-1.6v-1.9L4.2 8.9 5.9 6l2.3.8 1.6-.9.5-2.4Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
   if (name === 'back') return <svg {...p}><path d="m15 18-6-6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   if (name === 'drop') return <svg {...p}><path d="M12 3s6 6.2 6 11a6 6 0 1 1-12 0c0-4.8 6-11 6-11Z" stroke="currentColor" strokeWidth="1.6"/><path d="M9.5 15.5c.6 1.2 1.5 1.8 2.8 1.8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>;
   if (name === 'cloud') return <svg {...p}><path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.3A3.4 3.4 0 0 0 7 18Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
@@ -36,41 +56,100 @@ function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   return <svg {...p}><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-function Plant({ state = 'normal', className = '', celebrate = false }: { state?: PlantState; className?: string; celebrate?: boolean }) {
-  return <RivePlant state={state} className={className} celebrate={celebrate} />;
+// The garden's main character: the chosen companion. The plant keeps the original Rive sprout.
+type ActiveCompanion = { id: CompanionId } | null;
+function Plant({ state = 'normal', className = '', celebrate = false, active = null }: { state?: PlantState; className?: string; celebrate?: boolean; active?: ActiveCompanion }) {
+  if (!active) return <RivePlant state={state} className={className} celebrate={celebrate} />;
+  return <CompanionArt id={active.id} low={state === 'low'} celebrate={celebrate} className={className}/>;
 }
 
-function TopBar({ title, onBack, action }: { title: string; onBack?: () => void; action?: React.ReactNode }) {
-  return <header className="top-bar"><div>{onBack && <button className="icon-button" onClick={onBack} aria-label="뒤로 가기"><Icon name="back" /></button>}</div><h1>{title}</h1><div>{action}</div></header>;
+// The help link takes whichever side slot is free, so every top bar can open the safety center.
+function TopBar({ title, onBack, action, help = true }: { title: string; onBack?: () => void; action?: React.ReactNode; help?: boolean }) {
+  return <header className="top-bar"><div>{onBack ? <button className="icon-button" onClick={onBack} aria-label="뒤로 가기"><Icon name="back" /></button> : help && action && <HelpLink/>}</div><h1>{title}</h1><div>{action ?? (help && <HelpLink/>)}</div></header>;
 }
 
-function BottomNav({ active, go }: { active: 'home' | 'garden'; go: (v: View) => void }) {
+// Home is only the friend; everything else sits one swipe (or one tap on the floating bar) away.
+const NAV_TABS = [['home', 'home', '홈'], ['today', 'sun', '오늘'], ['decorate', 'brush', '꾸미기'], ['garden', 'diary', '기록'], ['settings', 'settings', '설정']] as const;
+type Tab = typeof NAV_TABS[number][0];
+const STYLE_VIEWS: View[] = ['decorate', 'dress', 'items', 'shop', 'rewards', 'extra-care'];
+// The tab a screen belongs to; null = a focused flow (check-in, completion, sub pages) without the bar.
+const tabOf = (view: View, caring: boolean): Tab | null => view === 'home' || view === 'today' || view === 'garden' || view === 'settings' ? view
+  : view === 'care' ? (caring ? 'today' : null) : STYLE_VIEWS.includes(view) ? 'decorate' : view === 'companions' ? 'settings' : null;
+const SWIPE_MIN = 70; // px; shorter or mostly vertical drags stay scrolls
+const SWIPE_IGNORE = '.companion-art, .pet-menu, .pet-menu-backdrop, .insights-chart, .missions-carousel, .camera-sheet, .chat-sheet, .help-sheet, input, textarea, select'; // these own their sideways gestures
+function BottomNav({ active, go }: { active: Tab; go: (v: View) => void }) {
   return <nav className="bottom-nav" aria-label="주요 메뉴">
-    <button className={active === 'home' ? 'active' : ''} onClick={() => go('home')}><span className="nav-symbol" aria-hidden="true">♧</span><span>정원</span></button>
-    <button className={active === 'garden' ? 'active' : ''} onClick={() => go('garden')}><span className="nav-symbol" aria-hidden="true">▤</span><span>기록</span></button>
+    {NAV_TABS.map(([target, icon, label]) => <button key={target} className={active === target ? 'active' : ''} aria-current={active === target ? 'page' : undefined} onClick={() => go(target)}><span className="nav-symbol" aria-hidden="true"><Icon name={icon} size={22}/></span><span>{label}</span></button>)}
   </nav>;
 }
 
-function Onboarding({ start }: { start: () => void }) {
+const CONSENT_ITEMS = ['만 19세 이상이에요.', '진단이나 치료를 하는 의료 서비스가 아니라는 걸 알고 있어요.', '응급 상황을 대신 대응하지 않아요. 위급하면 109·112·119에 연락할게요.', '개인정보 처리방침을 읽고 확인했어요.'];
+
+function Onboarding({ start }: { start: (firstTime: boolean) => void }) {
+  const [asking, setAsking] = useState(false);
+  const [checked, setChecked] = useState(() => CONSENT_ITEMS.map(() => false));
+  const [error, setError] = useState('');
+  const agree = () => {
+    try { saveConsent(); start(true); }
+    catch { setError('확인 내용을 저장하지 못했어요. 브라우저 저장 공간을 확인한 뒤 다시 시도해 주세요.'); }
+  };
   return <section className="screen onboarding-screen">
 
     <div className="onboarding-visual"><RivePlant idleOnly className="plant-art" label="작은 정원에서 기다리는 식물" /></div>
     <div className="onboarding-copy"><h1>오늘의 나를<br/>만나러 가볼까요?</h1><p>작은 정원에서<br/>천천히 나를 돌봐요.</p></div>
-    <div className="onboarding-action"><button className="primary-button" onClick={start}>시작하기 <Icon name="arrow" size={18}/></button><p>천천히 시작해도 괜찮아요.</p></div>
+    <div className="onboarding-action">
+      {asking ? <fieldset className="consent-box"><legend>시작하기 전에 확인해 주세요</legend>
+        {CONSENT_ITEMS.map((text, i) => <label key={text} className="consent-item"><input type="checkbox" checked={checked[i]} onChange={event => setChecked(values => values.map((value, j) => j === i ? event.target.checked : value))}/><span>{text}</span></label>)}
+        <a className="text-button consent-policy" href="#privacy">개인정보 처리방침 보기</a>
+        <button className="primary-button" disabled={!checked.every(Boolean)} onClick={agree}>확인하고 시작하기 <Icon name="arrow" size={18}/></button>
+        {error && <p role="alert" className="record-error">{error}</p>}
+      </fieldset> : <><button className="primary-button" onClick={() => hasConsent() ? start(false) : setAsking(true)}>시작하기 <Icon name="arrow" size={18}/></button><p>천천히 시작해도 괜찮아요.</p></>}
+      <a className="text-button onboarding-help" href="#safety">지금 많이 힘들다면, 도움 받을 수 있는 곳</a>
+    </div>
   </section>;
 }
 
-function HomeScreen({ state, go, recorded, completedCount, resume, balance, shop, growthSnapshot }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number; shop: ShopState | null; growthSnapshot: ReturnType<typeof shopSnapshot> | null }) {
-  return <section className="screen home-screen">
-    <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정" onClick={() => go('settings')}><span aria-hidden="true">⚙</span></button>}/>
-    <div className={"garden-scene garden-scene--" + (shop?.layout.background ?? "default-sky")}><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</span><SunshineBalance balance={balance}/><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></div>
-    <GardenTools onOpen={go}/>
-    <GrowthProgress snapshot={growthSnapshot} onOpen={() => go('rewards')}/>
-    <div className="today-copy"><span className="eyebrow">오늘의 모습</span><h2>{state === 'low' ? '조금 지쳐 보여요.' : '편안하게 기다리고 있어요.'}</h2><p>{state === 'low' ? '오늘은 천천히 가도 괜찮아요.' : '오늘의 나를 가볍게 살펴볼까요?'}</p></div>
-    <button className="primary-button home-cta" onClick={() => go(resume ?? (recorded ? 'care' : 'checkin'))}><span className="soft-icon"><Icon name="note" size={18}/></span>{resume && resume !== 'care' ? '오늘의 나 기록 이어하기' : !recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
-    {recorded && <p className="home-care-status">오늘의 작은 돌봄 {completedCount}/3 완료</p>}
-    <div className="gentle-note"><span>✦</span><p><strong>다시 찾아와줘서 반가워요.</strong><br/>쉬어간 시간도 이 정원에 포근히 남아 있어요.</p></div>
-    <div className="daily-value"><span>오늘의 가치</span><strong>자기 존중</strong></div>
+// The friend fills the screen. The help balloon, level and fan menu float on top; the talk bar sits above the tab bar.
+function HomeScreen({ state, go, shop, companion, companions, records, outfit, night, news }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; companions: CompanionState | null; records: DailyCheckin[]; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode }) {
+  const background = shop?.layout.background ?? 'default-sky';
+  const sceneClass = 'garden-scene pet-scene garden-scene--' + background + (night && background === 'default-sky' ? ' garden-scene--night' : '');
+  const ground = <><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></>;
+  return <section className="screen pet-home">
+    <h1 className="sr-only">오늘의 정원</h1>
+    {companion && companions ? <TalkToFriend id={companion.id} name={companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass} intro={GREETING}
+      growth={petGrowth(companions, records)} outfit={outfit} news={news} onOpen={go}>{ground}</TalkToFriend>
+      : <div className={sceneClass}><div className="pet-ground" aria-hidden="true"/><div className="pet-stage">{ground}<div className="hero-plant"><Plant state={state} className="plant-art"/></div></div>
+        <div className="pet-bottom"><button type="button" className="primary-button" onClick={() => go('companion')}>함께할 친구를 골라 보세요</button></div></div>}
+  </section>;
+}
+
+function TodayScreen({ go, recorded, completedCount, resume, gift }: { go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; gift?: React.ReactNode }) {
+  const done = (recorded ? 1 : 0) + completedCount;
+  return <section className="screen today-screen">
+    <TopBar title="오늘"/>
+    <p className="today-date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</p>
+    <section className="today-card" aria-labelledby="today-title">
+      <div className="today-card__head">
+        <h2 id="today-title"><span className="eyebrow">오늘</span>{!recorded ? '오늘의 나를 들려주세요' : completedCount === 3 ? '오늘의 돌봄을 모두 마쳤어요' : '작은 돌봄이 기다리고 있어요'}</h2>
+        <span className="today-steps" role="img" aria-label={`오늘의 나 기록 ${recorded ? '완료' : '전'}, 작은 돌봄 ${completedCount}/3`}>{[0, 1, 2, 3].map(i => <i key={i} className={i < done ? 'done' : ''}/>)}</span>
+      </div>
+      <button className="primary-button home-cta" onClick={() => go(resume ?? (recorded ? 'care' : 'checkin'))}><span className="soft-icon"><Icon name="note" size={18}/></span>{resume && resume !== 'care' ? '오늘의 나 기록 이어하기' : !recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
+      {recorded && <p className="home-care-status">오늘의 작은 돌봄 {completedCount}/3 완료</p>}
+    </section>
+    {gift}
+    <CompanionMissions/>
+    <a className="text-button support-link" href="#support">받을 수 있는 지원 제도 찾기 · 신청 도우미</a>
+  </section>;
+}
+
+const STYLE_TABS = [['decorate', '집 꾸미기'], ['dress', '옷 입히기'], ['items', '아이템 창']] as const;
+// 꾸미기 tab: the house (garden) and the friend's clothes are separate, and the item window shows everything collected.
+function StyleHub({ view, go, giftPending, children }: { view: View; go: (v: View) => void; giftPending: boolean; children: React.ReactNode }) {
+  return <section className="screen style-screen">
+    <TopBar title="꾸미기"/>
+    <nav className="style-tabs" aria-label="꾸미기 종류">{STYLE_TABS.map(([target, label]) => <button key={target} type="button" aria-current={view === target ? 'page' : undefined} onClick={() => go(target)}>{label}</button>)}</nav>
+    <GardenTools onOpen={go} giftPending={giftPending}/>
+    {children}
   </section>;
 }
 
@@ -105,7 +184,7 @@ function CheckinScreen({ onBack, onDone, onDraft, initialRecord }: { onBack: () 
   </section>;
 }
 
-function CareScreen({ state, recommendation, completed, completedIds, onComplete, onShowList, goHome }: { state: PlantState; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; onShowList: () => void; goHome: () => void }) {
+function CareScreen({ state, companion, answers, recommendation, completed, completedIds, onComplete, onShowList, goHome }: { state: PlantState; companion: ActiveCompanion; answers: string[]; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; onShowList: () => void; goHome: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [started, setStarted] = useState<string | null>(null);
   const completedCount = recommendation.cares.filter(care => completedIds.includes(care.id)).length;
@@ -113,7 +192,7 @@ function CareScreen({ state, recommendation, completed, completedIds, onComplete
   const selectedCare = recommendation.cares.find(care => care.id === selected);
   const returnToList = () => { setSelected(null); setStarted(null); onShowList(); };
   if (completed) return <section className="screen completion-screen">
-    <div className="completion-scene"><span className="droplet d1"/><span className="droplet d2"/><span className="spark s1">✦</span><span className="spark s2">✦</span><Plant state={state} celebrate className="plant-art lifted"/></div>
+    <div className="completion-scene"><span className="droplet d1"/><span className="droplet d2"/><span className="spark s1">✦</span><span className="spark s2">✦</span><Plant state={state} celebrate className="plant-art lifted" active={companion}/></div>
     <div className="completion-copy"><span className="completion-check"><Icon name="check" size={22}/></span><p className="eyebrow">작은 변화가 도착했어요</p><h1>{allCaredFor ? '오늘의 작은 돌봄을 모두 완료했어요! 🌼' : '작은 돌봄을 완료했어요! 🌷'}</h1><p>{allCaredFor ? '오늘도 나를 돌보는 시간을 만들어 주었네요.' : '오늘도 나를 위해 소중한 시간을 내주었네요.'}</p><p className="kind-message">오늘의 작은 쉼도 소중한 돌봄이에요.</p><p className="completion-status">오늘 {completedCount}/3 완료</p></div>
     <div className="completion-actions"><button className="primary-button" onClick={allCaredFor ? goHome : returnToList}>{allCaredFor ? '정원에서 변화 보기' : '다른 작은 돌봄 이어하기'}</button><button className="secondary-button" onClick={allCaredFor ? returnToList : goHome}>{allCaredFor ? '오늘의 돌봄 다시보기' : '정원에서 변화 보기'}</button></div>
   </section>;
@@ -132,14 +211,15 @@ function CareScreen({ state, recommendation, completed, completedIds, onComplete
   }
   return <section className="screen care-screen">
     <TopBar title="오늘의 작은 돌봄" onBack={goHome}/>
-    <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{recommendation.title.split('\n').map((line, index) => <span key={line}>{index > 0 && <br/>}{line}</span>)}</h2><p>이 중 하나만 해도 괜찮아요.</p><span className="care-progress">오늘의 작은 돌봄 {completedCount}/3 완료</span></div>
+    <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{recommendation.title.split('\n').map((line, index) => <span key={line}>{index > 0 && <br/>}{line}</span>)}</h2><p>이 중 하나만 해도 괜찮아요.</p><CareReason answers={answers} careIds={recommendation.cares.map(care => care.id)}/><span className="care-progress">오늘의 작은 돌봄 {completedCount}/3 완료</span></div>
     <div className="care-list">{recommendation.cares.map((care) => { const done = completedIds.includes(care.id); return <article className={`care-card${done ? ' care-card-done' : ''}`} key={care.id}><div className={`care-icon ${care.tone}`}><Icon name={care.icon}/></div><div className="care-copy"><h3>{care.title}</h3><p>{care.copy}</p><span>{done ? '✓ 완료했어요' : care.meta}</span></div><button onClick={() => { setSelected(care.id); setStarted(null); }}>{done ? '다시 보기' : '선택하기'}</button></article>; })}</div>
-    <button className="rest-choice" onClick={goHome}>오늘은 아무것도 하지 않아도 괜찮아요.</button><div className="care-plant"><Plant state={state} className="plant-art"/></div>
+    <a className="text-button support-link" href="#support">받을 수 있는 지원 제도 살펴보기</a>
+    <button className="rest-choice" onClick={goHome}>오늘은 아무것도 하지 않아도 괜찮아요.</button><div className="care-plant"><Plant state={state} className="plant-art" active={companion}/></div>
   </section>;
 }
 
 function GardenScreen({ records, onSave }: { records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean }) {
-  return <section className="screen garden-history-screen"><TopBar title="나의 기록"/><RecordsCalendar records={records} onSave={onSave}/></section>;
+  return <section className="screen garden-history-screen"><TopBar title="나의 기록"/><MoodInsights records={records}/><RecordsCalendar records={records} onSave={onSave}/></section>;
 }
 
 function storageMessage(error: unknown) {
@@ -163,8 +243,16 @@ export default function HomePage() {
   const [shopError, setShopError] = useState('');
   const [rewardError, setRewardError] = useState('');
   const [decorationItem, setDecorationItem] = useState<string | null>(null);
+  const [shopSelect, setShopSelect] = useState<string | null>(null);
+  const [dressSlot, setDressSlot] = useState<OutfitSlot>('head');
+  const [dressFriend, setDressFriend] = useState<CompanionId | null>(null);
+  const [outfitTick, setOutfitTick] = useState(0);
   const [completedCare, setCompletedCare] = useState<string | null>(null);
   const [sunshineQueue, setSunshineQueue] = useState<SunshineNotice[]>([]);
+  const [companions, setCompanions] = useState<CompanionState | null>(null);
+  const [night, setNight] = useState(false);
+  const [slide, setSlide] = useState<'' | 'left' | 'right'>('');
+  const swipe = useRef<{ x: number; y: number } | null>(null);
   const seenSunshineNotices = useRef(new Set<string>());
   const sunshineFeedback = sunshineQueue[0];
 
@@ -179,6 +267,7 @@ export default function HomePage() {
     try { if (developerToolsAvailable()) setTestEnabled(dataScope() === 'test'); }
     catch { setShopError('브라우저 저장소에 접근하지 못했어요. 저장 권한을 확인해 주세요.'); setCommerce(null); return null; }
     refreshCommerce();
+    setCompanions(readCompanions());
     try {
       const all = readRecords();
       setRecords(all);
@@ -202,11 +291,14 @@ export default function HomePage() {
     url.hash = next;
     if (replace || window.location.hash !== '#' + next) {
       window.history[replace ? 'replaceState' : 'pushState'](
-        { ...window.history.state, gardenView: next }, '', url);
+        // No spread of history.state: its __NA flag makes Next skip syncing its router URL, and Next later
+        // rewrites the entry back to the stale URL, so Back lands on the wrong screen. Next copies its own keys.
+        { gardenView: next }, '', url);
     }
     viewRef.current = next;
     setCompletedCare(null);
     setDecorationItem(null);
+    setShopSelect(null);
     setView(next);
   };
   const save = (record: DailyCheckin, reward?: SunshineReason) => {
@@ -260,14 +352,17 @@ export default function HomePage() {
     let active = true;
     const sync = (initial = false) => {
       if (!active) return;
+      setNight(isNight());
       const record = readToday();
       const requested = window.location.hash.slice(1);
-      // Every fresh entry shows the welcome screen; Start explicitly opens the garden.
-      const next = resolveView(initial ? 'onboarding' : requested, record);
+      // Every fresh entry shows the welcome screen; Start explicitly opens the garden. Back/forward or a typed hash
+      // cannot skip the age and privacy confirmation either (help and the policy stay reachable).
+      const gated = !hasConsent() && requested !== 'safety' && requested !== 'privacy';
+      const next = resolveView(initial || gated ? 'onboarding' : requested, record);
       updateDaily(record);
       const url = new URL(window.location.href);
       url.hash = next;
-      window.history.replaceState({ ...window.history.state, gardenView: next }, '', url);
+      window.history.replaceState({ gardenView: next }, '', url);
       viewRef.current = next;
       setView(next);
       setCompletedCare(null);
@@ -283,6 +378,7 @@ export default function HomePage() {
     let observedDay = localDay();
     const timer = window.setInterval(() => {
       const day = localDay();
+      setNight(isNight());
       if (observedDay !== day) { observedDay = day; sync(); }
     }, 30000);
     const warnDraft = (event: BeforeUnloadEvent) => { if (hasUnsavedDrafts()) { event.preventDefault(); event.returnValue = ''; } };
@@ -355,11 +451,55 @@ export default function HomePage() {
   };
   const go = (target: View) => show(target);
   const goHome = () => show('home', viewRef.current === 'onboarding' || viewRef.current === 'checkin');
+  const companionAction = (action: () => unknown, next?: View) => {
+    try { action(); setCompanions(readCompanions()); if (next) show(next); }
+    catch (error) { setSaveError(error instanceof Error ? error.message : '친구 정보를 저장하지 못했어요. 다시 시도해 주세요.'); }
+  };
+  const tab = tabOf(view, !completedCare);
+  const tabIndex = tab ? NAV_TABS.findIndex(([target]) => target === tab) : -1;
+  // Swipe left/right on a tab screen moves to the neighbouring tab (touch and pen only, so mouse text selection still works).
+  const swipeStart = (event: React.PointerEvent) => {
+    swipe.current = tabIndex < 0 || event.pointerType === 'mouse' || (event.target as Element).closest(SWIPE_IGNORE) ? null : { x: event.clientX, y: event.clientY };
+  };
+  const swipeEnd = (event: React.PointerEvent) => {
+    const start = swipe.current;
+    swipe.current = null;
+    if (!start || tabIndex < 0) return;
+    const dx = event.clientX - start.x, dy = event.clientY - start.y;
+    if (Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 1.6) return;
+    const next = NAV_TABS[tabIndex + (dx < 0 ? 1 : -1)];
+    if (!next) return;
+    setSlide(dx < 0 ? 'left' : 'right');
+    go(next[0]);
+  };
+  useEffect(() => { if (!slide) return; const t = setTimeout(() => setSlide(''), 400); return () => clearTimeout(t); }, [slide]);
+  const activeAdoption = companions?.adopted.find(a => a.id === companions.active);
+  const activeCompanion: ActiveCompanion = activeAdoption ? { id: activeAdoption.id } : null;
+  const owned = commerce ? ownedItemIds(commerce.state) : [];
+  void outfitTick; // a new tick re-reads the outfits after a change in 옷 입히기
+  const outfit = activeCompanion ? readOutfit(activeCompanion.id, owned) : undefined;
+  const worn = companions?.adopted.flatMap(a => Object.values(readOutfit(a.id, owned))) ?? [];
+  const giftPending = !!commerce?.state.rewards.some(grant => !grant.seenAt);
+  // "입혀 보기" puts an owned outfit on the friend right away, then opens 옷 입히기 on that slot.
+  const dressItem = (id: string) => {
+    const slot = shopItem(id)?.wear ?? 'head';
+    // The friend picked in 옷 입히기 before shopping, if still adopted; otherwise the garden's friend.
+    const target = dressFriend && companions?.adopted.some(a => a.id === dressFriend) ? dressFriend : activeCompanion?.id;
+    if (target && owned.includes(id)) { try { wear(target, slot, id, owned); setOutfitTick(tick => tick + 1); } catch { /* 옷 입히기 still lets them put it on by hand */ } }
+    show('dress'); setDressSlot(slot); setDressFriend(target ?? null);
+  };
+  const shopFor = (id: string, friend: CompanionId | null = null) => { show('shop'); setShopSelect(id); setDressFriend(friend); };
+  const openItem = (item: ShopItem, has: boolean) => {
+    if (!has) { if (item.rewardDays) go('rewards'); else shopFor(item.id); }
+    else if (item.category === 'outfit') dressItem(item.id);
+    else { show('decorate'); setDecorationItem(item.id); }
+  };
+  const bondNews = companions ? <CompanionStatus state={companions} records={records} onSeen={level => companionAction(() => markLevelSeen(companions.active, level))} onOpen={go}/> : null;
   const plantState = daily?.plantState ?? 'normal';
   const todayCares = daily?.careRecommendations?.find(entry => entry.date === daily.date);
   const completedCount = todayCares?.ids.filter(id => daily?.completedCareIds.includes(id)).length ?? 0;
 
-  return <main className="app-shell"><div className="phone-frame">
+  return <main className="app-shell"><div className="phone-frame" data-slide={slide || undefined} onPointerDown={swipeStart} onPointerUp={swipeEnd} onPointerCancel={() => { swipe.current = null; }}>
     <>
       {saveError && <p role="status" className="storage-status">{saveError}</p>}
       <div className="sunshine-notifications" role="status" aria-live="polite" aria-atomic="true">
@@ -368,18 +508,27 @@ export default function HomePage() {
           <strong>햇살 +{sunshineFeedback.amount}</strong>
         </div>}
       </div>
-      {view === 'onboarding' && <Onboarding start={goHome}/>}
-      {view === 'home' && <HomeScreen growthSnapshot={commerce} balance={commerce?.balance ?? 0} shop={commerce?.state ?? null} state={plantState} go={go} recorded={!!daily?.answers.every(Boolean)} completedCount={completedCount} resume={daily?.stage}/>}
+      {view === 'onboarding' && <Onboarding start={firstTime => firstTime && !readCompanions() ? show('companion', true) : goHome()}/>}
+      {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} companions={companions} records={records} outfit={outfit} night={night} news={bondNews}/>}
+      {view === 'today' && <TodayScreen go={go} recorded={!!daily?.answers.every(Boolean)} completedCount={completedCount} resume={daily?.stage} gift={giftPending && <GrowthProgress snapshot={commerce} onOpen={() => go('rewards')}/>}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
-      {view === 'care' && daily && todayCares && <CareScreen state={plantState} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
+      {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
       {view === 'garden' && <GardenScreen records={records} onSave={save}/>}
-      {(view === 'shop' || view === 'decorate') && <section className="screen shop-screen"><TopBar title={view === 'shop' ? '작은 정원 상점' : '정원 꾸미기'} onBack={goHome}/><GardenShop key={datasetEpoch + ':' + view + ':' + (decorationItem ?? '')} initialItem={decorationItem} plantState={plantState} inventory={view === 'decorate'} snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go(view === 'shop' ? 'decorate' : 'shop')}/></section>}
-      {view === 'rewards' && <section className="screen"><TopBar title="함께한 날의 선물" onBack={goHome}/><GrowthRewardsScreen snapshot={commerce} error={shopError || rewardError} onRetry={refreshCommerce} onChange={setCommerce} onPlace={id => { show('decorate'); setDecorationItem(id); }} onExtra={() => go('extra-care')}/></section>}
+      {view === 'decorate' && <StyleHub view={view} go={go} giftPending={giftPending}><GardenShop key={datasetEpoch + ':decorate:' + (decorationItem ?? '')} initialItem={decorationItem} plantState={plantState} inventory snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go('shop')} onDress={dressItem}/></StyleHub>}
+      {view === 'dress' && <StyleHub view={view} go={go} giftPending={giftPending}><DressUp key={datasetEpoch + ':' + dressSlot + ':' + (commerce ? 'ready' : 'loading') + ':' + companions?.active + ':' + dressFriend} snapshot={commerce} companions={companions} slot={dressSlot} friend={dressFriend} onWear={() => setOutfitTick(tick => tick + 1)} onShop={shopFor} onChoose={() => go('companion')}/></StyleHub>}
+      {view === 'items' && <StyleHub view={view} go={go} giftPending={giftPending}><Inventory snapshot={commerce} worn={worn} onUse={openItem}/></StyleHub>}
+      {view === 'shop' && <section className="screen shop-screen"><TopBar title="작은 정원 상점" onBack={() => go('decorate')}/><GardenShop key={datasetEpoch + ':shop:' + (shopSelect ?? '')} initialSelect={shopSelect} plantState={plantState} inventory={false} snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go('decorate')} onDress={dressItem}/></section>}
+      {view === 'rewards' && <section className="screen"><TopBar title="함께한 날의 선물" onBack={() => go('decorate')}/><GrowthRewardsScreen snapshot={commerce} error={shopError || rewardError} onRetry={refreshCommerce} onChange={setCommerce} onPlace={id => { show('decorate'); setDecorationItem(id); }} onExtra={() => go('extra-care')}/></section>}
       {view === 'extra-care' && <section className="screen"><TopBar title="선택형 돌봄" onBack={() => go('rewards')}/><OptionalCareScreen snapshot={commerce} onHome={goHome}/></section>}
-      {view === 'settings' && <section className="screen"><TopBar title="설정" onBack={goHome}/><SettingsScreen onDeveloper={() => go('developer')}/></section>}
+      {view === 'settings' && <section className="screen settings-screen"><TopBar title="설정"/><SettingsScreen onDeveloper={() => go('developer')} records={records} snapshot={commerce} canDelete={assertNoDrafts}/></section>}
+      {view === 'support' && <section className="screen"><TopBar title="지원 제도 신청 도우미" onBack={() => window.history.back()}/><SupportPrograms friend={activeCompanion ? { id: activeCompanion.id, name: companionInfo(activeCompanion.id).name } : null}/></section>}
+      {view === 'privacy' && <section className="screen"><TopBar title="개인정보 처리방침" help={false} onBack={() => window.history.back()}/><PrivacyPolicy/></section>}
+      {view === 'safety' && <section className="screen"><TopBar title="도움 받을 수 있는 곳" help={false} onBack={() => window.history.back()}/><SafetyCenter/></section>}
       {view === 'developer' && developerToolsAvailable() && <section className="screen"><TopBar title="개발자 테스트" onBack={() => go('settings')}/><DeveloperSettings enabled={testEnabled} snapshot={commerce} dataError={shopError || rewardError} onToggle={toggleTestMode} onRefresh={refreshDataset} onOpen={go} canReset={assertNoDrafts}/></section>}
-      {(view === 'home' || view === 'garden' || view === 'shop' || view === 'decorate' || view === 'rewards' || view === 'extra-care') && <BottomNav active={view === 'garden' ? 'garden' : 'home'} go={go}/>}
+      {view === 'companion' && <section className="screen"><TopBar title="함께할 친구" onBack={companions ? () => go('companions') : undefined}/><CompanionPicker state={companions} onAdopt={id => companionAction(() => adoptCompanion(id, records), 'home')}/></section>}
+      {view === 'companions' && <section className="screen"><TopBar title="함께하는 친구들" onBack={() => window.history.back()}/><CompanionCollection state={companions} records={records} onChoose={id => companionAction(() => chooseCompanion(id))} onAdopt={() => go('companion')}/></section>}
+      {tab && <BottomNav active={tab} go={go}/>}
     </>
   </div></main>;
 }

@@ -1,0 +1,26 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-output/rive-viewer.html"
+        ],
+        "createdAt": "2026-11-03T11:26:04.597Z",
+        "reason": "Claude triage: viewer intentionally reuses the app's own --background token #F8F7F2 from src/app/globals.css so characters are previewed on the real app surface"
+      },
+      {
+        "rule": "cream-palette",
+        "value": "*",
+        "files": [
+          "design-output/characters/index.html"
+        ],
+        "createdAt": "2026-11-03T11:45:04.955Z",
+        "reason": "Claude triage: character draft preview intentionally reuses the app's --background token #F8F7F2 from src/app/globals.css to show drafts on the real app surface"
+      }
+    ]
+  }
+}

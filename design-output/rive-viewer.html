@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rive 캐릭터 뷰어</title>
+<style>
+  :root { --bg: #F8F7F2; --card: #fff; --text: #343832; --muted: #646A61; --green: #3F5D46; --line: rgba(63,93,70,.12); }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font-family: system-ui, "Apple SD Gothic Neo", sans-serif; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .hint { margin: 0 0 16px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+  .files { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .files button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--green); font: inherit; font-size: 13px; cursor: pointer; }
+  .files button[aria-pressed="true"] { background: var(--green); color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+  .card { padding: 12px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); }
+  .card canvas { width: 100%; aspect-ratio: 1; display: block; border-radius: 12px; background: #f3f5ee; cursor: pointer; }
+  .card h2 { margin: 10px 0 2px; font-size: 15px; }
+  .meta { color: var(--muted); font-size: 12px; }
+  .use { margin: 6px 0 0; font-size: 12px; line-height: 1.6; }
+  .use.unused { color: #85552a; }
+</style>
+</head>
+<body>
+<h1>Rive 캐릭터 뷰어</h1>
+<p class="hint">카드마다 애니메이션이나 상태 머신 하나를 따로 재생해요. 한 번만 재생되는 애니메이션은 캔버스를 누르면 다시 재생돼요.<br>
+실행: 저장소 루트에서 <code>python -m http.server 8000</code> → <code>http://localhost:8000/design-output/rive-viewer.html</code></p>
+<div class="files" role="group" aria-label="Rive 파일"></div>
+<div class="grid"></div>
+<script src="./rive.js"></script>
+<script>
+// How the web app (src/app/components/RivePlant.tsx) uses each name.
+const USE = {
+  basic: '기본 상태: 홈·돌봄 화면 (idle + eye 깜빡임 레이어)',
+  'lowlow_ver.': '지친 상태: 응답 중 하나라도 낮음 (low_energy + cloud 레이어)',
+  idle: '시작 화면 (idleOnly)',
+  touch: '식물을 눌렀을 때',
+  '통통': '돌봄 완료 축하 (celebrate)',
+  eye: 'basic 상태 머신 안에서 재생',
+  low_energy: 'lowlow_ver. 상태 머신 안에서 재생',
+  cloud: 'lowlow_ver.·클리어 상태 머신 안에서 재생',
+};
+const FILES = [
+  { label: '앱에서 사용 중 · public/plant-final.riv', src: '../public/plant-final.riv' },
+  { label: '식물최종.riv (클리어 버전 포함)', src: '../식물최종.riv' },
+  { label: '식물.riv (초기본)', src: '../식물.riv' },
+];
+rive.RuntimeLoader.setWasmUrl('./rive.wasm');
+const grid = document.querySelector('.grid');
+const fileBar = document.querySelector('.files');
+let players = [];
+
+function card(src, name, kind, meta) {
+  const el = document.createElement('article');
+  el.className = 'card';
+  const used = USE[name];
+  el.innerHTML = `<canvas width="440" height="440" aria-label="${name} 재생"></canvas><h2>${name}</h2><div class="meta">${kind} · ${meta}</div><p class="use ${used ? '' : 'unused'}">${used ?? '웹 앱에서 직접 쓰지 않음'}</p>`;
+  grid.append(el);
+  const canvas = el.querySelector('canvas');
+  const options = { src, canvas, artboard: 'Artboard 1', autoplay: true, layout: new rive.Layout({ fit: rive.Fit.Contain, alignment: rive.Alignment.Center }) };
+  const player = new rive.Rive(kind === '상태 머신' ? { ...options, stateMachines: name } : { ...options, animations: name });
+  canvas.addEventListener('click', () => { player.stop(); kind === '상태 머신' ? player.play(name) : player.play(name); });
+  players.push(player);
+}
+
+function show(file) {
+  players.forEach(player => player.cleanup());
+  players = [];
+  grid.replaceChildren();
+  fileBar.querySelectorAll('button').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.src === file.src)));
+  const probe = new rive.Rive({
+    src: file.src, artboard: 'Artboard 1', canvas: document.createElement('canvas'), autoplay: false,
+    onLoad: () => {
+      const { artboards } = probe.contents;
+      const board = artboards.find(a => a.name === 'Artboard 1');
+      for (const machine of board.stateMachines) card(file.src, machine.name, '상태 머신', `입력 ${machine.inputs.length}개`);
+      for (const name of board.animations) card(file.src, name, '애니메이션', '');
+      const others = artboards.filter(a => a.name !== 'Artboard 1').map(a => a.name);
+      if (others.length) grid.insertAdjacentHTML('beforeend', `<p class="hint">이 파일에는 화면에 쓰지 않는 아트보드도 있어요: ${others.join(', ')}</p>`);
+      probe.cleanup();
+    },
+    onLoadError: () => grid.insertAdjacentHTML('beforeend', '<p class="hint">파일을 불러오지 못했어요. http 서버로 열었는지 확인해 주세요.</p>'),
+  });
+}
+
+for (const file of FILES) {
+  const button = document.createElement('button');
+  button.textContent = file.label;
+  button.dataset.src = file.src;
+  button.addEventListener('click', () => show(file));
+  fileBar.append(button);
+}
+show(FILES[0]);
+</script>
+</body>
+</html>

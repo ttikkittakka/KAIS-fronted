@@ -32,11 +32,11 @@ test('unlock, OFF and fresh app instance preserve every saved value and ignore o
  setup();const data=new Map([['little-garden.developer-mode.v1','on'],['little-garden.sandbox.test.v1','existing-test-data'],['user-records','existing-records']]);const before=new Map(data);
  const fetcher=(_url,options)=>POST(request(JSON.parse(options.body).password));const storage=freshStorage(data,fetcher);
  assert.equal(storage.dataScope(),'preview');assert.throws(()=>storage.requireTestMode());
- await assert.rejects(storage.setDeveloperMode(true,'1234'),/비밀번호가 올바르지 않아요/);
- assert.throws(()=>storage.setDeveloperMode(true,'728'),/비밀번호가 올바르지 않아요/);
+ await assert.rejects(storage.setDeveloperMode(true,'1234'),/개발자 코드가 올바르지 않아요/);
+ assert.throws(()=>storage.setDeveloperMode(true,'728'),/개발자 코드가 올바르지 않아요/);
  await storage.setDeveloperMode(true,'0728');assert.equal(storage.dataScope(),'test');
  const reloaded=freshStorage(data,fetcher);assert.equal(reloaded.dataScope(),'preview');assert.throws(()=>reloaded.requireTestMode());
- storage.setDeveloperMode(false);assert.throws(()=>storage.setDeveloperMode(true),/비밀번호가 올바르지 않아요/);
+ storage.setDeveloperMode(false);assert.throws(()=>storage.setDeveloperMode(true),/개발자 코드가 올바르지 않아요/);
  await storage.setDeveloperMode(true,'0728');assert.equal(storage.dataScope(),'test');assert.deepEqual(data,before);
 });
 test('network errors, cancellation and OFF during verification never unlock',async()=>{

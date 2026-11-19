@@ -198,7 +198,6 @@ export function schedulePhotoDeletion(id: string) {
   if (!id.startsWith(localOwner() + ':')) throw new Error('사진 기록의 기기 식별자를 확인해 주세요.');
   appStorage.setItem(PHOTO_TRASH_KEY, JSON.stringify(Array.from(new Set([...deletionQueue(), id]))));
 }
-export async function deleteStoredPhoto(id: string) { schedulePhotoDeletion(id); await cleanupPhotos(); }
 async function cleanupPhotosForScope() {
   const queue = deletionQueue();
   const snapshot = readSnapshot();
