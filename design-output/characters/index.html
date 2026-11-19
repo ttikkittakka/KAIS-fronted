@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>캐릭터 시안</title>
+<!-- Same motion file the app imports, so drafts move exactly as they will in the garden. -->
+<link rel="stylesheet" href="../../src/app/companions.css">
+<style>
+  :root { --bg: #F8F7F2; --card: #fff; --text: #343832; --muted: #646A61; --green: #3F5D46; --line: rgba(63,93,70,.12); }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 28px 16px 56px; background: var(--bg); color: var(--text); font-family: system-ui, "Apple SD Gothic Neo", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; }
+  h1 { margin: 0 0 6px; font-size: 22px; font-weight: 600; }
+  .hint { margin: 0 0 20px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+  .controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+  .controls button { min-height: 40px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); color: var(--green); font: inherit; font-size: 13px; cursor: pointer; }
+  .controls button[aria-pressed="true"] { background: var(--green); color: #fff; }
+  .controls button:focus-visible, .companion-art:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+  .friends { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 28px; }
+  figure { margin: 0; padding: 10px 10px 12px; border: 1px solid var(--line); border-radius: 20px; background: var(--card); text-align: center; }
+  .stage { border-radius: 14px; background: linear-gradient(180deg, #E6EFF0 0%, #EEF4E6 70%, #D9E3CF 100%); }
+  .stage .companion-art { width: 100%; }
+  figcaption { margin-top: 6px; font-size: 14px; }
+  figcaption small { display: block; color: var(--muted); font-size: 11px; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px; background: var(--card); border-radius: 16px; overflow: hidden; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: left; }
+  th { color: var(--muted); font-weight: 500; }
+  .hearts { color: #d98a8a; letter-spacing: .05em; }
+  footer { color: var(--muted); font-size: 12px; line-height: 1.8; }
+  footer a { color: var(--green); }
+  @media (max-width: 720px) { .friends { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+</style>
+</head>
+<body>
+<main>
+  <h1>캐릭터 시안</h1>
+  <p class="hint">친구들은 자라지 않고 아기 모습 그대로예요. 대신 함께한 날이 쌓이면 교감이 깊어져요. 그림을 누르면 점프해요(공중에서는 다시 누를 수 없어요). 앱에서는 옆으로 쓸어 주면 쓰다듬기가 돼요.<br>
+    물리 규칙: 발은 바닥선에 고정, 숨쉬기는 4초 주기, 오를 때 느려지고 내려올 때 빨라지며, 그림자는 떠오를수록 작고 옅어져요.</p>
+  <div class="controls" role="group" aria-label="보기 설정">
+    <button type="button" data-mood="normal" aria-pressed="true">기본</button>
+    <button type="button" data-mood="low" aria-pressed="false">지친 날</button>
+    <button type="button" data-mood="happy" aria-pressed="false">쓰다듬을 때</button>
+    <button type="button" data-mood="excited" aria-pressed="false">신날 때</button>
+    <button type="button" data-play="celebrate">축하 재생</button>
+  </div>
+  <div class="friends" id="list"></div>
+  <table aria-label="교감 단계">
+    <thead><tr><th>교감</th><th>조건 (관리자 모드에서 조절)</th><th>홈에 보이는 말</th></tr></thead>
+    <tbody>
+      <tr><td><span class="hearts">♥♡♡</span> 처음 만난 사이</td><td>데려온 날</td><td>정원에 들러 주기만 해도 가까워져요.</td></tr>
+      <tr><td><span class="hearts">♥♥♡</span> 친해지는 사이</td><td>들른 날 3일 (돌봄은 필요 없음)</td><td>작은 돌봄을 한 날마다 더 가까워져요. 하루 하나면 충분해요.</td></tr>
+      <tr><td><span class="hearts">♥♥♥</span> 단짝</td><td>그 뒤 돌봄한 날 10일 (하루 여러 번도 1일)</td><td>단짝이 되었어요. 늘 곁에 있을게요.</td></tr>
+    </tbody>
+  </table>
+  <footer>단짝이 되면 새 친구를 데려오거나, 이대로 함께 지내거나, 정원을 꾸밀 수 있어요. 새싹이는 정원에서 기존 Rive 새싹으로 보여요 · <a href="../rive-viewer.html">Rive 새싹 움직임 보기</a></footer>
+</main>
+<script>
+// Mirrors src/app/companions.ts.
+const COMPANIONS = [
+  { id: 'plant', name: '새싹이', kind: '새싹' },
+  { id: 'cat', name: '나비', kind: '아기 고양이' },
+  { id: 'dog', name: '보리', kind: '아기 강아지' },
+  { id: 'pegasus', name: '비비', kind: '아기 페가수스' },
+];
+const HOP_MS = 720, CELEBRATE_MS = 1700;
+const list = document.getElementById('list');
+for (const c of COMPANIONS) {
+  const figure = document.createElement('figure');
+  figure.innerHTML = `<div class="stage"><button type="button" class="companion-art companion-art--face-normal" aria-label="${c.name} 점프">
+    <span class="companion-art__shadow" aria-hidden="true"></span>
+    <span class="companion-art__jump"><span class="companion-art__body">
+      ${['normal', 'low', 'happy', 'excited'].map(f => `<img class="companion-art__img companion-art__img--${f}" src="../../public/characters/${c.id}${f === 'normal' ? '' : '-' + f}.webp" alt="">`).join('')}
+    </span></span></button></div><figcaption>${c.name}<small>${c.kind}</small></figcaption>`;
+  const art = figure.querySelector('.companion-art');
+  art.addEventListener('click', () => {
+    if (art.classList.contains('companion-art--hop')) return;
+    art.classList.add('companion-art--hop');
+    setTimeout(() => art.classList.remove('companion-art--hop'), HOP_MS);
+  });
+  list.append(figure);
+}
+const arts = () => document.querySelectorAll('.companion-art');
+document.querySelectorAll('[data-mood]').forEach(button => button.addEventListener('click', () => {
+  document.querySelectorAll('[data-mood]').forEach(b => b.setAttribute('aria-pressed', String(b === button)));
+  arts().forEach(a => {
+    a.classList.remove('companion-art--face-normal', 'companion-art--face-low', 'companion-art--face-happy', 'companion-art--face-excited');
+    a.classList.add('companion-art--face-' + button.dataset.mood);
+    a.classList.toggle('companion-art--low', button.dataset.mood === 'low');
+  });
+}));
+document.querySelector('[data-play]').addEventListener('click', () => {
+  arts().forEach(a => { a.classList.remove('companion-art--celebrate'); void a.offsetWidth; a.classList.add('companion-art--celebrate'); });
+  setTimeout(() => arts().forEach(a => a.classList.remove('companion-art--celebrate')), CELEBRATE_MS);
+});
+</script>
+</body>
+</html>

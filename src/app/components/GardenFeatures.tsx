@@ -1,37 +1,23 @@
-type GardenDestination = 'shop' | 'decorate';
+type QuickDestination = 'shop' | 'companions' | 'rewards';
 
-export const GARDEN_DESTINATIONS = {
-  shop: { title: '작은 정원 상점', description: '이곳에서 새로운 정원 친구들과 꾸미기 아이템을 만나게 될 거예요.' },
-  decorate: { title: '나의 정원 꾸미기', description: '앞으로 이곳에서 나만의 정원을 꾸밀 수 있어요.' },
+const TOOL_PATHS: Record<QuickDestination, React.ReactNode> = {
+  shop: <><path d="M5 8h14l1 12H4L5 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></>,
+  companions: <><circle cx="6.5" cy="10" r="1.7"/><circle cx="10" cy="6.3" r="1.7"/><circle cx="14" cy="6.3" r="1.7"/><circle cx="17.5" cy="10" r="1.7"/><path d="M12 11.5c-3 0-5.5 3.3-5.5 5.6 0 1.6 1.3 2.4 2.8 2.4 1 0 1.7-.5 2.7-.5s1.7.5 2.7.5c1.5 0 2.8-.8 2.8-2.4 0-2.3-2.5-5.6-5.5-5.6Z"/></>,
+  rewards: <><rect x="3.5" y="8" width="17" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8c-1.5-3-5-3.6-5.3-1.5C6.4 8.4 10 8 12 8Zm0 0c1.5-3 5-3.6 5.3-1.5.3 1.9-3.3 1.5-5.3 1.5Z"/></>,
 };
 
-// A future balance source can supply this prop without changing storage now.
-export function SunshineBalance({ balance }: { balance: number }) {
-  return <span className="sunshine-balance" role="status" aria-label={'햇살 ' + balance + '개'}>
-    <span aria-hidden="true">☀️</span><span aria-hidden="true">{balance}</span>
-  </span>;
-}
+const QUICK_TOOLS: [QuickDestination, string][] = [['shop', '상점'], ['rewards', '선물'], ['companions', '친구들']];
 
-function GardenToolIcon({ kind }: { kind: GardenDestination }) {
-  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    {kind === 'shop' ? <><path d="M5 8h14l1 12H4L5 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></> : <><path d="m4 20 4-1 11-11-3-3L5 16l-1 4Zm10-13 3 3M5 16l3 3"/><path d="M5 3v4M3 5h4M19 15v4M17 17h4"/></>}
-  </svg>;
-}
-
-export function GardenTools({ onOpen }: { onOpen: (destination: GardenDestination) => void }) {
-  return <div className="garden-tools" role="group" aria-label="정원 메뉴">
-    <button type="button" onClick={() => onOpen('shop')}><GardenToolIcon kind="shop"/>상점</button>
-    <button type="button" onClick={() => onOpen('decorate')}><GardenToolIcon kind="decorate"/>정원 꾸미기</button>
-  </div>;
-}
-
-export function GardenPreparation({ kind, onReturn }: { kind: GardenDestination; onReturn: () => void }) {
-  return <div className="garden-preparation-content">
-    <div className="garden-preparation-card">
-      <span className="garden-preparation-icon"><GardenToolIcon kind={kind}/></span>
-      <p className="eyebrow">천천히 준비하고 있어요</p>
-      <p>{GARDEN_DESTINATIONS[kind].description}</p>
-    </div>
-    <button type="button" className="primary-button" onClick={onReturn}>정원으로 돌아가기</button>
-  </div>;
+/** One row of labelled icon shortcuts in the 꾸미기 tab: the shop, anniversary gifts and the friends. */
+export function GardenTools({ onOpen, giftPending = false }: { onOpen: (destination: QuickDestination) => void; giftPending?: boolean }) {
+  return <nav className="garden-tools" aria-label="정원 메뉴">
+    {QUICK_TOOLS.map(([kind, label]) => {
+      const badge = kind === 'rewards' && giftPending;
+      return <button key={kind} type="button" className="garden-tool" onClick={() => onOpen(kind)} aria-label={badge ? label + ' (새 선물 도착)' : label}>
+        <span className="garden-tool__icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{TOOL_PATHS[kind]}</svg>
+          {badge && <i className="garden-tool__badge" aria-hidden="true"/>}</span>
+        <span className="garden-tool__label" aria-hidden="true">{label}</span>
+      </button>;
+    })}
+  </nav>;
 }

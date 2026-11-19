@@ -1,0 +1,188 @@
+/* Companion motion. Shared by the app (layout.tsx) and design-output/characters/index.html.
+   Physics rules: the feet stay on the ground line (transform-origin at the feet), squash and
+   stretch roughly keep volume, rises decelerate and falls accelerate (gravity), the shadow is
+   separate and shrinks while airborne, and every hop's air time follows sqrt(height). */
+
+/* pan-y: vertical swipes still scroll the page; sideways strokes pet the friend. */
+.companion-art { position: relative; display: block; aspect-ratio: 1; padding: 0; border: 0; background: transparent; cursor: pointer; touch-action: pan-y;
+  --hop: -14%; --hop-time: .72s; --hop-scale: 1; --hop-tempo: 1; --shadow-w: 44%; }
+div.companion-art { cursor: default; }
+.companion-art--low { --hop-scale: .5; --hop-tempo: .85; }
+
+/* Images share one 512px canvas: feet on y = 95%, character 80% tall. */
+.companion-art__shadow { position: absolute; top: 93%; left: calc(50% - var(--shadow-w) / 2); width: var(--shadow-w); height: 5%; border-radius: 50%; background: radial-gradient(closest-side, rgba(70, 66, 56, .2), rgba(70, 66, 56, 0)); }
+.companion-art__jump { position: absolute; inset: 0; display: block; }
+.companion-art__body { position: absolute; inset: 0; display: block; transform-origin: 50% 95%;
+  animation: companion-breathe 4s ease-in-out infinite, companion-sway 7.3s ease-in-out infinite, companion-drift 11.7s ease-in-out infinite; }
+.companion-art--low .companion-art__body { animation: companion-breathe-low 6s ease-in-out infinite, companion-sway-low 10s ease-in-out infinite; }
+/* Faces stacked: a change cross-fades. Petting brightens quickly; tiredness closes the eyes slowly. */
+.companion-art__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transition: opacity .3s ease; -webkit-user-drag: none; user-select: none;
+  filter: drop-shadow(0 2px 3px rgba(92, 78, 60, .16)); }
+/* Blink: the eyes-closed frame flashes for ~90ms, with an occasional double blink. Only on the calm face. */
+.companion-art--face-normal .companion-art__img--blink { animation: companion-blink 6.4s linear var(--blink-delay, 0s) infinite; transition: none; }
+@keyframes companion-blink {
+  0%, 55% { opacity: 0; } 55.6%, 56.8% { opacity: 1; } 57.4%, 91% { opacity: 0; }
+  91.6%, 92.6% { opacity: 1; } 93.2%, 94.6% { opacity: 0; } 95.2%, 96.2% { opacity: 1; } 96.8%, 100% { opacity: 0; }
+}
+.companion-art--face-low .companion-art__img { transition-duration: .6s; }
+.companion-art--face-normal .companion-art__img--normal, .companion-art--face-low .companion-art__img--low,
+.companion-art--face-happy .companion-art__img--happy, .companion-art--face-excited .companion-art__img--excited { opacity: 1; }
+
+/* Petting: a hand presses gently, so the body squashes a little (volume kept) and leans with the stroke;
+   on release it springs back with a small overshoot before breathing again. */
+.companion-art--petting .companion-art__body { animation: none; transform: rotate(calc(var(--lean, 0) * 4deg)) scale(1.025, .965); transition: transform .18s ease-out; }
+.companion-art--glow .companion-art__body { animation: companion-settle .55s cubic-bezier(.3, 1.6, .5, 1), companion-breathe 4s ease-in-out .55s infinite, companion-sway 7.3s ease-in-out .55s infinite; }
+.companion-art--low.companion-art--glow .companion-art__body { animation: companion-settle .55s cubic-bezier(.3, 1.6, .5, 1), companion-breathe-low 6s ease-in-out .55s infinite; }
+@keyframes companion-settle { from { transform: rotate(calc(var(--lean, 0) * 4deg)) scale(1.025, .965); } to { transform: none; } }
+/* Hearts rise like bubbles: fast at first, slowing, drifting sideways and fading. */
+.companion-art__hearts { position: absolute; inset: 0; pointer-events: none; }
+.companion-art__hearts i { position: absolute; top: 28%; left: 50%; color: #e3899a; font-size: 18px; font-style: normal; opacity: 0; animation: companion-heart 1.4s cubic-bezier(.2, .7, .4, 1) forwards; }
+@keyframes companion-heart {
+  0% { transform: translate(-50%, 0) scale(.6); opacity: 0; }
+  15% { transform: translate(calc(-50% + var(--drift, 0px) * .3), -10px) scale(1); opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--drift, 0px)), -70px) scale(.9); opacity: 0; }
+}
+
+/* Touch: anticipation squash, stretch on take-off, rise, fall, landing squash, settle. */
+.companion-art--hop .companion-art__body, .companion-art--emote-hop .companion-art__body { animation: companion-hop-body calc(var(--hop-time) * var(--hop-tempo)) linear, companion-hop-tilt calc(var(--hop-time) * var(--hop-tempo)) ease-in-out; }
+/* In the air the head tips back a little, then nods forward on landing (follow-through). */
+@keyframes companion-hop-tilt { 0%, 22% { rotate: 0deg; } 50% { rotate: -3deg; } 82% { rotate: 1.5deg; } 100% { rotate: 0deg; } }
+.companion-art--hop .companion-art__jump, .companion-art--emote-hop .companion-art__jump { animation: companion-hop-jump calc(var(--hop-time) * var(--hop-tempo)) linear; }
+.companion-art--hop .companion-art__shadow, .companion-art--emote-hop .companion-art__shadow { animation: companion-hop-shadow calc(var(--hop-time) * var(--hop-tempo)) linear; }
+
+/* Care completed: three hops losing height, then back to breathing. */
+.companion-art--celebrate .companion-art__body, .companion-art--emote-celebrate .companion-art__body { animation: companion-celebrate-body 1.7s linear, companion-celebrate-wiggle 1.7s ease-in-out, companion-breathe 4s ease-in-out 1.7s infinite, companion-sway 7.3s ease-in-out 1.7s infinite; }
+.companion-art--celebrate .companion-art__jump, .companion-art--emote-celebrate .companion-art__jump { animation: companion-celebrate-jump 1.7s linear; }
+.companion-art--celebrate .companion-art__shadow, .companion-art--emote-celebrate .companion-art__shadow { animation: companion-celebrate-shadow 1.7s linear; }
+
+/* Idle life: a slow side-to-side weight shift and a drift on a different period, so the loop never looks mechanical. */
+@keyframes companion-sway { 0%, 100% { rotate: 0deg; } 30% { rotate: -1.6deg; } 70% { rotate: 1.3deg; } }
+@keyframes companion-sway-low { 0%, 100% { rotate: 0deg; } 50% { rotate: -.8deg; } }
+@keyframes companion-drift { 0%, 100% { translate: 0 0; } 25% { translate: -1.2% 0; } 60% { translate: 1% -.6%; } }
+/* Celebrating: the head wiggles with the hops. */
+@keyframes companion-celebrate-wiggle { 0%, 100% { rotate: 0deg; } 20% { rotate: -5deg; } 47.5% { rotate: 4deg; } 69.5% { rotate: -2deg; } 84% { rotate: .6deg; } }
+
+/* Resting breath (~15 per minute): taller while slightly narrower, feet planted. */
+@keyframes companion-breathe { 0%, 100% { transform: scale(1, 1); } 45% { transform: scale(.992, 1.016); } }
+/* Tired: slower, shallower, sitting a little lower. */
+@keyframes companion-breathe-low { 0%, 100% { transform: scale(1.006, .99); } 50% { transform: scale(1, 1.002); } }
+
+@keyframes companion-hop-body {
+  0% { transform: scale(1, 1); animation-timing-function: ease-out; }
+  16% { transform: scale(1.07, .9); animation-timing-function: ease-in; }
+  26% { transform: scale(.95, 1.07); animation-timing-function: ease-out; }
+  50% { transform: scale(1, 1); animation-timing-function: ease-in; }
+  74% { transform: scale(.96, 1.05); animation-timing-function: ease-out; }
+  82% { transform: scale(1.08, .9); animation-timing-function: ease-out; }
+  92% { transform: scale(.985, 1.02); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes companion-hop-jump {
+  0%, 22% { transform: translateY(0); animation-timing-function: cubic-bezier(.25, .7, .5, 1); }
+  50% { transform: translateY(calc(var(--hop) * var(--hop-scale))); animation-timing-function: cubic-bezier(.5, 0, .75, .3); }
+  78%, 100% { transform: translateY(0); }
+}
+@keyframes companion-hop-shadow {
+  0% { transform: scale(1); opacity: 1; }
+  16% { transform: scale(1.05); opacity: 1; animation-timing-function: cubic-bezier(.25, .7, .5, 1); }
+  50% { transform: scale(.7); opacity: .45; animation-timing-function: cubic-bezier(.5, 0, .75, .3); }
+  82% { transform: scale(1.07); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Apex heights 1.0 / 0.6 / 0.3 of a hop; air time 24% / 19% / 13% of the run (proportional to sqrt(height)). */
+@keyframes companion-celebrate-jump {
+  0%, 8% { transform: translateY(0); animation-timing-function: cubic-bezier(.25, .7, .5, 1); }
+  20% { transform: translateY(calc(var(--hop) * var(--hop-scale))); animation-timing-function: cubic-bezier(.5, 0, .75, .3); }
+  32%, 38% { transform: translateY(0); animation-timing-function: cubic-bezier(.25, .7, .5, 1); }
+  47.5% { transform: translateY(calc(var(--hop) * var(--hop-scale) * .6)); animation-timing-function: cubic-bezier(.5, 0, .75, .3); }
+  57%, 63% { transform: translateY(0); animation-timing-function: cubic-bezier(.25, .7, .5, 1); }
+  69.5% { transform: translateY(calc(var(--hop) * var(--hop-scale) * .3)); animation-timing-function: cubic-bezier(.5, 0, .75, .3); }
+  76%, 100% { transform: translateY(0); }
+}
+@keyframes companion-celebrate-body {
+  0% { transform: scale(1, 1); }
+  6% { transform: scale(1.07, .9); }
+  10% { transform: scale(.95, 1.07); }
+  20% { transform: scale(1, 1); }
+  30% { transform: scale(.97, 1.04); }
+  33% { transform: scale(1.08, .9); }
+  37% { transform: scale(.96, 1.05); }
+  47.5% { transform: scale(1, 1); }
+  57% { transform: scale(1.05, .93); }
+  62% { transform: scale(.97, 1.03); }
+  69.5% { transform: scale(1, 1); }
+  76% { transform: scale(1.03, .96); }
+  84% { transform: scale(.995, 1.008); }
+  100% { transform: scale(1, 1); }
+}
+@keyframes companion-celebrate-shadow {
+  0%, 8% { transform: scale(1); opacity: 1; }
+  20% { transform: scale(.66); opacity: .4; }
+  32%, 38% { transform: scale(1.06); opacity: 1; }
+  47.5% { transform: scale(.8); opacity: .65; }
+  57%, 63% { transform: scale(1.03); opacity: 1; }
+  69.5% { transform: scale(.9); opacity: .85; }
+  76%, 100% { transform: scale(1); opacity: 1; }
+}
+
+/* Emotions (Companions.tsx EMOTES): each pairs a face with one of these motions and floating marks. */
+.companion-art--emote-nod .companion-art__body { animation: companion-nod 1.5s ease-in-out; }
+.companion-art--emote-tilt .companion-art__body { animation: companion-tilt 1.8s ease-in-out; }
+.companion-art--emote-doze .companion-art__body { animation: companion-doze 1.9s ease-in-out; }
+.companion-art--emote-hug .companion-art__body { animation: companion-hug 1.2s cubic-bezier(.3, 1.3, .5, 1); }
+.companion-art--emote-startle .companion-art__body { animation: companion-startle-body .6s ease-out; }
+.companion-art--emote-startle .companion-art__jump { animation: companion-startle-jump .6s ease-out; }
+/* Comfort: two slow nods, like listening. */
+@keyframes companion-nod { 0%, 40%, 80%, 100% { transform: none; } 20%, 60% { transform: translateY(2.5%) scale(1.02, .97); } }
+/* Curious: leans to one side and holds, then comes back. */
+@keyframes companion-tilt { 0%, 100% { rotate: 0deg; } 20%, 75% { rotate: -9deg; } }
+/* Sleepy: sinks and sways like nodding off. */
+@keyframes companion-doze { 0%, 100% { transform: none; rotate: 0deg; } 35% { transform: scale(1.01, .97); rotate: 3deg; } 70% { transform: scale(1.01, .98); rotate: -2deg; } }
+/* Hug: squeezed, then springs back taller (volume kept). */
+@keyframes companion-hug { 0% { transform: none; } 18% { transform: scale(1.09, .9); } 40%, 70% { transform: scale(.95, 1.05); } 85% { transform: scale(1.02, .98); } 100% { transform: none; } }
+/* Surprised: a quick stretch and a small jump. */
+@keyframes companion-startle-body { 0% { transform: none; } 20% { transform: scale(.93, 1.09); } 60% { transform: scale(1.03, .97); } 100% { transform: none; } }
+@keyframes companion-startle-jump { 0%, 100% { transform: translateY(0); } 25% { transform: translateY(-7%); } 55% { transform: translateY(0); } }
+.companion-art__hearts i.mark-spark { color: #e5b544; font-size: 16px; }
+.companion-art__hearts i.mark-mark { top: 10%; left: 74%; color: #3f5d46; font-size: 30px; font-weight: 800; animation: companion-pop 1.6s cubic-bezier(.3, 1.5, .5, 1) forwards; }
+.companion-art__hearts i.mark-zz { top: 20%; left: 64%; color: #8f86b8; font-size: 17px; font-weight: 700; animation: companion-zz 1.8s ease-out forwards; }
+@keyframes companion-pop { 0% { transform: scale(0) rotate(-12deg); opacity: 0; } 18% { transform: scale(1.15) rotate(6deg); opacity: 1; } 30%, 80% { transform: none; opacity: 1; } 100% { transform: scale(.9); opacity: 0; } }
+@keyframes companion-zz { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 20% { opacity: 1; } 100% { transform: translate(24px, -46px) scale(1.1); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .companion-art__body, .companion-art__jump, .companion-art__shadow, .companion-art__hearts i, .companion-art__img--blink { animation: none !important; }
+  .companion-art--petting .companion-art__body { transform: none; }
+  .companion-art__img { transition: none; }
+}
+
+/* Interactions from the fan menu: wave, sing, dance, breathe together, walk. */
+.companion-art--face-blink .companion-art__img--blink { opacity: 1; }
+.companion-art--emote-wave .companion-art__body { animation: companion-wave 1.7s ease-in-out; }
+@keyframes companion-wave { 0%, 100% { rotate: 0deg; transform: none; } 10% { transform: scale(1.02, .98); } 22%, 54% { rotate: -8deg; transform: none; } 38%, 70% { rotate: 8deg; } 86% { rotate: -2deg; } }
+.companion-art--emote-sing .companion-art__body { animation: companion-sing 2.3s ease-in-out; }
+@keyframes companion-sing { 0%, 100% { transform: none; rotate: 0deg; } 12%, 38%, 62%, 88% { transform: translateY(-2.5%) scale(.98, 1.03); } 25% { transform: none; rotate: -5deg; } 50% { transform: none; rotate: 5deg; } 75% { transform: none; rotate: -4deg; } }
+.companion-art--emote-dance .companion-art__body { animation: companion-dance 2.3s ease-in-out; }
+.companion-art--emote-dance .companion-art__jump { animation: companion-dance-hop 2.3s ease-in-out; }
+@keyframes companion-dance { 0%, 100% { rotate: 0deg; transform: none; } 15% { rotate: -11deg; transform: scale(1.04, .96); } 30% { rotate: 0deg; transform: scale(.96, 1.05); } 45% { rotate: 11deg; transform: scale(1.04, .96); } 60% { rotate: 0deg; transform: scale(.96, 1.05); } 80% { rotate: -4deg; transform: scale(1.03, .97); } }
+@keyframes companion-dance-hop { 0%, 30%, 60%, 100% { transform: translate(0, 0); } 15% { transform: translate(-6%, -7%); } 45% { transform: translate(6%, -7%); } 75% { transform: translate(0, -11%); } }
+.companion-art--emote-breathe .companion-art__body { animation: companion-breathe-deep 4.2s ease-in-out; }
+@keyframes companion-breathe-deep { 0%, 100% { transform: none; } 42%, 56% { transform: scale(1.06, 1.08); } }
+.companion-art--emote-walk .companion-art__jump { animation: companion-walk 2.7s ease-in-out; }
+.companion-art--emote-walk .companion-art__shadow { animation: companion-walk-shadow 2.7s ease-in-out; }
+.companion-art--emote-walk .companion-art__body { animation: companion-step .34s ease-in-out 8 alternate; }
+@keyframes companion-walk { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-16%); } 70% { transform: translateX(16%); } }
+@keyframes companion-walk-shadow { 0%, 100% { transform: translateX(0); } 30% { transform: translateX(-36%); } 70% { transform: translateX(36%); } }
+@keyframes companion-step { from { transform: none; rotate: -3deg; } 50% { transform: translateY(-2.5%); } to { transform: none; rotate: 3deg; } }
+.companion-art__hearts i.mark-note { color: #8a7fc4; font-size: 20px; font-weight: 700; }
+.companion-art__hearts i.mark-hand { top: 22%; left: 74%; color: #d9963a; animation: companion-hand 1.6s ease-in-out forwards; }
+.companion-art__hearts i.mark-hand svg { display: block; }
+@keyframes companion-hand { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.1) rotate(-18deg); opacity: 1; } 32% { transform: rotate(18deg); } 50% { transform: rotate(-18deg); } 68% { transform: rotate(18deg); opacity: 1; } 100% { transform: translateY(-14px) rotate(0); opacity: 0; } }
+
+/* Outfits (wardrobe.ts FIT): the anchor point of each item lands on (x, y) of the 512px picture and it turns around that point.
+   head = the hat's bottom centre (sink pulls it onto the head), face = centre, neck = top centre (sink tucks it under the chin). */
+.companion-art__wear { position: absolute; left: calc(var(--x) * 1%); top: calc(var(--y) * 1%); width: calc(var(--w) * 1%); height: auto; max-width: none;
+  pointer-events: none; user-select: none; -webkit-user-drag: none; filter: drop-shadow(0 1.5px 1.5px rgba(92, 78, 60, .18)); }
+.companion-art__wear--head { transform-origin: 50% calc((1 - var(--sink)) * 100%); transform: translate(-50%, calc((var(--sink) - 1) * 100%)) rotate(calc(var(--r) * 1deg)); }
+.companion-art__wear--face { transform: translate(-50%, -50%) rotate(calc(var(--r) * 1deg)); }
+.companion-art__wear--neck { transform-origin: 50% calc(var(--sink) * 100%); transform: translate(-50%, calc(var(--sink) * -100%)) rotate(calc(var(--r) * 1deg)); }

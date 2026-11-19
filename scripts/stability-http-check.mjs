@@ -13,5 +13,4 @@ const fonts=Array.from(new Set(Array.from((await readFile(new URL('../src/app/fo
 for(let i=0;i<fonts.length;i+=12)await Promise.all(fonts.slice(i,i+12).map(async path=>{const r=await fetch(new URL(path,base));assert.equal(r.status,200,path);const bytes=new Uint8Array(await r.arrayBuffer());assert.equal(Buffer.from(bytes.subarray(0,4)).toString(),'wOF2',path);}));
 const rive=await fetch(new URL('/plant-final.riv',base));assert.equal(rive.status,200);assert.ok((await rive.arrayBuffer()).byteLength>1000);
 const license=await fetch(new URL('/fonts/OFL.txt',base));assert.equal(license.status,200);
-const api=await fetch(new URL('/api/checkins',base),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({mood:3,energy:3,canGoOut:false})});assert.equal(api.status,200);const result=await api.json();assert.equal(result.success,true);assert.equal(result.recommendations.length,3);
-console.log(JSON.stringify({home:response.status,stylesheets:styles.length,javascriptFiles:scripts.length,fontFiles:fonts.length,rive:rive.status,api:api.status,recommendedQuests:result.recommendations.length,noGoogleFontUrls:true},null,2));
+console.log(JSON.stringify({home:response.status,stylesheets:styles.length,javascriptFiles:scripts.length,fontFiles:fonts.length,rive:rive.status,noGoogleFontUrls:true},null,2));

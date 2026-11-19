@@ -1,0 +1,35 @@
+{
+  "items": {
+    "straw-hat":        {"slot": "head", "sink": 0.19, "scale": 1.00},
+    "flower-crown":     {"slot": "head", "sink": 0.37, "scale": 1.03},
+    "knit-beanie":      {"slot": "head", "sink": 0.24, "scale": 0.55},
+    "party-hat":        {"slot": "head", "sink": 0.29, "scale": 0.365},
+    "round-glasses":    {"slot": "face", "sink": 0.00, "scale": 0.778},
+    "heart-sunglasses": {"slot": "face", "sink": 0.00, "scale": 1.00},
+    "mint-scarf":       {"slot": "neck", "sink": 0.20, "scale": 1.00},
+    "red-bowtie":       {"slot": "neck", "sink": 0.07, "scale": 0.65},
+    "bell-collar":      {"slot": "neck", "sink": 0.17, "scale": 0.94}
+  },
+  "anchors": {
+    "plant": {
+      "head": {"x": 34.2, "y": 40.1, "w": 29.8, "r": -12},
+      "face": {"x": 50.0, "y": 59.4, "w": 37.5, "r": 0.4},
+      "neck": {"x": 49.8, "y": 73.4, "w": 26.0, "r": 0}
+    },
+    "cat": {
+      "head": {"x": 46.4, "y": 25.2, "w": 44.5, "r": 1},
+      "face": {"x": 45.3, "y": 47.3, "w": 42.1, "r": 3.8},
+      "neck": {"x": 45.1, "y": 65.1, "w": 33.8, "r": 2}
+    },
+    "dog": {
+      "head": {"x": 48.9, "y": 19.4, "w": 43.0, "r": 0},
+      "face": {"x": 47.2, "y": 45.6, "w": 45.3, "r": 0.9},
+      "neck": {"x": 48.0, "y": 65.3, "w": 33.6, "r": 0}
+    },
+    "pegasus": {
+      "head": {"x": 46.2, "y": 20.4, "w": 34.0, "r": 8},
+      "face": {"x": 44.7, "y": 49.5, "w": 40.4, "r": 3.3},
+      "neck": {"x": 44.5, "y": 66.6, "w": 29.8, "r": 2}
+    }
+  }
+}

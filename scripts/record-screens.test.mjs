@@ -21,7 +21,7 @@ function mount(name,props) {
     useEffect(effect,deps) { const i=cursor++; const old=slots[i]; if (!old || deps.some((d,j)=>!Object.is(d,old.deps[j]))) { slots[i]={deps,cleanup:old?.cleanup}; effects.push(()=>{slots[i].cleanup?.();slots[i].cleanup=effect();}); } }
   };
   const jsx=(type,props)=>({type,props});const exports={};let urls=0,revoked=0;
-  runInNewContext(compiled,{exports,Blob,queueMicrotask,crypto:globalThis.crypto,URL:{createObjectURL:()=> 'blob:test-'+(++urls),revokeObjectURL(){revoked++;}},window:{addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)},require: name => name==='react' ? react : name==='react/jsx-runtime' ? {jsx,jsxs:jsx,Fragment:'fragment'} : loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
+  runInNewContext(compiled,{exports,Blob,queueMicrotask,crypto:globalThis.crypto,URL:{createObjectURL:()=> 'blob:test-'+(++urls),revokeObjectURL(){revoked++;}},window:{addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)},require: name => name==='react' ? react : name==='react/jsx-runtime' ? {jsx,jsxs:jsx,Fragment:'fragment'} : name.startsWith('./') ? {HelpLink:()=>null,default:()=>null,cameraSupported:()=>false} : loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
   function render(){cursor=0;const tree=exports[name](props);effects.splice(0).forEach(fn=>fn());return tree;}
   render();
   return { tree:render,button(label){return nodes(render(),n=>n.type==='button'&&text(n)===label)[0];},listeners,get revoked(){return revoked;},unmount(){for(const slot of slots)slot?.cleanup?.();},remount(){for(const slot of slots)slot?.cleanup?.();slots.length=0;render();} };
