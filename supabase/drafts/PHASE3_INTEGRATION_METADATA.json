@@ -1,0 +1,2065 @@
+{
+  "project": "yhzgucbiwvizjxpzwpqg",
+  "scope": "Read-only metadata evidence, not a complete restorable backup. No user rows, tokens, passwords.",
+  "observedAt": "2026-11-13 12:07:50 UTC",
+  "environment": [
+    {
+      "version": "17.11",
+      "read_only": "on",
+      "tables": [
+        {
+          "rls": true,
+          "name": "onestep_profiles",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_gardens",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_daily_records",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_daily_cares",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_sunshine_ledger",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_purchases",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_inventory",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_growth_grants",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_placements",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_item_catalog",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_care_catalog",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_slot_catalog",
+          "force": false
+        },
+        {
+          "rls": true,
+          "name": "onestep_photos",
+          "force": false
+        }
+      ],
+      "roles": [
+        {
+          "name": "postgres",
+          "login": true,
+          "super": false,
+          "bypass": true,
+          "createrole": true
+        }
+      ],
+      "cron": null
+    }
+  ],
+  "functions": [
+    {
+      "signature": "onestep_attach_photo(date,uuid,bigint)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "db3a8c1dad1c7ed513efa6a173452d3f"
+    },
+    {
+      "signature": "onestep_buy_item(text)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "037f14110567a379a390446e508ecf06"
+    },
+    {
+      "signature": "onestep_commit_activity(uuid,text,text)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+      "definition_md5": "d68f6ae984445ae6fa0e02a4f1724f9d"
+    },
+    {
+      "signature": "onestep_commit_reflection(uuid,text[],text[],text)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,service_role=X/postgres}",
+      "definition_md5": "cae9773de93265fa9744291eaee7217e"
+    },
+    {
+      "signature": "onestep_ensure_garden()",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "74062830fe68cc81a8679885839966ad"
+    },
+    {
+      "signature": "onestep_private.award(uuid,date,text)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "definition_md5": "09e69ae9251d4ab1c4c3a803d1b651b4"
+    },
+    {
+      "signature": "onestep_private.ensure_garden(uuid)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "definition_md5": "d5cecc2ff376edb21e9f9fb0662a64d5"
+    },
+    {
+      "signature": "onestep_private.new_user()",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "definition_md5": "f0098607e2057325e352970b1ea1e5ec"
+    },
+    {
+      "signature": "onestep_private.photo_access(text,text)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,anon=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "a0762a2e1b23c6e5df53d0db3162b7cd"
+    },
+    {
+      "signature": "onestep_private.require_user()",
+      "owner": "postgres",
+      "prosecdef": false,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "definition_md5": "649ed5c684d399f703a33a52839ea908"
+    },
+    {
+      "signature": "onestep_private.sync_growth(uuid)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "definition_md5": "00bf9d8d6664c4788e47ff519a413d07"
+    },
+    {
+      "signature": "onestep_private.today(uuid)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres}",
+      "definition_md5": "387faafae79fea3f2647c97ea71e8970"
+    },
+    {
+      "signature": "onestep_reserve_photo(date)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "5188777f5bdb5e02fed9fd232da19de8"
+    },
+    {
+      "signature": "onestep_retire_photo(uuid)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "e1d55f6fac82e8bff7f4fd801f639aca"
+    },
+    {
+      "signature": "onestep_save_layout(jsonb,bigint)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "87bd81600d1431475e16b74c0340ff26"
+    },
+    {
+      "signature": "onestep_save_writing(date,text,text,bigint)",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "63cbe49b150fffbf27835336a6e300fa"
+    },
+    {
+      "signature": "onestep_start_day()",
+      "owner": "postgres",
+      "prosecdef": true,
+      "proconfig": [
+        "search_path=\"\""
+      ],
+      "proacl": "{postgres=X/postgres,authenticated=X/postgres}",
+      "definition_md5": "bbce1d57a4d05a7a14d7be12a9bb5fcf"
+    }
+  ],
+  "policies": [
+    {
+      "tablename": "onestep_care_catalog",
+      "policyname": "signed_in_catalog",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_daily_cares",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_daily_records",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_gardens",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_growth_grants",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_inventory",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_item_catalog",
+      "policyname": "signed_in_catalog",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_photos",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_placements",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_profiles",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_purchases",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_slot_catalog",
+      "policyname": "signed_in_catalog",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) IS NOT NULL)",
+      "with_check": null
+    },
+    {
+      "tablename": "onestep_sunshine_ledger",
+      "policyname": "own_rows",
+      "roles": "{authenticated}",
+      "cmd": "SELECT",
+      "qual": "(( SELECT auth.uid() AS uid) = user_id)",
+      "with_check": null
+    }
+  ],
+  "definitions": [
+    {
+      "signature": "onestep_start_day()",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_start_day()\n RETURNS date\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); d date;\r\nbegin\r\n  perform onestep_private.ensure_garden(u);\r\n  d := onestep_private.today(u);\r\n  insert into public.onestep_daily_records(user_id, record_date) values (u, d) on conflict do nothing;\r\n  return d;\r\nend $function$\n"
+    },
+    {
+      "signature": "onestep_private.require_user()",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.require_user()\n RETURNS uuid\n LANGUAGE plpgsql\n STABLE\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := auth.uid();\r\nbegin\r\n  if u is null then raise exception 'Authentication required' using errcode = '42501'; end if;\r\n  return u;\r\nend $function$\n"
+    },
+    {
+      "signature": "onestep_private.ensure_garden(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.ensure_garden(u uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\nbegin\r\n  if u is null then raise exception 'User required'; end if;\r\n  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(u::text, 0));\r\n  insert into public.onestep_profiles(user_id) values (u) on conflict do nothing;\r\n  insert into public.onestep_gardens(user_id) values (u) on conflict do nothing;\r\n  insert into public.onestep_inventory(user_id, item_id, source)\r\n    select u, id, 'default' from public.onestep_item_catalog where default_owned on conflict do nothing;\r\n  insert into public.onestep_placements(user_id, slot_id, item_id)\r\n    values (u, 'background', 'default-sky') on conflict do nothing;\r\nend $function$\n"
+    },
+    {
+      "signature": "onestep_private.today(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.today(u uuid)\n RETURNS date\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select (now() at time zone timezone)::date from public.onestep_profiles where user_id = u\r\n$function$\n"
+    },
+    {
+      "signature": "onestep_private.award(uuid,date,text)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.award(u uuid, d date, why text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare amount integer; inserted integer;\r\nbegin\r\n  if d is distinct from onestep_private.today(u) then raise exception 'Rewards are today only'; end if;\r\n  amount := case why when 'reflection' then 10 when 'participation' then 5 when 'firstCare' then 10 end;\r\n  if amount is null then raise exception 'Invalid reward'; end if;\r\n  if not exists (select 1 from public.onestep_daily_records r where r.user_id = u and r.record_date = d\r\n    and not ('' = any(r.answers)) and r.stage <> 'checkin'\r\n    and (why = 'reflection' or r.stage = 'care')) then raise exception 'Ineligible record'; end if;\r\n  if why = 'firstCare' and not exists (select 1 from public.onestep_daily_cares c\r\n    where c.user_id = u and c.record_date = d and c.completed_at is not null) then raise exception 'No completed care'; end if;\r\n  insert into public.onestep_sunshine_ledger(user_id,event_key,record_date,reason,delta)\r\n    values(u,d::text || ':' || why,d,why,amount) on conflict do nothing;\r\n  get diagnostics inserted = row_count;\r\n  if inserted = 1 then update public.onestep_gardens set sunshine_balance = sunshine_balance + amount where user_id = u; end if;\r\nend $function$\n"
+    },
+    {
+      "signature": "onestep_private.sync_growth(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.sync_growth(u uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare days integer; milestone integer;\r\nbegin\r\n  select count(*) into days from public.onestep_daily_records\r\n    where user_id = u and record_date <= onestep_private.today(u) and stage <> 'checkin';\r\n  update public.onestep_gardens set active_days = days where user_id = u;\r\n  foreach milestone in array array[50,100] loop\r\n    if days >= milestone then\r\n      insert into public.onestep_growth_grants(user_id,milestone_days,active_days) values(u,milestone,days) on conflict do nothing;\r\n      insert into public.onestep_inventory(user_id,item_id,source)\r\n        select u,id,'growth' from public.onestep_item_catalog where reward_days = milestone on conflict do nothing;\r\n    end if;\r\n  end loop;\r\nend $function$\n"
+    },
+    {
+      "signature": "onestep_save_writing(date,text,text,bigint)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_save_writing(p_date date, p_note text, p_comment text, p_revision bigint)\n RETURNS bigint\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); result bigint;\r\nbegin\r\n  -- NULL is invalid, never an implicit erase. Send '' to explicitly clear text.\r\n  -- Reject rather than truncate so an invalid save preserves the entire record.\r\n  if p_date is null or p_revision is null or p_revision < 0 then\r\n    raise exception 'Date and nonnegative revision required' using errcode = '22023';\r\n  end if;\r\n  if p_note is null or p_comment is null then\r\n    raise exception 'Writing must not be NULL; use an empty string to clear' using errcode = '22004';\r\n  end if;\r\n  if char_length(p_note) > 300 or char_length(p_comment) > 100 then\r\n    raise exception 'Note limit is 300 characters; photo comment limit is 100' using errcode = '22001';\r\n  end if;\r\n  perform onestep_private.ensure_garden(u);\r\n  update public.onestep_daily_records set note = p_note,photo_comment = p_comment,revision = revision+1,updated_at = now()\r\n    where user_id = u and record_date = p_date and revision = p_revision returning revision into result;\r\n  if not found then raise exception 'Record missing or stale revision' using errcode = '40001'; end if;\r\n  return result;\r\nend $function$\n"
+    },
+    {
+      "signature": "onestep_commit_reflection(uuid,text[],text[],text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_commit_reflection(p_user uuid, p_answers text[], p_cares text[], p_title text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare d date; n integer;\r\nbegin\r\n  perform onestep_private.ensure_garden(p_user);\r\n  d := onestep_private.today(p_user);\r\n  if p_answers is null or array_ndims(p_answers) <> 1 or array_lower(p_answers,1) <> 1 or cardinality(p_answers) <> 4 then\r\n    raise exception 'Four answers required';\r\n  end if;\r\n  if array_position(p_answers,null) is not null or '' = any(p_answers) then\r\n    raise exception 'Four answers required';\r\n  end if;\r\n  if p_cares is null or cardinality(p_cares) <> 3 or array_ndims(p_cares) <> 1\r\n    or p_title is null or char_length(p_title) not between 1 and 200 or char_length(btrim(p_title)) = 0 then raise exception 'Three recommendations and title required'; end if;\r\n  select count(distinct id) into n from public.onestep_care_catalog where id = any(p_cares) and catalog_version = 2 and active;\r\n  if n <> 3 then raise exception 'Invalid recommendations'; end if;\r\n  insert into public.onestep_daily_records(user_id,record_date,answers,stage,plant_state,recommendation_title)\r\n    values(p_user,d,p_answers,'photo',case when p_answers && array['very_low','low'] then 'low' else 'normal' end,p_title)\r\n    on conflict(user_id,record_date) do update set answers = excluded.answers,\r\n      plant_state = excluded.plant_state,\r\n      stage = case when onestep_daily_records.stage = 'checkin' then 'photo' else onestep_daily_records.stage end,\r\n      recommendation_title = coalesce(onestep_daily_records.recommendation_title,excluded.recommendation_title),\r\n      revision = onestep_daily_records.revision + 1, updated_at = now();\r\n  -- A repeated request or edited answer must not reroll the daily care set.\r\n  if not exists(select 1 from public.onestep_daily_cares where user_id = p_user and record_date = d) then\r\n    insert into public.onestep_daily_cares(user_id,record_date,position,care_id,catalog_version)\r\n      select p_user,d,ordinality,id,2 from unnest(p_cares) with ordinality as c(id,ordinality);\r\n  end if;\r\n  perform onestep_private.award(p_user,d,'reflection');\r\n  perform onestep_private.sync_growth(p_user);\r\nend $function$\n"
+    },
+    {
+      "signature": "onestep_commit_activity(uuid,text,text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_commit_activity(p_user uuid, p_action text, p_care text DEFAULT NULL::text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare d date; current_stage text;\r\nbegin\r\n  perform onestep_private.ensure_garden(p_user);\r\n  d := onestep_private.today(p_user);\r\n  select stage into current_stage from public.onestep_daily_records where user_id = p_user and record_date = d;\r\n  if current_stage is null or current_stage = 'checkin' then raise exception 'Complete reflection first'; end if;\r\n  if p_action = 'photo_done' then\r\n    if current_stage = 'photo' then\r\n      update public.onestep_daily_records set stage = 'growth',revision = revision+1,updated_at = now() where user_id = p_user and record_date = d;\r\n    end if;\r\n  elsif p_action = 'growth_done' then\r\n    if current_stage not in ('growth','care') then raise exception 'Complete photo step first'; end if;\r\n    update public.onestep_daily_records set stage = 'care',revision = revision+1,updated_at = now() where user_id = p_user and record_date = d;\r\n    -- Skipping the optional photo or diary still counts as participation.\r\n    perform onestep_private.award(p_user,d,'participation');\r\n  elsif p_action = 'care_done' then\r\n    if current_stage <> 'care' or p_care is null then raise exception 'Care is not available'; end if;\r\n    update public.onestep_daily_cares set completed_at = coalesce(completed_at,now())\r\n      where user_id = p_user and record_date = d and care_id = p_care;\r\n    if not found then raise exception 'Care was not recommended'; end if;\r\n    perform onestep_private.award(p_user,d,'firstCare');\r\n  else raise exception 'Unknown activity'; end if;\r\nend $function$\n"
+    }
+  ],
+  "columns": [
+    {
+      "table_name": "onestep_care_catalog",
+      "column_name": "id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_care_catalog",
+      "column_name": "catalog_version",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_care_catalog",
+      "column_name": "category",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_care_catalog",
+      "column_name": "title",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_care_catalog",
+      "column_name": "active",
+      "type": "boolean",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "column_name": "record_date",
+      "type": "date",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "column_name": "position",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "column_name": "care_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "column_name": "catalog_version",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": "2"
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "column_name": "completed_at",
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "record_date",
+      "type": "date",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "version",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": "1"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "answers",
+      "type": "text[]",
+      "attnotnull": true,
+      "default_expr": "ARRAY[''::text, ''::text, ''::text, ''::text]"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "stage",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "'checkin'::text"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "plant_state",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "'normal'::text"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "note",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "''::text"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "photo_comment",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "''::text"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "photo_id",
+      "type": "uuid",
+      "attnotnull": false,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "recommendation_title",
+      "type": "text",
+      "attnotnull": false,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "revision",
+      "type": "bigint",
+      "attnotnull": true,
+      "default_expr": "0"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "column_name": "updated_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_gardens",
+      "column_name": "main_character",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "'sprout'::text"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "column_name": "sunshine_balance",
+      "type": "bigint",
+      "attnotnull": true,
+      "default_expr": "0"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "column_name": "active_days",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": "0"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "column_name": "growth_stage",
+      "type": "integer",
+      "attnotnull": false,
+      "default_expr": "\nCASE\n    WHEN (active_days >= 100) THEN 2\n    WHEN (active_days >= 50) THEN 1\n    ELSE 0\nEND"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "column_name": "layout_revision",
+      "type": "bigint",
+      "attnotnull": true,
+      "default_expr": "0"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "column_name": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "column_name": "milestone_days",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "column_name": "active_days",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "column_name": "granted_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "column_name": "seen_at",
+      "type": "timestamp with time zone",
+      "attnotnull": false,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_inventory",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_inventory",
+      "column_name": "item_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_inventory",
+      "column_name": "source",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_inventory",
+      "column_name": "acquired_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "column_name": "id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "column_name": "category",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "column_name": "slot_kind",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "column_name": "price",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "column_name": "default_owned",
+      "type": "boolean",
+      "attnotnull": true,
+      "default_expr": "false"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "column_name": "reward_days",
+      "type": "integer",
+      "attnotnull": false,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_photos",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_photos",
+      "column_name": "id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": "gen_random_uuid()"
+    },
+    {
+      "table_name": "onestep_photos",
+      "column_name": "record_date",
+      "type": "date",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_photos",
+      "column_name": "object_path",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_photos",
+      "column_name": "status",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "'staged'::text"
+    },
+    {
+      "table_name": "onestep_photos",
+      "column_name": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_placements",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_placements",
+      "column_name": "slot_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_placements",
+      "column_name": "item_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_profiles",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_profiles",
+      "column_name": "display_name",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "''::text"
+    },
+    {
+      "table_name": "onestep_profiles",
+      "column_name": "timezone",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": "'Asia/Seoul'::text"
+    },
+    {
+      "table_name": "onestep_profiles",
+      "column_name": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_purchases",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_purchases",
+      "column_name": "item_id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_purchases",
+      "column_name": "cost",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_purchases",
+      "column_name": "event_key",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_purchases",
+      "column_name": "purchased_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    },
+    {
+      "table_name": "onestep_slot_catalog",
+      "column_name": "id",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_slot_catalog",
+      "column_name": "kind",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "user_id",
+      "type": "uuid",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "event_key",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "record_date",
+      "type": "date",
+      "attnotnull": false,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "reason",
+      "type": "text",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "delta",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "item_id",
+      "type": "text",
+      "attnotnull": false,
+      "default_expr": null
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "policy_version",
+      "type": "integer",
+      "attnotnull": true,
+      "default_expr": "1"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "column_name": "created_at",
+      "type": "timestamp with time zone",
+      "attnotnull": true,
+      "default_expr": "now()"
+    }
+  ],
+  "constraints": [
+    {
+      "table_name": "onestep_care_catalog",
+      "conname": "onestep_care_catalog_catalog_version_check",
+      "contype": "c",
+      "definition": "CHECK ((catalog_version = ANY (ARRAY[1, 2])))"
+    },
+    {
+      "table_name": "onestep_care_catalog",
+      "conname": "onestep_care_catalog_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id, catalog_version)"
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "conname": "onestep_daily_cares_care_id_catalog_version_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (care_id, catalog_version) REFERENCES onestep_care_catalog(id, catalog_version)"
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "conname": "onestep_daily_cares_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, record_date, care_id)"
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "conname": "onestep_daily_cares_position_check",
+      "contype": "c",
+      "definition": "CHECK (((\"position\" >= 1) AND (\"position\" <= 3)))"
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "conname": "onestep_daily_cares_user_id_record_date_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id, record_date) REFERENCES onestep_daily_records(user_id, record_date) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_daily_cares",
+      "conname": "onestep_daily_cares_user_id_record_date_position_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, record_date, \"position\")"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_answers_check",
+      "contype": "c",
+      "definition": "CHECK (((array_ndims(answers) = 1) AND (array_lower(answers, 1) = 1) AND (cardinality(answers) = 4) AND (array_position(answers, NULL::text) IS NULL)))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_answers_check1",
+      "contype": "c",
+      "definition": "CHECK (((answers[1] = ANY (ARRAY[''::text, 'very_low'::text, 'low'::text, 'normal'::text, 'good'::text])) AND (answers[2] = ANY (ARRAY[''::text, 'very_low'::text, 'low'::text, 'normal'::text, 'good'::text, 'very_good'::text])) AND (answers[3] = ANY (ARRAY[''::text, 'very_low'::text, 'low'::text, 'normal'::text, 'good'::text])) AND (answers[4] = ANY (ARRAY[''::text, 'very_low'::text, 'low'::text, 'normal'::text, 'good'::text, 'very_good'::text]))))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_check",
+      "contype": "c",
+      "definition": "CHECK (((stage = 'checkin'::text) OR (NOT (''::text = ANY (answers)))))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_note_check",
+      "contype": "c",
+      "definition": "CHECK ((char_length(note) <= 300))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_photo_comment_check",
+      "contype": "c",
+      "definition": "CHECK ((char_length(photo_comment) <= 100))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, record_date)"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_plant_state_check",
+      "contype": "c",
+      "definition": "CHECK ((plant_state = ANY (ARRAY['normal'::text, 'low'::text])))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_recommendation_title_check",
+      "contype": "c",
+      "definition": "CHECK ((((char_length(recommendation_title) >= 1) AND (char_length(recommendation_title) <= 200)) AND (char_length(btrim(recommendation_title)) > 0)))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_revision_check",
+      "contype": "c",
+      "definition": "CHECK ((revision >= 0))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_stage_check",
+      "contype": "c",
+      "definition": "CHECK ((stage = ANY (ARRAY['checkin'::text, 'photo'::text, 'growth'::text, 'care'::text])))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES onestep_profiles(user_id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_daily_records_version_check",
+      "contype": "c",
+      "definition": "CHECK ((version = 1))"
+    },
+    {
+      "table_name": "onestep_daily_records",
+      "conname": "onestep_record_photo_owner_fk",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id, record_date, photo_id) REFERENCES onestep_photos(user_id, record_date, id)"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "conname": "onestep_gardens_active_days_check",
+      "contype": "c",
+      "definition": "CHECK ((active_days >= 0))"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "conname": "onestep_gardens_layout_revision_check",
+      "contype": "c",
+      "definition": "CHECK ((layout_revision >= 0))"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "conname": "onestep_gardens_main_character_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (main_character) REFERENCES onestep_item_catalog(id)"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "conname": "onestep_gardens_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id)"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "conname": "onestep_gardens_sunshine_balance_check",
+      "contype": "c",
+      "definition": "CHECK ((sunshine_balance >= 0))"
+    },
+    {
+      "table_name": "onestep_gardens",
+      "conname": "onestep_gardens_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES onestep_profiles(user_id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "conname": "onestep_growth_grants_check",
+      "contype": "c",
+      "definition": "CHECK ((active_days >= milestone_days))"
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "conname": "onestep_growth_grants_milestone_days_check",
+      "contype": "c",
+      "definition": "CHECK ((milestone_days = ANY (ARRAY[50, 100])))"
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "conname": "onestep_growth_grants_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, milestone_days)"
+    },
+    {
+      "table_name": "onestep_growth_grants",
+      "conname": "onestep_growth_grants_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES onestep_profiles(user_id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_inventory",
+      "conname": "onestep_inventory_item_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (item_id) REFERENCES onestep_item_catalog(id)"
+    },
+    {
+      "table_name": "onestep_inventory",
+      "conname": "onestep_inventory_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, item_id)"
+    },
+    {
+      "table_name": "onestep_inventory",
+      "conname": "onestep_inventory_source_check",
+      "contype": "c",
+      "definition": "CHECK ((source = ANY (ARRAY['default'::text, 'purchase'::text, 'growth'::text])))"
+    },
+    {
+      "table_name": "onestep_inventory",
+      "conname": "onestep_inventory_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES onestep_profiles(user_id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "conname": "onestep_item_catalog_category_check",
+      "contype": "c",
+      "definition": "CHECK ((category = ANY (ARRAY['character'::text, 'decoration'::text, 'background'::text])))"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "conname": "onestep_item_catalog_check",
+      "contype": "c",
+      "definition": "CHECK (((NOT default_owned) OR ((price = 0) AND (reward_days IS NULL))))"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "conname": "onestep_item_catalog_check1",
+      "contype": "c",
+      "definition": "CHECK (((reward_days IS NULL) OR (price = 0)))"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "conname": "onestep_item_catalog_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "conname": "onestep_item_catalog_price_check",
+      "contype": "c",
+      "definition": "CHECK ((price >= 0))"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "conname": "onestep_item_catalog_reward_days_check",
+      "contype": "c",
+      "definition": "CHECK ((reward_days = ANY (ARRAY[50, 100])))"
+    },
+    {
+      "table_name": "onestep_item_catalog",
+      "conname": "onestep_item_catalog_slot_kind_check",
+      "contype": "c",
+      "definition": "CHECK ((slot_kind = ANY (ARRAY['core'::text, 'character'::text, 'flower'::text, 'path'::text, 'bench'::text, 'background'::text])))"
+    },
+    {
+      "table_name": "onestep_photos",
+      "conname": "onestep_photos_check",
+      "contype": "c",
+      "definition": "CHECK ((object_path = ((((user_id)::text || '/'::text) || (id)::text) || '.jpg'::text)))"
+    },
+    {
+      "table_name": "onestep_photos",
+      "conname": "onestep_photos_object_path_key",
+      "contype": "u",
+      "definition": "UNIQUE (object_path)"
+    },
+    {
+      "table_name": "onestep_photos",
+      "conname": "onestep_photos_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, id)"
+    },
+    {
+      "table_name": "onestep_photos",
+      "conname": "onestep_photos_status_check",
+      "contype": "c",
+      "definition": "CHECK ((status = ANY (ARRAY['staged'::text, 'attached'::text, 'retired'::text])))"
+    },
+    {
+      "table_name": "onestep_photos",
+      "conname": "onestep_photos_user_id_record_date_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id, record_date) REFERENCES onestep_daily_records(user_id, record_date) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_photos",
+      "conname": "onestep_photos_user_id_record_date_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, record_date, id)"
+    },
+    {
+      "table_name": "onestep_placements",
+      "conname": "onestep_placements_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, slot_id)"
+    },
+    {
+      "table_name": "onestep_placements",
+      "conname": "onestep_placements_slot_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (slot_id) REFERENCES onestep_slot_catalog(id)"
+    },
+    {
+      "table_name": "onestep_placements",
+      "conname": "onestep_placements_user_id_item_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id, item_id) REFERENCES onestep_inventory(user_id, item_id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_placements",
+      "conname": "onestep_placements_user_id_item_id_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, item_id)"
+    },
+    {
+      "table_name": "onestep_profiles",
+      "conname": "onestep_profiles_display_name_check",
+      "contype": "c",
+      "definition": "CHECK ((char_length(display_name) <= 40))"
+    },
+    {
+      "table_name": "onestep_profiles",
+      "conname": "onestep_profiles_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id)"
+    },
+    {
+      "table_name": "onestep_profiles",
+      "conname": "onestep_profiles_timezone_check",
+      "contype": "c",
+      "definition": "CHECK ((timezone = 'Asia/Seoul'::text))"
+    },
+    {
+      "table_name": "onestep_profiles",
+      "conname": "onestep_profiles_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_purchases",
+      "conname": "onestep_purchases_check",
+      "contype": "c",
+      "definition": "CHECK ((event_key = ('purchase:'::text || item_id)))"
+    },
+    {
+      "table_name": "onestep_purchases",
+      "conname": "onestep_purchases_cost_check",
+      "contype": "c",
+      "definition": "CHECK ((cost > 0))"
+    },
+    {
+      "table_name": "onestep_purchases",
+      "conname": "onestep_purchases_item_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (item_id) REFERENCES onestep_item_catalog(id)"
+    },
+    {
+      "table_name": "onestep_purchases",
+      "conname": "onestep_purchases_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, item_id)"
+    },
+    {
+      "table_name": "onestep_purchases",
+      "conname": "onestep_purchases_user_id_event_key_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id, event_key) REFERENCES onestep_sunshine_ledger(user_id, event_key) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_slot_catalog",
+      "conname": "onestep_slot_catalog_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_check",
+      "contype": "c",
+      "definition": "CHECK ((((reason = 'purchase'::text) AND (delta < 0) AND (item_id IS NOT NULL) AND (record_date IS NULL) AND (event_key = ('purchase:'::text || item_id))) OR ((reason <> 'purchase'::text) AND (item_id IS NULL) AND (record_date IS NOT NULL) AND (event_key = (((record_date)::text || ':'::text) || reason)) AND (delta =\nCASE reason\n    WHEN 'reflection'::text THEN 10\n    WHEN 'participation'::text THEN 5\n    WHEN 'firstCare'::text THEN 10\n    ELSE NULL::integer\nEND))))"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_item_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (item_id) REFERENCES onestep_item_catalog(id)"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_pkey",
+      "contype": "p",
+      "definition": "PRIMARY KEY (user_id, event_key)"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_policy_version_check",
+      "contype": "c",
+      "definition": "CHECK ((policy_version = 1))"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_reason_check",
+      "contype": "c",
+      "definition": "CHECK ((reason = ANY (ARRAY['reflection'::text, 'participation'::text, 'firstCare'::text, 'purchase'::text])))"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_user_id_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id) REFERENCES onestep_profiles(user_id) ON DELETE CASCADE"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_user_id_record_date_fkey",
+      "contype": "f",
+      "definition": "FOREIGN KEY (user_id, record_date) REFERENCES onestep_daily_records(user_id, record_date)"
+    },
+    {
+      "table_name": "onestep_sunshine_ledger",
+      "conname": "onestep_sunshine_ledger_user_id_record_date_reason_key",
+      "contype": "u",
+      "definition": "UNIQUE (user_id, record_date, reason)"
+    }
+  ],
+  "indexes": [
+    {
+      "schemaname": "public",
+      "tablename": "onestep_profiles",
+      "indexname": "onestep_profiles_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_profiles_pkey ON public.onestep_profiles USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_gardens",
+      "indexname": "onestep_gardens_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_gardens_pkey ON public.onestep_gardens USING btree (user_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_daily_records",
+      "indexname": "onestep_daily_records_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_daily_records_pkey ON public.onestep_daily_records USING btree (user_id, record_date)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_daily_cares",
+      "indexname": "onestep_daily_cares_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_daily_cares_pkey ON public.onestep_daily_cares USING btree (user_id, record_date, care_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_daily_cares",
+      "indexname": "onestep_daily_cares_user_id_record_date_position_key",
+      "indexdef": "CREATE UNIQUE INDEX onestep_daily_cares_user_id_record_date_position_key ON public.onestep_daily_cares USING btree (user_id, record_date, \"position\")"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_sunshine_ledger",
+      "indexname": "onestep_sunshine_ledger_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_sunshine_ledger_pkey ON public.onestep_sunshine_ledger USING btree (user_id, event_key)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_sunshine_ledger",
+      "indexname": "onestep_sunshine_ledger_user_id_record_date_reason_key",
+      "indexdef": "CREATE UNIQUE INDEX onestep_sunshine_ledger_user_id_record_date_reason_key ON public.onestep_sunshine_ledger USING btree (user_id, record_date, reason)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_purchases",
+      "indexname": "onestep_purchases_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_purchases_pkey ON public.onestep_purchases USING btree (user_id, item_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_inventory",
+      "indexname": "onestep_inventory_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_inventory_pkey ON public.onestep_inventory USING btree (user_id, item_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_growth_grants",
+      "indexname": "onestep_growth_grants_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_growth_grants_pkey ON public.onestep_growth_grants USING btree (user_id, milestone_days)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_placements",
+      "indexname": "onestep_placements_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_placements_pkey ON public.onestep_placements USING btree (user_id, slot_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_placements",
+      "indexname": "onestep_placements_user_id_item_id_key",
+      "indexdef": "CREATE UNIQUE INDEX onestep_placements_user_id_item_id_key ON public.onestep_placements USING btree (user_id, item_id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_photos",
+      "indexname": "onestep_photos_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_photos_pkey ON public.onestep_photos USING btree (user_id, id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_photos",
+      "indexname": "onestep_photos_object_path_key",
+      "indexdef": "CREATE UNIQUE INDEX onestep_photos_object_path_key ON public.onestep_photos USING btree (object_path)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_photos",
+      "indexname": "onestep_photos_user_id_record_date_id_key",
+      "indexdef": "CREATE UNIQUE INDEX onestep_photos_user_id_record_date_id_key ON public.onestep_photos USING btree (user_id, record_date, id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_photos",
+      "indexname": "onestep_photos_cleanup",
+      "indexdef": "CREATE INDEX onestep_photos_cleanup ON public.onestep_photos USING btree (user_id, status, created_at)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_item_catalog",
+      "indexname": "onestep_item_catalog_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_item_catalog_pkey ON public.onestep_item_catalog USING btree (id)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_care_catalog",
+      "indexname": "onestep_care_catalog_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_care_catalog_pkey ON public.onestep_care_catalog USING btree (id, catalog_version)"
+    },
+    {
+      "schemaname": "public",
+      "tablename": "onestep_slot_catalog",
+      "indexname": "onestep_slot_catalog_pkey",
+      "indexdef": "CREATE UNIQUE INDEX onestep_slot_catalog_pkey ON public.onestep_slot_catalog USING btree (id)"
+    }
+  ],
+  "triggers": [
+    {
+      "nspname": "auth",
+      "relname": "users",
+      "tgname": "onestep_new_auth_user",
+      "definition": "CREATE TRIGGER onestep_new_auth_user AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION onestep_private.new_user()"
+    }
+  ],
+  "sqlFunctionCallers": [],
+  "privileges": [
+    {
+      "metadata": {
+        "roles": null,
+        "tables": [
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_profiles",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_gardens",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_daily_records",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_daily_cares",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_sunshine_ledger",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_purchases",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_inventory",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_growth_grants",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_placements",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=arwd/postgres"
+            ],
+            "name": "onestep_photos",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=r/postgres"
+            ],
+            "name": "onestep_item_catalog",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=r/postgres"
+            ],
+            "name": "onestep_care_catalog",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "authenticated=r/postgres",
+              "service_role=r/postgres"
+            ],
+            "name": "onestep_slot_catalog",
+            "anon_select": false,
+            "authenticated_write": false,
+            "authenticated_select": true
+          }
+        ],
+        "schemas": [
+          {
+            "acl": [
+              "postgres=UC/postgres",
+              "anon=U/postgres",
+              "authenticated=U/postgres"
+            ],
+            "name": "onestep_private"
+          },
+          {
+            "acl": [
+              "supabase_admin=UC/supabase_admin",
+              "anon=U/supabase_admin",
+              "authenticated=U/supabase_admin",
+              "service_role=U/supabase_admin",
+              "supabase_auth_admin=UC/supabase_admin",
+              "dashboard_user=UC/supabase_admin",
+              "postgres=U/supabase_admin"
+            ],
+            "name": "auth"
+          },
+          {
+            "acl": [
+              "pg_database_owner=UC/pg_database_owner",
+              "=U/pg_database_owner",
+              "postgres=U/pg_database_owner",
+              "anon=U/pg_database_owner",
+              "authenticated=U/pg_database_owner",
+              "service_role=U/pg_database_owner"
+            ],
+            "name": "public"
+          }
+        ],
+        "event_triggers": [
+          {
+            "name": "issue_graphql_placeholder",
+            "event": "sql_drop",
+            "enabled": "O",
+            "function": "extensions.set_graphql_placeholder()"
+          },
+          {
+            "name": "pgrst_ddl_watch",
+            "event": "ddl_command_end",
+            "enabled": "O",
+            "function": "extensions.pgrst_ddl_watch()"
+          },
+          {
+            "name": "pgrst_drop_watch",
+            "event": "sql_drop",
+            "enabled": "O",
+            "function": "extensions.pgrst_drop_watch()"
+          },
+          {
+            "name": "issue_pg_cron_access",
+            "event": "ddl_command_end",
+            "enabled": "O",
+            "function": "extensions.grant_pg_cron_access()"
+          },
+          {
+            "name": "issue_pg_net_access",
+            "event": "ddl_command_end",
+            "enabled": "O",
+            "function": "extensions.grant_pg_net_access()"
+          },
+          {
+            "name": "issue_pg_graphql_access",
+            "event": "ddl_command_end",
+            "enabled": "O",
+            "function": "extensions.grant_pg_graphql_access()"
+          }
+        ]
+      }
+    }
+  ],
+  "access": [
+    {
+      "metadata": {
+        "defaults": [
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "anon=arwdDxtm/postgres",
+              "authenticated=arwdDxtm/postgres",
+              "service_role=arwdDxtm/postgres"
+            ],
+            "type": "r",
+            "owner": "postgres",
+            "schema": "public"
+          },
+          {
+            "acl": [
+              "postgres=X/postgres",
+              "anon=X/postgres",
+              "authenticated=X/postgres",
+              "service_role=X/postgres"
+            ],
+            "type": "f",
+            "owner": "postgres",
+            "schema": "public"
+          },
+          {
+            "acl": [
+              "postgres=rwU/postgres",
+              "anon=rwU/postgres",
+              "authenticated=rwU/postgres",
+              "service_role=rwU/postgres"
+            ],
+            "type": "S",
+            "owner": "postgres",
+            "schema": "public"
+          },
+          {
+            "acl": [
+              "postgres=rwU/supabase_admin",
+              "anon=rwU/supabase_admin",
+              "authenticated=rwU/supabase_admin",
+              "service_role=rwU/supabase_admin"
+            ],
+            "type": "S",
+            "owner": "supabase_admin",
+            "schema": "public"
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/supabase_admin",
+              "anon=arwdDxtm/supabase_admin",
+              "authenticated=arwdDxtm/supabase_admin",
+              "service_role=arwdDxtm/supabase_admin"
+            ],
+            "type": "r",
+            "owner": "supabase_admin",
+            "schema": "public"
+          },
+          {
+            "acl": [
+              "postgres=X/supabase_admin",
+              "anon=X/supabase_admin",
+              "authenticated=X/supabase_admin",
+              "service_role=X/supabase_admin"
+            ],
+            "type": "f",
+            "owner": "supabase_admin",
+            "schema": "public"
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/postgres",
+              "anon=arwdDxtm/postgres",
+              "authenticated=arwdDxtm/postgres",
+              "service_role=arwdDxtm/postgres"
+            ],
+            "type": "r",
+            "owner": "postgres",
+            "schema": "storage"
+          },
+          {
+            "acl": [
+              "postgres=X/postgres",
+              "anon=X/postgres",
+              "authenticated=X/postgres",
+              "service_role=X/postgres"
+            ],
+            "type": "f",
+            "owner": "postgres",
+            "schema": "storage"
+          },
+          {
+            "acl": [
+              "postgres=rwU/postgres",
+              "anon=rwU/postgres",
+              "authenticated=rwU/postgres",
+              "service_role=rwU/postgres"
+            ],
+            "type": "S",
+            "owner": "postgres",
+            "schema": "storage"
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/supabase_auth_admin",
+              "dashboard_user=arwdDxtm/supabase_auth_admin"
+            ],
+            "type": "r",
+            "owner": "supabase_auth_admin",
+            "schema": "auth"
+          },
+          {
+            "acl": [
+              "postgres=rwU/supabase_auth_admin",
+              "dashboard_user=rwU/supabase_auth_admin"
+            ],
+            "type": "S",
+            "owner": "supabase_auth_admin",
+            "schema": "auth"
+          },
+          {
+            "acl": [
+              "postgres=X/supabase_auth_admin",
+              "dashboard_user=X/supabase_auth_admin"
+            ],
+            "type": "f",
+            "owner": "supabase_auth_admin",
+            "schema": "auth"
+          },
+          {
+            "acl": [
+              "postgres=rwU/supabase_admin",
+              "anon=rwU/supabase_admin",
+              "authenticated=rwU/supabase_admin",
+              "service_role=rwU/supabase_admin"
+            ],
+            "type": "S",
+            "owner": "supabase_admin",
+            "schema": "graphql_public"
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/supabase_admin",
+              "anon=arwdDxtm/supabase_admin",
+              "authenticated=arwdDxtm/supabase_admin",
+              "service_role=arwdDxtm/supabase_admin"
+            ],
+            "type": "r",
+            "owner": "supabase_admin",
+            "schema": "graphql_public"
+          },
+          {
+            "acl": [
+              "postgres=X/supabase_admin",
+              "anon=X/supabase_admin",
+              "authenticated=X/supabase_admin",
+              "service_role=X/supabase_admin"
+            ],
+            "type": "f",
+            "owner": "supabase_admin",
+            "schema": "graphql_public"
+          },
+          {
+            "acl": [
+              "postgres=a*r*w*d*D*x*t*m*/supabase_admin"
+            ],
+            "type": "r",
+            "owner": "supabase_admin",
+            "schema": "extensions"
+          },
+          {
+            "acl": [
+              "postgres=X*/supabase_admin"
+            ],
+            "type": "f",
+            "owner": "supabase_admin",
+            "schema": "extensions"
+          },
+          {
+            "acl": [
+              "postgres=r*w*U*/supabase_admin"
+            ],
+            "type": "S",
+            "owner": "supabase_admin",
+            "schema": "extensions"
+          },
+          {
+            "acl": [
+              "postgres=arwdDxtm/supabase_admin",
+              "anon=arwdDxtm/supabase_admin",
+              "authenticated=arwdDxtm/supabase_admin",
+              "service_role=arwdDxtm/supabase_admin"
+            ],
+            "type": "r",
+            "owner": "supabase_admin",
+            "schema": "graphql"
+          },
+          {
+            "acl": [
+              "postgres=X/supabase_admin",
+              "anon=X/supabase_admin",
+              "authenticated=X/supabase_admin",
+              "service_role=X/supabase_admin"
+            ],
+            "type": "f",
+            "owner": "supabase_admin",
+            "schema": "graphql"
+          },
+          {
+            "acl": [
+              "postgres=rwU/supabase_admin",
+              "anon=rwU/supabase_admin",
+              "authenticated=rwU/supabase_admin",
+              "service_role=rwU/supabase_admin"
+            ],
+            "type": "S",
+            "owner": "supabase_admin",
+            "schema": "graphql"
+          },
+          {
+            "acl": [
+              "postgres=rwU/supabase_admin",
+              "dashboard_user=rwU/supabase_admin"
+            ],
+            "type": "S",
+            "owner": "supabase_admin",
+            "schema": "realtime"
+          },
+          {
+            "acl": [
+              "postgres=X/supabase_admin",
+              "dashboard_user=X/supabase_admin"
+            ],
+            "type": "f",
+            "owner": "supabase_admin",
+            "schema": "realtime"
+          },
+          {
+            "acl": [
+              "postgres=a*r*wdDxtm/supabase_admin",
+              "dashboard_user=arwdDxtm/supabase_admin"
+            ],
+            "type": "r",
+            "owner": "supabase_admin",
+            "schema": "realtime"
+          }
+        ],
+        "function_access": [
+          {
+            "anon": false,
+            "function": "onestep_attach_photo(date,uuid,bigint)",
+            "service_role": false,
+            "authenticated": true
+          },
+          {
+            "anon": false,
+            "function": "onestep_buy_item(text)",
+            "service_role": false,
+            "authenticated": true
+          },
+          {
+            "anon": false,
+            "function": "onestep_commit_activity(uuid,text,text)",
+            "service_role": true,
+            "authenticated": false
+          },
+          {
+            "anon": false,
+            "function": "onestep_commit_reflection(uuid,text[],text[],text)",
+            "service_role": true,
+            "authenticated": false
+          },
+          {
+            "anon": false,
+            "function": "onestep_ensure_garden()",
+            "service_role": false,
+            "authenticated": true
+          },
+          {
+            "anon": false,
+            "function": "onestep_reserve_photo(date)",
+            "service_role": false,
+            "authenticated": true
+          },
+          {
+            "anon": false,
+            "function": "onestep_retire_photo(uuid)",
+            "service_role": false,
+            "authenticated": true
+          },
+          {
+            "anon": false,
+            "function": "onestep_save_layout(jsonb,bigint)",
+            "service_role": false,
+            "authenticated": true
+          },
+          {
+            "anon": false,
+            "function": "onestep_save_writing(date,text,text,bigint)",
+            "service_role": false,
+            "authenticated": true
+          },
+          {
+            "anon": false,
+            "function": "onestep_start_day()",
+            "service_role": false,
+            "authenticated": true
+          }
+        ],
+        "public_definers": null
+      }
+    }
+  ],
+  "edgeFunctions": {
+    "verified": false,
+    "error": "MCP -32600: You do not have permission to perform this action",
+    "httpStatus": "not provided"
+  },
+  "functionBodyComparison": [
+    {
+      "signature": "onestep_start_day()",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_private.require_user()",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_private.ensure_garden(uuid)",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_private.today(uuid)",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_private.award(uuid,date,text)",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_private.sync_growth(uuid)",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_save_writing(date,text,text,bigint)",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_commit_reflection(uuid,text[],text[],text)",
+      "bodyMatchesLocal003": true
+    },
+    {
+      "signature": "onestep_commit_activity(uuid,text,text)",
+      "bodyMatchesLocal003": true
+    }
+  ],
+  "drafts": [
+    {
+      "name": "phase3b.sql",
+      "sha256": "55680d2d947622d968db9f0f74f6f0a830376fbaa110dcfb5d6ab02613053e58",
+      "guard": true,
+      "rollback": true
+    },
+    {
+      "name": "phase3b-permissions.sql",
+      "sha256": "86756d1601b0d0563e526a9aea58dce773e47ee6345ce7cb09ac33024166b6ec",
+      "guard": true,
+      "rollback": true
+    },
+    {
+      "name": "phase3b-login.sql",
+      "sha256": "7484524ce6a6e35e627891f85fdd76d3e9fe35fab92f837614177ffd27efe53d",
+      "guard": true,
+      "rollback": true
+    }
+  ]
+}

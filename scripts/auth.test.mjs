@@ -119,7 +119,9 @@ function boundary(environment = 'development') {
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
       if (name.includes('auth-store')) return { createAuthStore: () => store, INITIAL_AUTH: snapshot };
       if (name.includes('auth-client')) return { getAuthClient() {} };
+      if (name === './AccountGarden') return { default: 'account-garden' };
       if (name.includes('app-storage')) return { async setDeveloperMode() { unlocks++; } };
+      if (name === './GardenLoading') return { default: 'GardenLoading' };
       throw Error(name);
     },
   });
@@ -138,21 +140,30 @@ function find(node, predicate) {
   return null;
 }
 
-test('connected screen offers account switching without exposing an unsafe garden entry', () => {
+test('connected screen mounts only the keyed account garden and preserves logout errors', () => {
   const app = boundary('production');
   app.update({ phase: 'signed-in', user: { id: 'A', email: 'A@example.test' } });
   const screen = app.render();
-  assert.match(JSON.stringify(screen), /반가워요!|계정별 정원을 준비/);
+  assert.equal(screen.type, 'account-garden');
+  assert.equal(screen.props.userId, 'A');
   assert.doesNotMatch(JSON.stringify(screen), /SENTINEL_NEVER_SHOW|나의 정원으로 가기/);
   assert.equal(find(screen, n => n.type === 'button' && n.props.className === 'primary-button'), null);
-  const switchAccount = find(screen, n => n.type === 'button' && n.props.children === '다른 계정으로 로그인');
-  assert.ok(switchAccount);
-  switchAccount.props.onClick();
+  screen.props.onLogout();
   assert.deepEqual(app.submissions, [['logout']]);
   app.update({ busy: true, error: true, message: '로그아웃을 다시 시도해 주세요.' });
   const busyScreen = app.render();
   assert.equal(find(busyScreen, n => n.type === 'button' && n.props.className === 'auth-secondary').props.disabled, true);
   assert.ok(find(busyScreen, n => n.props?.role === 'alert'));
+});
+
+test('same-user token refresh retains the account subtree identity; switching user replaces it', () => {
+  const app = boundary('production');
+  app.update({ phase: 'signed-in', user: { id: 'A' }, epoch: 1 });
+  const initial = app.render();
+  app.update({ epoch: 2 });
+  assert.equal(app.render().props.userId, initial.props.userId);
+  app.update({ user: { id: 'B' }, epoch: 3 });
+  assert.equal(app.render().props.userId, 'B');
 });
 test('actual auth boundary hides local readers during loading, logout, recovery, A/B and production', async () => {
   const app = boundary();
@@ -185,5 +196,28 @@ test('auth modules never import garden stores or manually persist credentials; l
     assert.doesNotMatch(text, /localStorage\.|indexedDB\.|record-store|shop-store|console\./);
   }
   const layout = readFileSync(new URL('../src/app/layout.tsx', import.meta.url), 'utf8');
-  assert.match(layout, /<AuthBoundary><RecordSessionBoundary>/);
+  assert.match(layout, /<AppSessionBoundary>/);
+  const wrapper = readFileSync(new URL('../src/app/components/AppSessionBoundary.tsx', import.meta.url), 'utf8');
+  assert.match(wrapper, /<AuthBoundary><RecordSessionBoundary>/);
+  assert.match(wrapper, /process\.env\.NODE_ENV === 'development' && \['\/dev\/care-completion', '\/dev\/ai-mind'\]\.includes\(pathname\)/);
+});
+
+test('로그인한 개발자도 PIN 확인 후에만 로컬 앱을 열며 계정 전환 시 닫힌다', async () => {
+  const app = boundary();
+  app.update({ phase: 'signed-in', user: { id: 'fixture-user' }, epoch: 1 });
+  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  app.render().props.onDeveloper();
+  const form = app.render().props.developerEntry;
+  assert.equal(form.type, 'form');
+  await form.props.onSubmit({ preventDefault() {}, currentTarget: { reset() {} } });
+  assert.equal(app.unlocks(), 1);
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.deepEqual(app.submissions, []);
+  app.update({ user: { id: 'different-fixture-user' }, epoch: 2 });
+  assert.equal(app.render().type, 'account-garden');
+  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  const prod = boundary('production');
+  prod.update({ phase: 'signed-in', user: { id: 'fixture-user' } });
+  assert.equal(prod.render().props.onDeveloper, undefined);
+  assert.equal(prod.render().props.developerEntry, undefined);
 });

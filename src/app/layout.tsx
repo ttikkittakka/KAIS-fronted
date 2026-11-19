@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./fonts.css";
-import RecordSessionBoundary from "./components/RecordSessionBoundary";
-import AuthBoundary from "./components/AuthBoundary";
+import AppSessionBoundary from "./components/AppSessionBoundary";
 import "./globals.css";
 import "./auth.css";
 
@@ -18,7 +17,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ko"
       className="h-full antialiased"
     >
-      <body className="min-h-full flex flex-col"><AuthBoundary><RecordSessionBoundary>{children}</RecordSessionBoundary></AuthBoundary></body>
+      <body className="min-h-full flex flex-col"><AppSessionBoundary>{children}</AppSessionBoundary></body>
     </html>
   );
 }

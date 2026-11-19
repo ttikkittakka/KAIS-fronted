@@ -8,9 +8,11 @@ import { loadTs } from './helpers/load-ts.mjs';
 const daily = loadTs(new URL('../src/app/daily-checkin.ts', import.meta.url));
 const { recommendCares } = loadTs(new URL('../src/app/recommend-cares.ts', import.meta.url));
 
-const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), {
+const compiled = ts.transpileModule(`const timerStyles = { active: "timer-active" }; function CareTimer() {}
+import RivePlant from './components/RivePlant'; import GardenPlacement from './components/GardenPlacement'; import { SunshineBalance, GardenTools } from './components/GardenFeatures'; import { GrowthProgress } from './components/GrowthRewards'; import { StepHeader, RecordsCalendar } from './components/RecordScreens';
+` + readFileSync(new URL('../src/app/components/OneStepScreens.tsx', import.meta.url), 'utf8').replace(/^import .*$/gm, '').replace(/export function /g, 'function ') + readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8').replace(/^import .*OneStepScreens.*$/gm, '').replace("'use client';", '').replace("import { plantStateForAnswers }", "import { QUESTIONS, normalizeAnswers, plantStateForAnswers }"), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX }
-}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen; exports.GardenScreen = GardenScreen; exports.BottomNav = BottomNav;';
+}).outputText.replace(/(?<![.\w])useState\(/g, 'react_1.useState(').replace(/(?<![.\w])useRef\(/g, 'react_1.useRef(').replace(/(?<![.\w])useEffect\(/g, 'react_1.useEffect(') + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen; exports.GardenScreen = GardenScreen; exports.BottomNav = BottomNav;';
 const saved = { version: 1, date: daily.localDay(), answers: ['괜찮게 잤어요', '보통', '든든하게 먹었어요', '잔잔해요'], note: '기존 기록', plantState: 'normal', completedCareIds: ['water'] };
 function mount(raw = null, hash = '', component = 'default', props = {}) {
   const slots = [], effects = [], tasks = [], listeners = new Map();
@@ -36,7 +38,7 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
     document: { visibilityState: 'visible', addEventListener: window.addEventListener, removeEventListener() {} },
     queueMicrotask: fn => tasks.push(fn), clearInterval() {},
     setTimeout: fn => { tasks.push(fn); return 1; }, clearTimeout() {},
-    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/DeveloperSettings' ? { SettingsScreen: function SettingsScreen() {}, DeveloperSettings: function DeveloperSettings() {} } : name === './components/GrowthRewards' ? { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
+    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/GardenFeatures' ? { SunshineBalance: function SunshineBalance() {}, GardenTools: function GardenTools() {} } : name === './components/DeveloperSettings' ? { SettingsScreen: function SettingsScreen() {}, DeveloperSettings: function DeveloperSettings() {} } : name === './components/GrowthRewards' ? { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
   });
   function render() { cursor = 0; const tree = exports[component](props); first = false; return tree; }
   function find(node, name) {
@@ -118,13 +120,14 @@ test('care cards open details before the two-step completion action', () => {
     const recommendation = recommendCares(answers, { date: '2026-10-08' });
     const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
     assert.deepEqual(nodes(app.tree(), node => node.type === 'h3').map(textContent), recommendation.cares.map(care => care.title));
-    const cardButton = nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1);
+    const cardButton = nodes(app.tree(), node => node.type === 'article')[0].props.children.find(child => child?.type === 'button');
     cardButton.props.onClick();
     assert.match(textContent(app.tree()), /해볼게요/);
     const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
     action().props.onClick(); assert.equal(completed.length, 0);
-    assert.equal(textContent(action()), '완료했어요');
-    action().props.onClick(); assert.equal(completed.length, 1);
+    const timer = nodes(app.tree(), node => node.type?.name === 'CareTimer')[0];
+    assert.equal(timer.props.minutes, recommendation.cares[0].minutes);
+    timer.props.onComplete(); assert.equal(completed.length, 1);
   }
 });
 
@@ -138,7 +141,7 @@ test('completion offers the appropriate two choices and keeps the existing celeb
     assert.match(textContent(tree), new RegExp(`오늘 ${count}/3 완료`));
     const buttons = nodes(tree, node => node.type === 'button');
     assert.equal(buttons.length, 2);
-    assert.deepEqual(buttons.map(textContent), count === 3 ? ['정원에서 변화 보기', '오늘의 돌봄 다시보기'] : ['다른 작은 돌봄 이어하기', '정원에서 변화 보기']);
+    assert.deepEqual(buttons.map(textContent), count === 3 ? ['정원에서 변화 보기', '오늘의 돌봄 다시보기'] : ['다른 돌봄 해보기', '정원에서 변화 보기']);
     buttons[0].props.onClick(); assert.equal(destination, count === 3 ? 'home' : 'list');
     buttons[1].props.onClick(); assert.equal(destination, count === 3 ? 'list' : 'home');
     const plant = nodes(tree, node => node.type?.name === 'Plant')[0];
@@ -155,19 +158,15 @@ test('garden entry label follows today’s completion count', () => {
   }
 });
 
-test('completed care remains reviewable without another completion action', () => {
+test('completed care shows a check without selection or another completion action', () => {
   const recommendation = recommendCares(['very_low', 'very_low', 'very_low', 'very_low'], { date: '2026-10-08' });
   const id = recommendation.cares[0].id;
   let completedAgain = false;
   const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [id], onComplete() { completedAgain = true; }, onShowList() {}, goHome() {} });
   const card = nodes(app.tree(), node => node.type === 'article')[0];
   assert.match(textContent(card), /완료했어요/);
-  card.props.children.at(-1).props.onClick();
-  assert.match(textContent(app.tree()), /완료했어요/);
-  assert.doesNotMatch(textContent(app.tree()), /해볼게요/);
-  const buttons = nodes(app.tree(), node => node.type === 'button');
-  assert.deepEqual(buttons.map(textContent), ['목록으로 돌아가기']);
-  buttons[0].props.onClick();
+  assert.equal(nodes(card, node => node.type === 'button').length, 0);
+  assert.equal(nodes(card, node => node.props?.['aria-label'] === '완료한 돌봄').length, 1);
   assert.equal(completedAgain, false);
   assert.equal(nodes(app.tree(), node => node.type === 'article').length, 3);
 });
@@ -310,11 +309,11 @@ test('all 30 active mission details render instructions, optional examples and h
     const completed = [];
     const recommendation = { title: '작은 돌봄', cares: [care, ...ACTIVE_CARES.filter(other => other.id !== care.id).slice(0, 2)] };
     const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
-    nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1).props.onClick();
+    nodes(app.tree(), node => node.type === 'article')[0].props.children.find(child => child?.type === 'button').props.onClick();
     const content = textContent(app.tree());
     for (const value of [care.title, care.instruction, care.helper, care.meta, ...(care.example ? [care.example] : [])]) assert.ok(content.includes(value), care.id + ': ' + value);
     const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
-    action().props.onClick(); assert.equal(completed.length, 0); action().props.onClick(); assert.deepEqual(completed, [care.id]);
+    action().props.onClick(); assert.equal(completed.length, 0); nodes(app.tree(), node => node.type?.name === 'CareTimer')[0].props.onComplete(); assert.deepEqual(completed, [care.id]);
   }
 });
 
@@ -404,4 +403,16 @@ test('page settings switch dataset immediately and restore test commerce without
     app.screen('DeveloperSettings').props.onOpen('home'); assert.equal(app.screen('HomeScreen').props.balance,0); assert.deepEqual(app.screen('HomeScreen').props.shop.placed,['default-sky']);
     app.screen('HomeScreen').props.go('developer'); await app.screen('DeveloperSettings').props.onToggle(true, '0728'); app.screen('DeveloperSettings').props.onOpen('home'); assert.equal(app.screen('HomeScreen').props.balance,850); assert.equal(app.screen('HomeScreen').props.shop.layout['friend-left'],'momo');
   } finally { globalThis.fetch = oldFetch; if (oldEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = oldEnv; }
+});
+
+test('account question preview walks all four questions without drafts or rewards', () => {
+ let calls = 0;
+ const app = mount(null, '', 'CheckinScreen', { readOnly: true, initialRecord: null, onBack() {}, onDraft() { calls++; return true; }, onDone() { calls++; } });
+ for (let i = 0; i < 4; i++) {
+  const choices = nodes(app.tree(), n => n.type === 'button' && n.props?.className === '');
+  for (const choice of choices) { assert.equal(choice.props.disabled, true); choice.props.onClick(); }
+  const next = nodes(app.tree(), n => n.type === 'button' && textContent(n) === '다음 질문 보기')[0];
+  assert.ok(next); next.props.onClick(); app.advanceChoice();
+ }
+ assert.equal(calls, 0);
 });

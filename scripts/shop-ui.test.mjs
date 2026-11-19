@@ -41,3 +41,18 @@ test('inventory only lists default and bought items and distinguishes placement'
 test('failed purchase shows recovery guidance and never displays success',()=>{
  const app=mount();app.click('모모');localStorage.setItem=()=>{throw new Error('quota');};app.click('구매 확인');assert.match(app.text(),/저장 공간/);assert.doesNotMatch(app.text(),/보관함에 도착/);assert.equal(shop.shopSnapshot().balance,200);
 });
+
+test('read-only catalog uses explicit server ownership and never executes local purchase or placement', () => {
+ const app = mount(); app.props.readOnly = true; app.props.accountOwned = ['momo'];
+ const before = JSON.stringify([...app.data]);
+ const previous = globalThis.localStorage;
+ globalThis.localStorage = { getItem() { throw Error('local read'); }, setItem() { throw Error('local write'); } };
+ try {
+  app.click('모모'); app.button('정원에 배치하기').props.onClick();
+  assert.equal(app.editor().props.readOnly, true); app.editor().props.onClose();
+  app.click('포리');
+  const buy = app.button('구매 확인'); assert.equal(buy.props.disabled, true); buy.props.onClick();
+  assert.doesNotMatch(app.text(), /보관함에 도착/);
+  assert.equal(JSON.stringify([...app.data]), before);
+ } finally { globalThis.localStorage = previous; }
+});

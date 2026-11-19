@@ -12,7 +12,7 @@ export function getAuthClient(): SupabaseClient | null {
   try {
     client = createClient(config.url, config.publishableKey, {
       auth: {
-        storageKey: 'little-garden.supabase-auth.v1',
+        // Use the SDK's project-scoped default; never migrate legacy sessions.
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,

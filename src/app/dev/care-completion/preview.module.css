@@ -1,0 +1,7 @@
+.controls { position: fixed; z-index: 100; top: 0; right: 4px; max-width: min(300px, calc(100vw - 8px)); border: 1px solid var(--line); border-radius: 12px; padding: 2px 8px; background: var(--background); color: var(--deep-green); box-shadow: 0 4px 16px #0001; font-size: 12px; }
+.controls summary { cursor: pointer; line-height: 18px; }
+.controls p { margin: 8px 0; line-height: 1.6; word-break: keep-all; }
+.controls p:empty { display: none; }
+.options { display: flex; gap: 6px; }
+.controls button { min-height: 44px; padding: 8px; margin-top: 6px; border: 1px solid var(--line); border-radius: 10px; background: white; }
+.controls button[aria-pressed='true'] { background: var(--light-green); }

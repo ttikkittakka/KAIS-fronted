@@ -12,6 +12,10 @@
 
 # testing
 /coverage
+/.playwright-results/
+/playwright-report/
+/test-results/
+/supabase/tests/results/
 
 # next.js
 /.next/
@@ -23,6 +27,8 @@
 # misc
 .DS_Store
 *.pem
+*.vsix
+/prod-ca-2021.crt
 
 # debug
 npm-debug.log*

@@ -12,7 +12,7 @@ const compiled = ts.transpileModule(readFileSync(new URL('../src/app/components/
 function mount(initialProps = {}) {
   const slots = [], pending = [], frames = new Map(), microtasks = [], listeners = new Map(), played = [];
   let cursor = 0, frameId = 0, runtime = null, params, props = initialProps;
-  const canvas = { width: 500, height: 500, clientWidth: 274, clientHeight: 274 };
+  const canvas = { width: 500, height: 500, clientWidth: 274, clientHeight: 274, alpha: 255, getBoundingClientRect: () => ({left:0,top:0,right:274,bottom:274,width:274,height:274}) };
   const emit = (type, data) => [...(listeners.get(type) ?? [])].forEach(fn => fn({ data }));
   const instance = {
     stateMachineNames: ['basic', 'lowlow_ver.'], animationNames: ['idle', 'touch', '통통'],
@@ -34,7 +34,8 @@ function mount(initialProps = {}) {
   const jsx = (type, props) => ({ type, props });
   const exports = {};
   runInNewContext(compiled, {
-    exports, console,
+    exports, console, window: { addEventListener() {}, removeEventListener() {} },
+    document: { createElement: () => ({getContext: () => ({clearRect() {}, drawImage() {}, getImageData: () => ({data:[0,0,0,canvas.alpha]})})}) },
     requestAnimationFrame(fn) { frames.set(++frameId, fn); return frameId; },
     cancelAnimationFrame(id) { frames.delete(id); },
     queueMicrotask(fn) { microtasks.push(fn); },
@@ -73,11 +74,22 @@ test('download completion alone keeps the placeholder; advance and paint enable 
   assert.equal(ready.props.disabled, false);
   assert.equal(ready.props['aria-busy'], false);
   assert.match(ready.props.className, /rive-plant--ready/);
-  ready.props.onClick();
+  ready.props.onClick({ detail: 0 });
   assert.equal(app.played.at(-1), 'touch');
   app.emit('loop', { animation: 'touch' });
   app.flush();
   assert.equal(app.played.at(-1), 'basic');
+});
+
+test('silhouette tap fires once after touch pointerleave; transparent pixels and drags never fire', () => {
+  const app = mount(); app.load(); app.emit('advance'); const tree = app.frame();
+  const event = {isPrimary:true,button:0,pointerId:1,clientX:100,clientY:100};
+  const tap = () => { tree.props.onPointerDown(event); tree.props.onPointerUp(event); tree.props.onPointerLeave(); tree.props.onClick({detail:1}); };
+  tap(); assert.deepEqual(app.played, ['touch']);
+  tree.props.onClick({detail:1}); assert.equal(app.played.length, 1);
+  app.canvas.alpha=0; tap(); assert.equal(app.played.length, 1);
+  app.canvas.alpha=255; tree.props.onPointerDown(event); tree.props.onPointerMove({...event,clientX:140});tree.props.onPointerUp(event);tree.props.onClick({detail:1});assert.equal(app.played.length,1);
+  tree.props.onPointerDown(event);tree.props.onPointerCancel();tree.props.onClick({detail:1});assert.equal(app.played.length,1);
 });
 
 test('zero-size canvas stays covered until it has a drawable size', () => {

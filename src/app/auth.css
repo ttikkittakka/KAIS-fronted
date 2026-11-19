@@ -34,6 +34,11 @@
 .auth-developer > button { color: #687163; font-size: 11px; }
 .auth-dev-banner { padding: 12px; text-align: center; color: #3f5d46; background: #e4eddc; font-size: 13px; }
 .auth-dev-banner button { margin-left: 10px; min-height: 44px; text-decoration: underline; }
+/* 로컬 개발자 모드에서만 안내와 앱을 나눠 모바일 나가기 버튼을 보존해요. */
+@media (max-width: 520px), (max-height: 520px) and (pointer: coarse) {
+  .auth-local-mode { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100dvh; }
+  .auth-local-mode > .app-shell { position: relative; top: 0; height: 100%; min-height: 0; }
+}
 @media (max-height: 600px) {
   .auth-content { gap: 18px; padding-top: 16px; }
   .auth-plant { width: 96px; height: 96px; }

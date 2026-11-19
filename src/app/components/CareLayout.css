@@ -1,0 +1,43 @@
+/* Only the care list, never the detail or completion screen. */
+.phone-frame > .care-screen:has(> .care-list) {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  scroll-padding-block: 16px;
+}
+
+.care-screen:has(> .care-list) > * {
+  flex-shrink: 0;
+}
+
+.care-screen:has(> .care-list) > .care-intro {
+  padding-top: 20px;
+  padding-bottom: 14px;
+}
+
+.care-screen > .care-list {
+  gap: 12px;
+  padding-inline: 12px;
+}
+
+.care-screen .care-card { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; padding: 16px 14px; }
+.care-screen .care-card > .care-icon { width: 40px; height: 40px; border-radius: 13px; }
+.care-screen .care-card > .care-copy { grid-column: 2 / -1; min-width: 0; }
+.care-screen .care-copy h3 { margin: 0; font-size: 15px; font-weight: 500; line-height: 1.6; word-break: keep-all; overflow-wrap: normal; text-wrap: pretty; }
+.care-screen .care-summary { grid-column: 1 / -1; margin: 0; font-size: 13px; line-height: 1.7; color: var(--secondary); word-break: keep-all; overflow-wrap: normal; }
+.care-screen .care-meta { grid-column: 1 / 3; font-size: 11px; line-height: 1.6; color: var(--primary); }
+.care-screen .care-card > button { min-height: 44px; height: auto; font-size: 12px; padding: 8px 12px; }
+.care-screen .care-intro h2 { word-break: keep-all; overflow-wrap: normal; line-height: 1.45; }
+.care-screen .care-intro p, .care-screen .rest-choice { word-break: keep-all; line-height: 1.7; }
+
+.care-screen:has(> .care-list) > .rest-choice {
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+.care-screen:has(> .care-list) > .care-plant {
+  /* Keep the existing 140px square artboard intact; use spare height above it. */
+  margin: auto auto 0;
+  overflow: visible;
+}

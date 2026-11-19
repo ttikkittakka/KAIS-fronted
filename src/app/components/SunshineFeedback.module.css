@@ -1,0 +1,22 @@
+/* The account notice includes guidance; the original local notice remains compact. */
+.notice:global(.sunshine-feedback) {
+  width: max-content;
+  min-width: min(190px, 100%);
+  max-width: 100%;
+  height: auto;
+  min-height: 40px;
+  padding: 8px 16px;
+  white-space: normal;
+}
+
+.notice > strong {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.message {
+  min-width: 0;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
