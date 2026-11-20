@@ -689,6 +689,12 @@ export default function SupportPrograms({ friend }: { friend?: { id: CompanionId
 export function PrivacyPolicy() {
   return <article className="settings-content support-privacy">
     <section className="settings-card">
+      <h2>일기 · 지도 · 연결 기능의 개인정보</h2>
+      <p>일기 원문과 사진, 장소 저장, 연락처와 연락 기록은 이 기기에 보관해요. 미션 사진은 촬영을 선택했을 때 이 기기에서 확인하고 저장하지 않아요. 지도에서 내 위치 순서를 선택하면 위치는 현재 화면에서 거리 계산에만 쓰여요.</p>
+      <p>미션 추천은 선택 응답, 정해진 마음 단어 범주와 미션 ID를 사용해요. 안부 제안은 최근 두 기간의 연락 횟수만 비교해요. AI 맞춤 추천을 켠 경우 이 범주와 횟수를 모델에 보내요. 설정에서 언제든 끌 수 있어요.</p>
+      <p>보호자 공유에 동의하면 최근 14일의 날짜별 마음, 에너지, 수면, 식사, 외출 응답을 Supabase에 저장해 링크로 7일 동안 보여줘요. 설정에서 공유를 중단할 수 있어요. 가입 시 설치 안내에 동의했다면 입력한 번호를 문자 발송사에 한 번 전달해요.</p>
+    </section>
+    <section className="settings-card">
       <h2>지원 제도 신청 도우미 개인정보 처리방침</h2>
       <p>시행일 <time dateTime="2026-11-19">2026년 11월 19일</time> · 동의문 버전 {SUPPORT_CONSENT_VERSION}</p>
       <p>이 방침은 지원 제도 신청 도우미에서 운영팀에 보내는 지원 요청에 적용돼요.</p>

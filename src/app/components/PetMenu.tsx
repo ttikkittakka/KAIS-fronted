@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, type CSSProperties, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { INTERACTIONS, unlockLabel } from '../chat';
 import { bondName, bondRule } from '../companions';
@@ -24,8 +24,12 @@ function useEscape(onClose: () => void) {
  *  The parent draws the backdrop that closes it. */
 export function PetMenu({ items, onPick, onClose }: { items: MenuItem[]; onPick: (id: string) => void; onClose: () => void }) {
   const ring = useRef<HTMLDivElement>(null);
+  const [page, setPage] = useState(0);
+  const size = 4;
+  const pages = Math.ceil(items.length / size);
+  const visible = items.slice(page * size, (page + 1) * size);
   useEscape(onClose);
-  useEffect(() => { ring.current?.querySelector('button')?.focus(); }, []);
+  useEffect(() => { ring.current?.querySelector('button')?.focus(); }, [page]);
   // Arrow keys walk around the ring.
   const step = (event: KeyboardEvent) => {
     const delta = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[event.key];
@@ -35,17 +39,18 @@ export function PetMenu({ items, onPick, onClose }: { items: MenuItem[]; onPick:
     buttons[(buttons.indexOf(document.activeElement as HTMLButtonElement) + delta + buttons.length) % buttons.length]?.focus();
   };
   return <div className="pet-menu" role="menu" aria-label="함께할 일" ref={ring} onKeyDown={step}>
-      {items.map((item, i) => <button key={item.id} type="button" role="menuitem" className={'pet-menu__item' + (item.locked ? ' pet-menu__item--locked' : '')}
-        style={{ '--a': (i * 360) / items.length + 'deg', '--i': i } as CSSProperties}
+      {visible.map((item, i) => <button key={item.id} type="button" role="menuitem" className={'pet-menu__item' + (item.locked ? ' pet-menu__item--locked' : '')}
+        style={{ '--a': (i * 360) / visible.length + 'deg', '--i': i } as CSSProperties}
         aria-label={item.locked ? `${item.label}, ${item.locked}에 열려요` : item.label} onClick={() => onPick(item.id)}>
         <span className="pet-menu__icon"><Icon name={item.icon}/>{item.locked && <i className="pet-menu__lock"><Icon name="lock" size={11}/></i>}</span>
         <span className="pet-menu__label" aria-hidden="true">{item.label}</span>
       </button>)}
+      {pages > 1 && <button className="pet-menu__next" type="button" role="menuitem" aria-label={`다른 펫 동작 보기 (${page + 1}/${pages})`} onClick={() => setPage((page + 1) % pages)}><Icon name="more" size={20}/></button>}
   </div>;
 }
 
 const GESTURES: [IconName, string, string][] = [
-  ['sparkle', '한 번 누르기', '함께할 일이 부채처럼 펼쳐져요. 오른쪽 위 손 버튼으로도 열 수 있어요.'],
+  ['sparkle', '한 번 누르기', '동작 메뉴를 열어요. 가운데 점 세 개를 누르면 다른 동작이 나와요.'],
   ['pet', '옆으로 쓸어 주기', '살살 쓰다듬어 줘요.'],
   ['hug', '꾹 누르고 있기', '꼭 안아 줘요.'],
   ['mic', '말풍선 · 마이크', '말풍선을 누르면 대화창이 열리고, 마이크로 말하면 들은 대로 전해져요.'],

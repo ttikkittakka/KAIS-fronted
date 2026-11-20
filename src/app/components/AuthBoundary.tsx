@@ -5,6 +5,8 @@ import { getAuthClient } from '../../lib/supabase/auth-client';
 import { createAuthStore, INITIAL_AUTH, type AuthAction } from '../../lib/supabase/auth-store';
 import { developerToolsAvailable, setAccountScope, setDeveloperMode } from '../app-storage';
 import { SAFETY_CONTACTS } from '../safety';
+import { koreanMobile } from '../install-phone';
+import { saveInstallIntent, sendInstallIntent } from '../install-intent';
 
 function clearAuthRedirect() {
   const url = new URL(window.location.href);
@@ -20,11 +22,25 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
   const [pinOpen, setPinOpen] = useState(false);
   const [pinBusy, setPinBusy] = useState(false);
   const [pinError, setPinError] = useState('');
+  const [smsConsent, setSmsConsent] = useState(false);
+  const [smsError, setSmsError] = useState('');
+  const [smsStatus, setSmsStatus] = useState('');
   const pinLock = useRef(false);
   const panel = useRef<HTMLDivElement>(null);
   // Unsaved drafts and caches live in memory; after a sign-out or a switch to another person a reload drops them.
   const signedInAs = useRef<string | null>(null);
   const currentAccount = state.phase === 'signed-in' ? state.user?.id ?? null : null;
+  const accountEmail = currentAccount ? state.user?.email : undefined;
+  useEffect(() => {
+    if (!accountEmail) return;
+    const controller = new AbortController();
+    void sendInstallIntent(accountEmail, controller.signal).then(message => {
+      if (message && !controller.signal.aborted) setSmsStatus(message);
+    }, () => {
+      if (!controller.signal.aborted) setSmsStatus('문자 안내를 확인하지 못했어요. 설치 페이지에서 바로 열 수 있어요.');
+    });
+    return () => controller.abort();
+  }, [accountEmail]);
   useEffect(() => {
     if (signedInAs.current && signedInAs.current !== currentAccount) window.location.reload();
     signedInAs.current = currentAccount;
@@ -76,11 +92,19 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
     const action: AuthAction = state.phase === 'recovery' ? 'update' : mode;
     const password = String(values.get('password') ?? '');
     const email = String(values.get('email') ?? '');
+    setSmsError('');
+    if (action === 'signup') {
+      const phone = values.has('smsConsent') ? koreanMobile(String(values.get('installPhone') ?? '')) : null;
+      if (values.has('smsConsent') && !phone) { setSmsError('010으로 시작하는 휴대폰 번호를 입력해 주세요.'); return; }
+      try { saveInstallIntent(email, phone); }
+      catch { if (phone) { setSmsError('설치 문자 요청을 보관하지 못했어요. 체크를 끄고 가입할 수 있어요.'); return; } }
+    }
     // Credentials only live in the input/request; the application never persists them.
     const input = form.elements.namedItem('password');
     if (input instanceof HTMLInputElement) input.value = '';
     void store.submit(action, email, password, window.location.origin).then(ok => {
       if (ok && action !== 'reset') clearAuthRedirect();
+      if (!ok && action === 'signup') { try { saveInstallIntent(email, null); } catch {} }
     });
   };
 
@@ -112,7 +136,7 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
   // The legacy unscoped device garden is never shown to an account.
   const account = state.phase === 'signed-in' ? state.user : null;
   setAccountScope(account?.id ?? null);
-  if (account) return <Fragment key={account.id}>{children}</Fragment>;
+  if (account) return <Fragment key={account.id}>{smsStatus && <div className="install-toast" role="status"><span>{smsStatus}</span><a href="/install">설치 안내</a><button type="button" aria-label="안내 닫기" onClick={() => setSmsStatus('')}>×</button></div>}{children}</Fragment>;
   // Developer version: the PIN opens the isolated test garden without an account.
   if (developerToolsAvailable() && state.phase === 'signed-out' && !state.busy && developerEpoch === state.epoch) {
     return <><aside className="auth-dev-banner">개발자 버전 · 테스트 정원 · Supabase 계정과 연결되지 않아요. <button onClick={() => window.location.reload()}>테스트 나가기</button></aside>{children}</>;
@@ -147,6 +171,11 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
           {!recovery && <label>이메일<input name="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} required maxLength={254} disabled={state.busy || pinBusy} placeholder="garden@example.com" /></label>}
           {(mode !== 'reset' || recovery) && <label>{recovery ? '새 비밀번호' : '비밀번호'}<input name="password" type="password" autoComplete={mode === 'signup' || recovery ? 'new-password' : 'current-password'} required minLength={mode === 'signup' || recovery ? 8 : 1} maxLength={128} disabled={state.busy || pinBusy} aria-describedby={mode === 'signup' || recovery ? 'auth-password-help' : undefined}/></label>}
           {(mode === 'signup' || recovery) && <p className="auth-help" id="auth-password-help">비밀번호는 8자 이상으로 입력해 주세요.</p>}
+          {mode === 'signup' && !recovery && <div className="signup-install">
+            <label className="quiet-check"><input type="checkbox" name="smsConsent" disabled={state.busy} checked={smsConsent} onChange={event => setSmsConsent(event.target.checked)}/><span>설치 링크를 문자로 받는 데 동의해요. (선택)</span></label>
+            {smsConsent && <><label>내 휴대폰 번호<input name="installPhone" type="tel" autoComplete="tel" maxLength={18} placeholder="010-0000-0000" disabled={state.busy} required/></label><p className="auth-help">같은 브라우저에서 이메일 인증을 마치면 입력한 번호로 설치 안내를 한 번 보내요.</p></>}
+            {smsError && <p role="alert" className="auth-error">{smsError}</p>}
+          </div>}
           <button className="primary-button" type="submit" disabled={state.busy || pinBusy}>{state.busy ? '잠시만 기다려 주세요…' : recovery ? '새 비밀번호 저장' : mode === 'signup' ? '회원가입' : mode === 'reset' ? '재설정 이메일 보내기' : '로그인'}</button>
         </form>
         <div className="auth-links">
@@ -158,6 +187,7 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
       </>}
       </div>
       <footer className="auth-footer">
+      <a href="/demo" className="quiet-link auth-demo-link">로그인 없이 체험하기</a>
       <p className="auth-footnote">기존 기기 기록은 그대로 보관돼요.<br />로그인한 계정에 자동으로 연결되지 않아요.</p>
       {/* The safety center lives behind login, so the first screen links 109 directly. */}
       <p className="auth-footnote">지금 많이 힘들다면 <a href={'tel:' + SAFETY_CONTACTS[0].number}>{SAFETY_CONTACTS[0].number} {SAFETY_CONTACTS[0].name}</a> (24시간)</p>

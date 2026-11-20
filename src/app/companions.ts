@@ -31,7 +31,7 @@ export function bondRule(): BondRule {
 export function bond(records: DailyCheckin[], adoptedOn: string, rule = bondRule(), today = localDay()) {
   const since = records.filter(record => record.date >= adoptedOn);
   const visitDays = activeDayCount(since, today);
-  const careDays = new Set(since.filter(record => record.date <= today && record.completedCareIds.some(isCareId)).map(record => record.date)).size;
+  const careDays = new Set(since.filter(record => record.date <= today && (record.completedCareIds.some(isCareId) || record.completedMissionIds?.length)).map(record => record.date)).size;
   const level: BondLevel = visitDays < rule.visitDays ? 1 : careDays < rule.careDays ? 2 : 3;
   return { level, visitDays, careDays };
 }

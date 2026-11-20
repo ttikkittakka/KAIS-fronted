@@ -1,5 +1,6 @@
 import { appStorage } from './app-storage';
 import { localDay } from './daily-checkin';
+import { RECOVERY_MISSIONS, type RecoveryId } from './mission-policy';
 
 // Optional small missions done with the friend. Unlike the daily cares they grant nothing,
 // never expire into "missed", and are never required, so they add play without pressure.
@@ -26,8 +27,8 @@ export const MINUTE_MISSIONS = [
 export const HELLO_MISSION = { id: 'send-hello', title: '소중한 사람에게 안부 전하기', copy: '문자 앱이 문구를 채워서 열려요. 받는 사람은 직접 골라요. 보내지 않아도 괜찮아요.' } as const;
 export const HELLO_TEMPLATES = ['잘 지내? 갑자기 생각나서 연락해 봤어.', '오늘 하루 어땠어? 나는 천천히 지내고 있어.', '요즘 날씨가 바뀌네. 감기 조심해!', '고마웠던 게 생각나서 연락했어. 늘 고마워.'] as const;
 
-export type MissionId = typeof MISSIONS[number]['id'] | typeof MINUTE_MISSIONS[number]['id'] | typeof HELLO_MISSION.id;
-const ALL_IDS: readonly string[] = [...MISSIONS, ...MINUTE_MISSIONS, HELLO_MISSION].map(m => m.id);
+export type MissionId = typeof MISSIONS[number]['id'] | typeof MINUTE_MISSIONS[number]['id'] | typeof HELLO_MISSION.id | RecoveryId;
+const ALL_IDS: readonly string[] = [...MISSIONS, ...MINUTE_MISSIONS, HELLO_MISSION, ...RECOVERY_MISSIONS].map(m => m.id);
 const isMissionId = (id: unknown): id is MissionId => typeof id === 'string' && ALL_IDS.includes(id);
 
 /** Three missions per day, rotating so the same day always shows the same three. */

@@ -21,10 +21,10 @@ function mount(name,props) {
     useEffect(effect,deps) { const i=cursor++; const old=slots[i]; if (!old || deps.some((d,j)=>!Object.is(d,old.deps[j]))) { slots[i]={deps,cleanup:old?.cleanup}; effects.push(()=>{slots[i].cleanup?.();slots[i].cleanup=effect();}); } }
   };
   const jsx=(type,props)=>({type,props});const exports={};let urls=0,revoked=0;
-  runInNewContext(compiled,{exports,Blob,queueMicrotask,crypto:globalThis.crypto,URL:{createObjectURL:()=> 'blob:test-'+(++urls),revokeObjectURL(){revoked++;}},window:{addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)},require: name => name==='react' ? react : name==='react/jsx-runtime' ? {jsx,jsxs:jsx,Fragment:'fragment'} : name.startsWith('./') ? {HelpLink:()=>null,default:()=>null,cameraSupported:()=>false} : loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
+  runInNewContext(compiled,{exports,Blob,queueMicrotask,crypto:globalThis.crypto,URL:{createObjectURL:()=> 'blob:test-'+(++urls),revokeObjectURL(){revoked++;}},window:{addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)},require: name => name==='react' ? react : name==='react/jsx-runtime' ? {jsx,jsxs:jsx,Fragment:'fragment'} : name==='@astryxdesign/core/Button' ? {Button:'button'} : name.startsWith('./') ? {HelpLink:()=>null,Icon:()=>null,default:()=>null,cameraSupported:()=>false} : loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
   function render(){cursor=0;const tree=exports[name](props);effects.splice(0).forEach(fn=>fn());return tree;}
   render();
-  return { tree:render,button(label){return nodes(render(),n=>n.type==='button'&&text(n)===label)[0];},listeners,get revoked(){return revoked;},unmount(){for(const slot of slots)slot?.cleanup?.();},remount(){for(const slot of slots)slot?.cleanup?.();slots.length=0;render();} };
+  return { tree:render,button(label){return nodes(render(),n=>n.type==='button'&&(n.props.label??text(n))===label)[0];},listeners,get revoked(){return revoked;},unmount(){for(const slot of slots)slot?.cleanup?.();},remount(){for(const slot of slots)slot?.cleanup?.();slots.length=0;render();} };
 }
 function setup(){const data=new Map();globalThis.localStorage={getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value)};globalThis.createImageBitmap=async()=>({width:1200,height:800,close(){}});globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>({fillRect(){},drawImage(){}}),toBlob:fn=>fn(new Blob(['pixels'],{type:'image/jpeg'}))})};return data;}
 const flush=()=>new Promise(resolve=>setImmediate(resolve));
@@ -59,18 +59,18 @@ test('photo deletion saves cleared metadata and offers retry until Blob is actua
   assert.equal(props.record.photoId,undefined);assert.equal(props.record.photoComment,'');assert.ok(db.files.has(id));assert.ok(app.button('사진 정리 다시 시도'));
   app.button('사진 정리 다시 시도').props.onClick();await flush();assert.equal(db.files.has(id),false);assert.equal(app.button('사진 정리 다시 시도'),undefined);
 });
-test('calendar connects all four answers, note, photo, comment and completed recommended care',()=>{
+test('calendar connects all four answers, note, photo, comment and finished activities',()=>{
   const date=daily.localDay();const answers=['good','normal','low','very_low'];const rec=cares.ensureCareHistory(date,answers);const record={...store.emptyRecord(),answers,note:'오늘도 수고했어.',photoId:'test:'+date+':photo',photoComment:'기억할 장면',careRecommendations:rec,completedCareIds:[rec[0].ids[0]]};
   const app=mount('RecordsCalendar',{records:[record],onSave:()=>true});const content=text(app.tree());
-  for(const value of ['괜찮게 잤어요','보통','조금 먹었어요','많이 지쳐요','기억할 장면','오늘도 수고했어.','✓ 완료했어요'])assert.ok(content.includes(value));
-  assert.equal(nodes(app.tree(),n=>n.type==='li').length,3);assert.equal(nodes(app.tree(),n=>typeof n.type==='function'&&n.type.name==='PhotoPreview')[0].props.id,record.photoId);
-  app.button('기록 수정').props.onClick();assert.ok(nodes(app.tree(),n=>typeof n.type==='function'&&n.type.name==='PhotoEditor').length);
-  const next=nodes(app.tree(),n=>n.props?.['aria-label']==='다음 달')[0];next.props.onClick();assert.match(text(app.tree()),/아직 남긴 기록이 없어요/);
-  nodes(app.tree(),n=>n.props?.['aria-label']==='이전 달')[0].props.onClick();const day=nodes(app.tree(),n=>n.props?.['aria-label']===date+' 기록 있음')[0];day.props.onClick();assert.match(text(app.tree()),/기억할 장면/);
+  for(const value of ['괜찮게 잤어요','보통','조금 먹었어요','많이 지쳐요','기억할 장면','오늘도 수고했어.','마친 활동 1개'])assert.ok(content.includes(value));
+  assert.equal(nodes(app.tree(),n=>n.type==='li').length,1);assert.equal(nodes(app.tree(),n=>typeof n.type==='function'&&n.type.name==='PhotoPreview')[0].props.id,record.photoId);
+  app.button('일기 수정').props.onClick();assert.ok(nodes(app.tree(),n=>typeof n.type==='function'&&n.type.name==='PhotoEditor').length);
+  app.button('다음 달').props.onClick();assert.match(text(app.tree()),/이날에 남긴 일기가 없어요/);
+  app.button('이전 달').props.onClick();const day=nodes(app.tree(),n=>n.props?.['aria-label']===date+' 많이 지침')[0];day.props.onClick();assert.match(text(app.tree()),/기억할 장면/);
 });
 test('optional photo and growth screens offer the existing next action without mandatory input',()=>{
   for(const kind of ['photo','growth']) {let next=0;const app=mount('ReflectionExtras',{kind,record:store.emptyRecord(),onSave:()=>true,onBack(){},onNext:()=>next++});
-    const primary=app.button(kind==='photo' ? '성장하기로 이어가기' : '오늘의 추천 행동 만나보기');assert.equal(primary.props.disabled,false);primary.props.onClick();assert.equal(next,1);
+    const primary=app.button(kind==='photo' ? '성장하기로 이어가기' : '일기 닫기');assert.equal(primary.props.disabled,false);primary.props.onClick();assert.equal(next,1);
     assert.match(text(app.tree()),kind==='photo' ? /사진 없이도/ : /글 없이도/);
   }
 });
@@ -86,10 +86,10 @@ test('photo transaction quota failure preserves old photo and pending replacemen
   app.button('이 사진 저장하기').props.onClick(); await flush(); assert.notEqual(props.record.photoId, id); assert.equal(db.files.size, 1); app.unmount();
 });
 
-test('record calendar still displays retired mission names and their saved completion state', () => {
+test('record calendar preserves completed retired activities without repeating unused recommendations', () => {
   const date = daily.localDay();
   const record = { ...store.emptyRecord(), answers: ['good','good','good','good'], careRecommendations: [{ date, title: '과거 추천', ids: ['warm-drink','walk','emoji'] }], completedCareIds: ['warm-drink','emoji'] };
   const app = mount('RecordsCalendar', { records: [record], onSave: () => true });
   const items = nodes(app.tree(), n => n.type === 'li').map(text);
-  assert.deepEqual(items, ['따뜻한 음료 마시기✓ 완료했어요', '5분 걷기남겨둔 돌봄', '이모지 하나 보내기✓ 완료했어요']);
+  assert.deepEqual(items, ['따뜻한 음료 마시기', '이모지 하나 보내기']);
 });

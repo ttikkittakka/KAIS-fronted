@@ -156,3 +156,15 @@ npm run build
 - 운영 관리자 권한은 서버에서 검증하는 별도 설계 (개발용 PIN과 분리)
 
 공식 인증 흐름: https://supabase.com/docs/guides/auth/passwords
+# 일기ㆍ보호자ㆍ설치 문자 연결
+
+Vercel에 Next.js를 배포할 때 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 설정하고, Supabase Auth의 Site URL과 Redirect URLs에 배포한 HTTPS 오리진을 등록합니다. `/api/v1/*`에서 기존 Hono 설명과 정부24 조회를 연결하려면 배포된 Hono의 `BACKEND_URL`을 설정합니다. 미션과 안부 제안은 Next.js의 `/api/wellbeing`이 처리합니다.
+
+1. 기존 마이그레이션 이후 `202611200001_guardian_and_install.sql`을 적용합니다. 보호자 링크는 7일 동안 유효하며 로그인한 사용자가 갱신하거나 중단할 수 있습니다. 링크에는 14일의 상태 선택값만 들어갑니다. 서비스 역할로 `onestep_housekeeping()`을 매일 실행하도록 배포 환경에서 예약합니다.
+2. AI 후보 조정에는 선택적으로 서버의 `ANTHROPIC_API_KEY`와 `ANTHROPIC_MODEL`을 설정합니다. 로그인한 사용자가 설정에서 동의했을 때만 모델에 답변 범주와 미션 후보 또는 연락 횟수를 보냅니다. 서비스 키가 없거나 응답이 늦으면 정해진 기준으로 고릅니다.
+3. 설치 문자를 켜려면 `GARDEN_PUBLIC_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`, 32자 이상의 임의 `INSTALL_SMS_PEPPER`를 서버에 설정합니다. Twilio 발신 서비스는 운영할 국가의 발송 요건을 충족해야 합니다. 가입자가 선택 동의 후 같은 브라우저에서 이메일 인증을 완료하면 처음 입력한 번호에 배포 도메인의 `/install` 링크를 한 번 요청합니다.
+4. 프로덕션에는 예시 데이터와 실사용자를 분리합니다. 스테이징에서 실제 가입, SMS 수신, 보호자 링크 교차 기기 열람, 철회 후 접근 차단을 확인한 뒤 운영 환경에 연결합니다.
+
+키와 실제 번호는 저장소에 추가하지 않습니다. 주소록과 개별 연락 기록은 기기에 남고, 실계정 공유에는 사용자가 동의한 상태 선택값만 전송됩니다.
+
+[Supabase Redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls) · [Twilio Messages API](https://www.twilio.com/docs/messaging/api/message-resource)

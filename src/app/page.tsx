@@ -6,8 +6,14 @@ import { CompanionArt, CompanionCollection, CompanionPicker, CompanionStatus } f
 import { dataScope, developerToolsAvailable, hasConsent, saveConsent, setDeveloperMode, DEVELOPER_MODE_KEY, TEST_DATA_KEY, PREVIEW_DATA_KEY } from './app-storage';
 import SafetyCenter, { HelpLink } from './components/SafetyCenter';
 import CareReason from './components/CareReason';
-import MoodInsights from './components/Insights';
 import CompanionMissions from './components/Missions';
+import RecoveryMissions from './components/RecoveryMissions';
+import Places from './components/Places';
+import { ConnectionNudge, ConnectionsScreen } from './components/Connections';
+import { GuardianSettings } from './components/Guardian';
+import { guardianAvailable, syncGuardianShare } from './guardian-share';
+import { moodSnapshot } from './wellbeing';
+import type { RecoveryId } from './mission-policy';
 import TalkToFriend from './components/TalkToFriend';
 import SupportPrograms, { PrivacyPolicy } from './components/SupportPrograms';
 import { SettingsScreen, DeveloperSettings } from './components/DeveloperSettings';
@@ -33,7 +39,7 @@ import { SHOP_KEY, ownedItemIds, shopSnapshot, syncGrowthRewards, type ShopState
 import { newSunshineNotices, enqueueSunshineNotices, SUNSHINE_NOTICE_MS, type SunshineNotice } from './sunshine-notifications';
 type View = GardenView;
 type PlantState = RivePlantState;
-type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow' | 'diary' | 'heart' | 'home' | 'sun' | 'brush';
+type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow' | 'diary' | 'heart' | 'home' | 'sun' | 'brush' | 'map';
 // Night follows the device clock; the default sky turns into a night sky.
 const isNight = (now = new Date()) => now.getHours() < 6 || now.getHours() >= 19;
 
@@ -41,6 +47,7 @@ const isNight = (now = new Date()) => now.getHours() < 6 || now.getHours() >= 19
 function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   const p = { width: size, height: size, viewBox: '0 0 24 24', fill: 'none', 'aria-hidden': true };
   if (name === 'home') return <svg {...p}><path d="M4 11.5 12 5l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5H15V15h-6v5.5H5.5A1.5 1.5 0 0 1 4 19v-7.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
+  if (name === 'map') return <svg {...p}><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6Zm6-2v14m6-12v14" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>;
   if (name === 'sun') return <svg {...p}><circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="1.6"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
   if (name === 'brush') return <svg {...p}><path d="m4 20 4-1 11-11-3-3L5 16l-1 4Zm10-13 3 3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/><path d="M5 3v4M3 5h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
   if (name === 'diary') return <svg {...p}><path d="M6 4.5h10.5A1.5 1.5 0 0 1 18 6v13.5H7.5A1.5 1.5 0 0 1 6 18V4.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/><path d="M6 18a1.5 1.5 0 0 1 1.5-1.5H18M10 4.5V10l1.75-1.2L13.5 10V4.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>;
@@ -68,18 +75,18 @@ function TopBar({ title, onBack, action, help = true }: { title: string; onBack?
   return <header className="top-bar"><div>{onBack ? <button className="icon-button" onClick={onBack} aria-label="뒤로 가기"><Icon name="back" /></button> : help && action && <HelpLink/>}</div><h1>{title}</h1><div>{action ?? (help && <HelpLink/>)}</div></header>;
 }
 
-// Home is only the friend; everything else sits one swipe (or one tap on the floating bar) away.
-const NAV_TABS = [['home', 'home', '홈'], ['today', 'sun', '오늘'], ['decorate', 'brush', '꾸미기'], ['garden', 'diary', '기록'], ['settings', 'settings', '설정']] as const;
+const NAV_TABS = [['home', 'home', '홈'], ['garden', 'diary', '일기'], ['map', 'map', '지도'], ['decorate', 'brush', '꾸미기'], ['settings', 'settings', '설정']] as const;
 type Tab = typeof NAV_TABS[number][0];
 const STYLE_VIEWS: View[] = ['decorate', 'dress', 'items', 'shop', 'rewards', 'extra-care'];
 // The tab a screen belongs to; null = a focused flow (check-in, completion, sub pages) without the bar.
-const tabOf = (view: View, caring: boolean): Tab | null => view === 'home' || view === 'today' || view === 'garden' || view === 'settings' ? view
-  : view === 'care' ? (caring ? 'today' : null) : STYLE_VIEWS.includes(view) ? 'decorate' : view === 'companions' ? 'settings' : null;
+const tabOf = (view: View, caring: boolean): Tab | null => view === 'home' || view === 'map' || view === 'garden' || view === 'settings' ? view
+  : view === 'care' ? (caring ? 'garden' : null) : STYLE_VIEWS.includes(view) ? 'decorate' : ['companions', 'guardian', 'connections'].includes(view) ? 'settings' : null;
+const journalView = (target: string) => target === 'today' || (target === 'care' && dataScope() !== 'test') ? 'garden' : target;
 const SWIPE_MIN = 70; // px; shorter or mostly vertical drags stay scrolls
-const SWIPE_IGNORE = '.companion-art, .pet-menu, .pet-menu-backdrop, .insights-chart, .missions-carousel, .camera-sheet, .chat-sheet, .help-sheet, input, textarea, select'; // these own their sideways gestures
+const SWIPE_IGNORE = '.companion-art, .pet-menu, .pet-menu-backdrop, .insights-chart, .missions-carousel, .period-rail, .places-rail, .places-map, .garden-mood-strip, .camera-sheet, .chat-sheet, .help-sheet, input, textarea, select'; // these own their sideways gestures
 function BottomNav({ active, go }: { active: Tab; go: (v: View) => void }) {
   return <nav className="bottom-nav" aria-label="주요 메뉴">
-    {NAV_TABS.map(([target, icon, label]) => <button key={target} className={active === target ? 'active' : ''} aria-current={active === target ? 'page' : undefined} onClick={() => go(target)}><span className="nav-symbol" aria-hidden="true"><Icon name={icon} size={22}/></span><span>{label}</span></button>)}
+    {NAV_TABS.map(([target, icon, label]) => <button key={target} className={active === target ? 'active' : ''} aria-current={active === target ? 'page' : undefined} onClick={() => go(target)}><span className="nav-symbol" aria-hidden="true"><Icon name={icon} size={22}/>{target === 'garden' && active === 'home' && <i className="diary-reminder"/>}</span><span>{label}</span></button>)}
   </nav>;
 }
 
@@ -116,29 +123,11 @@ function HomeScreen({ state, go, shop, companion, companions, records, outfit, n
   const ground = <><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></>;
   return <section className="screen pet-home">
     <h1 className="sr-only">오늘의 정원</h1>
+    <ConnectionNudge onOpen={() => go('connections')}/>
     {companion && companions ? <TalkToFriend id={companion.id} name={companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass} intro={GREETING}
       growth={petGrowth(companions, records)} outfit={outfit} news={news} onOpen={go}>{ground}</TalkToFriend>
       : <div className={sceneClass}><div className="pet-ground" aria-hidden="true"/><div className="pet-stage">{ground}<div className="hero-plant"><Plant state={state} className="plant-art"/></div></div>
         <div className="pet-bottom"><button type="button" className="primary-button" onClick={() => go('companion')}>함께할 친구를 골라 보세요</button></div></div>}
-  </section>;
-}
-
-function TodayScreen({ go, recorded, completedCount, resume, gift }: { go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; gift?: React.ReactNode }) {
-  const done = (recorded ? 1 : 0) + completedCount;
-  return <section className="screen today-screen">
-    <TopBar title="오늘"/>
-    <p className="today-date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</p>
-    <section className="today-card" aria-labelledby="today-title">
-      <div className="today-card__head">
-        <h2 id="today-title"><span className="eyebrow">오늘</span>{!recorded ? '오늘의 나를 들려주세요' : completedCount === 3 ? '오늘의 돌봄을 모두 마쳤어요' : '작은 돌봄이 기다리고 있어요'}</h2>
-        <span className="today-steps" role="img" aria-label={`오늘의 나 기록 ${recorded ? '완료' : '전'}, 작은 돌봄 ${completedCount}/3`}>{[0, 1, 2, 3].map(i => <i key={i} className={i < done ? 'done' : ''}/>)}</span>
-      </div>
-      <button className="primary-button home-cta" onClick={() => go(resume ?? (recorded ? 'care' : 'checkin'))}><span className="soft-icon"><Icon name="note" size={18}/></span>{resume && resume !== 'care' ? '오늘의 나 기록 이어하기' : !recorded ? '오늘의 나 기록하기' : completedCount === 0 ? '오늘의 작은 돌봄 시작하기' : completedCount === 3 ? '오늘의 돌봄 돌아보기' : '남은 작은 돌봄 이어하기'}</button>
-      {recorded && <p className="home-care-status">오늘의 작은 돌봄 {completedCount}/3 완료</p>}
-    </section>
-    {gift}
-    <CompanionMissions/>
-    <a className="text-button support-link" href="#support">받을 수 있는 지원 제도 찾기 · 신청 도우미</a>
   </section>;
 }
 
@@ -218,10 +207,6 @@ function CareScreen({ state, companion, answers, recommendation, completed, comp
   </section>;
 }
 
-function GardenScreen({ records, onSave }: { records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean }) {
-  return <section className="screen garden-history-screen"><TopBar title="나의 기록"/><MoodInsights records={records}/><RecordsCalendar records={records} onSave={onSave}/></section>;
-}
-
 function storageMessage(error: unknown) {
     const name = error && typeof error === 'object' && 'name' in error ? error.name : '';
     if (name === 'QuotaExceededError') return '브라우저 저장 공간이 부족해요. 작성한 글이나 사진을 저장하지 못했어요. 이 화면을 닫기 전에 다시 시도해 주세요.';
@@ -286,7 +271,7 @@ export default function HomePage() {
   };
   const show = (target: View, replace = false, record = readToday()) => {
     updateDaily(record);
-    const next = resolveView(target, record);
+    const next = resolveView(journalView(target), record);
     const url = new URL(window.location.href);
     url.hash = next;
     if (replace || window.location.hash !== '#' + next) {
@@ -350,15 +335,14 @@ export default function HomePage() {
 
   useEffect(() => {
     let active = true;
-    const sync = (initial = false) => {
+    const sync = () => {
       if (!active) return;
       setNight(isNight());
       const record = readToday();
       const requested = window.location.hash.slice(1);
-      // Every fresh entry shows the welcome screen; Start explicitly opens the garden. Back/forward or a typed hash
-      // cannot skip the age and privacy confirmation either (help and the policy stay reachable).
+      // A URL cannot skip the consent screen. Help and the privacy policy remain reachable.
       const gated = !hasConsent() && requested !== 'safety' && requested !== 'privacy';
-      const next = resolveView(initial || gated ? 'onboarding' : requested, record);
+      const next = resolveView(gated ? 'onboarding' : journalView(requested), record);
       updateDaily(record);
       const url = new URL(window.location.href);
       url.hash = next;
@@ -367,7 +351,7 @@ export default function HomePage() {
       setView(next);
       setCompletedCare(null);
     };
-    queueMicrotask(() => { sync(true); void cleanupPhotos().catch(error => { if (active) setSaveError(storageMessage(error)); }); });
+    queueMicrotask(() => { sync(); void cleanupPhotos().catch(error => { if (active) setSaveError(storageMessage(error)); }); });
     const onBack = () => sync();
     const onResume = () => { if (document.visibilityState === 'visible') sync(); };
     const onStorage = (event: StorageEvent) => {
@@ -399,6 +383,14 @@ export default function HomePage() {
       document.removeEventListener('visibilitychange', onResume);
     };
   }, [readToday]);
+
+  // Share only the consented projection. Editing prose or replacing a photo does not change it.
+  const guardianEntries = JSON.stringify(moodSnapshot(records));
+  useEffect(() => {
+    if (!guardianAvailable() || guardianEntries === '[]') return;
+    const timer = window.setTimeout(() => { void syncGuardianShare(JSON.parse(guardianEntries)).catch(() => {}); }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [guardianEntries]);
 
   useEffect(() => {
     const id = sunshineFeedback?.id;
@@ -434,6 +426,11 @@ export default function HomePage() {
     if (!record.careRecommendations?.find(entry => entry.date === record.date)?.ids.some(careId => careId === id)) return;
     if (record.completedCareIds.includes(id)) return;
     if (save({ ...record, completedCareIds: [...record.completedCareIds, id] }, 'firstCare')) setCompletedCare(id);
+  };
+  const completeMission = (id: RecoveryId) => {
+    const record = readToday() ?? emptyRecord();
+    if (record.completedMissionIds?.includes(id)) return true;
+    return save({ ...record, completedMissionIds: [...(record.completedMissionIds ?? []), id] }, 'firstCare');
   };
   const assertNoDrafts = () => {
     if (hasUnsavedDrafts()) throw new Error('아직 저장하지 않은 사진이나 글이 있어요. 저장하거나 선택을 취소한 뒤 모드를 바꿔 주세요.');
@@ -497,7 +494,6 @@ export default function HomePage() {
   const bondNews = companions ? <CompanionStatus state={companions} records={records} onSeen={level => companionAction(() => markLevelSeen(companions.active, level))} onOpen={go}/> : null;
   const plantState = daily?.plantState ?? 'normal';
   const todayCares = daily?.careRecommendations?.find(entry => entry.date === daily.date);
-  const completedCount = todayCares?.ids.filter(id => daily?.completedCareIds.includes(id)).length ?? 0;
 
   return <main className="app-shell"><div className="phone-frame" data-slide={slide || undefined} onPointerDown={swipeStart} onPointerUp={swipeEnd} onPointerCancel={() => { swipe.current = null; }}>
     <>
@@ -510,11 +506,22 @@ export default function HomePage() {
       </div>
       {view === 'onboarding' && <Onboarding start={firstTime => firstTime && !readCompanions() ? show('companion', true) : goHome()}/>}
       {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} companions={companions} records={records} outfit={outfit} night={night} news={bondNews}/>}
-      {view === 'today' && <TodayScreen go={go} recorded={!!daily?.answers.every(Boolean)} completedCount={completedCount} resume={daily?.stage} gift={giftPending && <GrowthProgress snapshot={commerce} onOpen={() => go('rewards')}/>}/>}
-      {view === 'checkin' && <CheckinScreen key={localDay()} onBack={goHome} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
+      {view === 'checkin' && <CheckinScreen key={localDay()} onBack={() => go('garden')} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
-      {view === 'garden' && <GardenScreen records={records} onSave={save}/>}
+      {view === 'garden' && <section className="screen garden-history-screen work-screen"><TopBar title="일기"/>
+        <div className="work-area journal-area"><RecordsCalendar records={records} onSave={save}
+          onToday={() => go(daily?.stage === 'photo' || daily?.stage === 'growth' ? daily.stage : 'checkin')}/>
+          {giftPending && <GrowthProgress snapshot={commerce} onOpen={() => go('rewards')}/>}
+          <RecoveryMissions key={datasetEpoch + ':' + localDay()} record={daily} records={records} onComplete={completeMission} onMap={() => go('map')} onConnections={() => go('connections')}/>
+          {testEnabled && <details className="quiet-card"><summary>개발용 돌봄 확인</summary>
+            {daily?.answers.every(Boolean) && <button className="text-button" type="button" onClick={() => go('care')}>기존 추천 행동 열기</button>}<CompanionMissions/>
+          </details>}
+        </div>
+      </section>}
+      {view === 'map' && <section className="screen work-screen places-screen"><TopBar title="지도"/><Places energy={normalizeAnswers(daily?.answers)[1]}/></section>}
+      {view === 'connections' && <section className="screen work-screen"><TopBar title="연락처" onBack={() => go('settings')}/><ConnectionsScreen/></section>}
+      {view === 'guardian' && <section className="screen work-screen"><TopBar title="보호자 공유" onBack={() => go('settings')}/><GuardianSettings records={records}/></section>}
       {view === 'decorate' && <StyleHub view={view} go={go} giftPending={giftPending}><GardenShop key={datasetEpoch + ':decorate:' + (decorationItem ?? '')} initialItem={decorationItem} plantState={plantState} inventory snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go('shop')} onDress={dressItem}/></StyleHub>}
       {view === 'dress' && <StyleHub view={view} go={go} giftPending={giftPending}><DressUp key={datasetEpoch + ':' + dressSlot + ':' + (commerce ? 'ready' : 'loading') + ':' + companions?.active + ':' + dressFriend} snapshot={commerce} companions={companions} slot={dressSlot} friend={dressFriend} onWear={() => setOutfitTick(tick => tick + 1)} onShop={shopFor} onChoose={() => go('companion')}/></StyleHub>}
       {view === 'items' && <StyleHub view={view} go={go} giftPending={giftPending}><Inventory snapshot={commerce} worn={worn} onUse={openItem}/></StyleHub>}

@@ -7,7 +7,9 @@ export const TEST_DATA_KEY = 'little-garden.sandbox.test.v1';
 export const PREVIEW_DATA_KEY = 'little-garden.sandbox.preview.v1';
 // 'account' = a signed-in user's own garden on this device (the user version). 'real' is the legacy
 // unscoped device garden, kept untouched and never shown to an account.
-export type DataScope = 'real' | 'account' | 'test' | 'preview';
+export type DataScope = 'real' | 'account' | 'test' | 'preview' | 'demo';
+const demoValues = new Map<string, string>();
+export const isDemo = () => typeof window !== 'undefined' && window.location.pathname === '/demo';
 let pendingOperations = 0;
 // Never restore authorization from browser storage (including the legacy mode key).
 let testModeEnabled = false;
@@ -20,6 +22,7 @@ export function requireDeveloperTools() {
   if (!developerToolsAvailable()) throw new Error('개발 환경에서만 사용할 수 있는 테스트 기능이에요.');
 }
 export function dataScope(): DataScope {
+  if (isDemo()) return 'demo';
   if (testModeEnabled && developerToolsAvailable()) return 'test';
   if (accountId) return 'account';
   return developerToolsAvailable() ? 'preview' : 'real';
@@ -79,6 +82,7 @@ function readSandbox(key: string): Sandbox {
 export const appStorage = {
   getItem(key: string): string | null {
     const scope = dataScope();
+    if (scope === 'demo') return demoValues.get(key) ?? null;
     if (scope === 'real') return localStorage.getItem(key);
     if (scope === 'account') return localStorage.getItem(accountPrefix() + key);
     const values = readSandbox(sandboxKey(scope)).values;
@@ -86,6 +90,7 @@ export const appStorage = {
   },
   setItem(key: string, value: string) {
     const scope = dataScope();
+    if (scope === 'demo') { demoValues.set(key, value); return; }
     if (scope === 'real') { localStorage.setItem(key, value); return; }
     if (scope === 'account') { localStorage.setItem(accountPrefix() + key, value); return; }
     const target = sandboxKey(scope);
@@ -114,6 +119,7 @@ export function saveConsent() {
 /** Deletes this scope's garden data and photos. Keeps the login session and other scopes' sandboxes. */
 export async function deleteAllLocalData() {
   assertIdle();
+  if (isDemo()) { demoValues.clear(); return; }
   // Whose data this is gets fixed before the first await: an account switch meanwhile must not redirect the delete.
   const scope = dataScope(), prefix = accountPrefix(), database = photoDatabaseName(), sandbox = scope === 'test' || scope === 'preview' ? sandboxKey(scope) : '';
   // Photos first: if this fails, records still point at them and the user can retry.

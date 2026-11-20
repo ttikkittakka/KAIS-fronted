@@ -121,6 +121,8 @@ function boundary(environment = 'development') {
       if (name.includes('auth-client')) return { getAuthClient() {} };
       if (name.includes('app-storage')) return { async setDeveloperMode() { unlocks++; }, setAccountScope(id) { scopes.push(id); }, developerToolsAvailable: () => environment === 'development' };
       if (name.endsWith('/safety')) return loadTs(new URL('../src/app/safety.ts', import.meta.url));
+      if (name === '../install-phone') return loadTs(new URL('../src/app/install-phone.ts', import.meta.url));
+      if (name === '../install-intent') return { saveInstallIntent() {}, async sendInstallIntent() { return null; } };
       throw Error(name);
     },
   });
@@ -191,5 +193,7 @@ test('auth modules never import garden stores or manually persist credentials; l
     assert.doesNotMatch(text, /localStorage\.|indexedDB\.|record-store|shop-store|console\./);
   }
   const layout = readFileSync(new URL('../src/app/layout.tsx', import.meta.url), 'utf8');
-  assert.match(layout, /<AuthBoundary><RecordSessionBoundary>/);
+  const entry = readFileSync(new URL('../src/app/components/AppEntry.tsx', import.meta.url), 'utf8');
+  assert.match(layout, /<AppEntry>/);
+  assert.match(entry, /<AuthBoundary><RecordSessionBoundary>/);
 });

@@ -7,10 +7,18 @@ import { DEFAULT_BOND } from '../companions';
 import { ownedItemIds, type shopSnapshot } from '../shop-store';
 import { localDay, type DailyCheckin } from '../daily-checkin';
 import { readMissionLog } from '../missions';
+import { gardenPreferences, setGardenPreferences } from '../preferences';
+import { guardianStatus, revokeGuardianShare } from '../guardian-share';
+import { MISSION_PACES } from '../mission-policy';
 export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { onDeveloper: () => void; records: DailyCheckin[]; snapshot: ReturnType<typeof shopSnapshot> | null; canDelete: () => void }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [preferences, setPreferences] = useState(gardenPreferences);
+  const updatePreferences = (patch: Parameters<typeof setGardenPreferences>[0]) => {
+    try { setPreferences(setGardenPreferences(patch)); setError(''); }
+    catch { setError('설정을 저장하지 못했어요.'); }
+  };
   // Local-only data is lost with the browser data, so the user needs a copy they own. Photos stay on the device.
   const exportRecords = () => {
     const file = new Blob([JSON.stringify({ app: 'little-garden', version: 1, exportedAt: new Date().toISOString(), records, missions: readMissionLog().values }, null, 2)], { type: 'application/json' });
@@ -24,6 +32,7 @@ export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { 
     setBusy(true); setError('');
     try {
       canDelete();
+      if (await guardianStatus()) await revokeGuardianShare();
       await deleteAllLocalData();
       // A fresh load drops in-memory drafts and caches and starts from the welcome screen.
       window.location.replace(window.location.pathname);
@@ -39,10 +48,19 @@ export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { 
       <p>{scope === 'account' ? '로그인한 계정의 정원이에요. 기록과 사진은 이 기기 브라우저에 계정별로 보관돼요.' : scope === 'test' ? '개발자 버전 · 테스트 정원을 보고 있어요.' : '기록과 사진은 이 브라우저에 보관돼요.'}</p>
       {scope === 'account' && <button type="button" className="shop-secondary" onClick={() => window.dispatchEvent(new Event('little-garden:logout'))}>로그아웃</button>}</section>
     <a className="settings-menu" href="#companions"><strong>함께하는 친구들</strong><span>대표 친구 바꾸기 · 새 친구 데려오기 <span aria-hidden="true">→</span></span></a>
+    <a className="settings-menu" href="#guardian"><strong>보호자 공유</strong><span>공유 링크 · 상태 갱신 · 공유 중단 <span aria-hidden="true">→</span></span></a>
+    <a className="settings-menu" href="#connections"><strong>연락처와 안부 제안</strong><span>연락 기록 보기 · 알림 설정 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#support"><strong>지원 제도 신청 도우미</strong><span>찾기 · 신청서 작성 · 내 신청 현황 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#safety"><strong>도움 받을 수 있는 곳</strong><span>109 · 112 · 119 연락처 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#privacy"><strong>개인정보 처리방침</strong><span>모으는 정보 · 보관 기간 · 내 권리 <span aria-hidden="true">→</span></span></a>
-    <section className="settings-card"><h2>내 데이터</h2><p>이 브라우저에만 저장돼 있고 서버로 보내지 않아요.</p>
+    <section className="settings-card"><h2>미션 설정</h2>
+      <label>선호하는 장소<select value={preferences.pace} onChange={event => updatePreferences({ pace: MISSION_PACES.find(pace => pace === event.target.value) ?? 'any' })}>
+        <option value="any">어디든 편해요</option><option value="inside">실내가 좋아요</option><option value="outside">바깥이 좋아요</option>
+      </select></label>
+      {scope === 'account' && <><label className="quiet-check"><input type="checkbox" checked={preferences.ai} onChange={event => updatePreferences({ ai: event.target.checked })}/><span>AI 맞춤 추천 허용 (선택)</span></label>
+        <p className="privacy-note">동의하면 응답 범주와 마음 단어 범주 또는 기능을 켠 연락 횟수만 모델이 사용해요. 일기 원문과 연락처는 기기에 남아요.</p></>}
+    </section>
+    <section className="settings-card"><h2>내 데이터</h2><p>일기 원문과 사진은 이 기기의 브라우저에 보관돼요. 보호자와 공유한 상태는 설정에서 닫을 수 있어요.</p>
       <dl className="data-summary">
         <div><dt>기록</dt><dd>{records.length}일</dd></div>
         <div><dt>사진</dt><dd>{records.filter(record => record.photoId).length}장</dd></div>
@@ -57,7 +75,7 @@ export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { 
         : <button type="button" className="shop-secondary" onClick={() => setConfirm(true)}>내 데이터 모두 지우기</button>}
       {error && <p role="alert" className="shop-error">{error}</p>}
     </section>
-    {developerToolsAvailable() && <button type="button" className="settings-menu" onClick={onDeveloper}><strong>개발자 코드 입력</strong><span>{scope === 'test' ? '개발자 버전 사용 중 · 끄면 유저 버전' : '코드를 넣으면 햇살 무제한 · 모두 열림'} <span aria-hidden="true">→</span></span></button>}
+    {developerToolsAvailable() && scope !== 'demo' && <button type="button" className="settings-menu" onClick={onDeveloper}><strong>개발자 코드 입력</strong><span>{scope === 'test' ? '개발자 버전 사용 중 · 끄면 유저 버전' : '코드를 넣으면 햇살 무제한 · 모두 열림'} <span aria-hidden="true">→</span></span></button>}
   </div>;
 }
 export function DeveloperSettings({ enabled, snapshot, dataError, onToggle, onRefresh, onOpen, canReset }: {

@@ -19,6 +19,20 @@ const ICONS = {
   help: <><path d="M5 4.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-6.5L8 20v-3.5H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"/><path d="M10 9a2 2 0 1 1 2.7 1.9c-.5.2-.7.6-.7 1.1v.3M12 14.2h.01"/></>,
   sparkle: <><path d="m12 3 1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6L12 3Z"/><path d="M19 15.5l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6.6-1.9Z"/></>,
   lock: <><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></>,
+  back: <path d="m15 18-6-6 6-6"/>,
+  arrow: <path d="m9 6 6 6-6 6"/>,
+  check: <path d="m5 12 4 4L19 6"/>,
+  plus: <path d="M12 5v14M5 12h14"/>,
+  map: <><path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2V6Z"/><path d="M9 4v14m6-12v14"/></>,
+  phone: <path d="M5 3h4l2 5-3 2a14 14 0 0 0 6 6l2-3 5 2v4c-1 2-4 2-7 1C8 18 5 15 4 10 3 7 3 5 5 3Z"/>,
+  leaf: <path d="M19 4c-8 0-14 3-14 10a5 5 0 0 0 5 5c7 0 10-6 9-15ZM5 20l8-8"/>,
+  drop: <path d="M12 3s6.5 7 6.5 11A6.5 6.5 0 1 1 5.5 14c0-4 6.5-11 6.5-11Z"/>,
+  more: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3.4"/>,
+  camera: <><path d="m3 7 5-1 1.5-2h5L16 6l5 1v12H3V7Z"/><circle cx="12" cy="12.5" r="3.5"/></>,
+  note: <><path d="M6 4h12v16H6z"/><path d="M9 8h6m-6 4h6m-6 4h3"/></>,
+  edit: <><path d="m4 20 4-1 11-11-3-3L5 16l-1 4Zm10-13 3 3"/></>,
+  target: <><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></>,
+  bookmark: <path d="M6 4h12v16l-6-4-6 4V4Z"/>,
 };
 export type IconName = keyof typeof ICONS;
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {

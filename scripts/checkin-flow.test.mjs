@@ -10,11 +10,11 @@ const { recommendCares } = loadTs(new URL('../src/app/recommend-cares.ts', impor
 
 const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), {
   compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX }
-}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen; exports.TodayScreen = TodayScreen; exports.GardenScreen = GardenScreen; exports.BottomNav = BottomNav;';
+}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen; exports.BottomNav = BottomNav;';
 // The home is only the friend now; balances and rewards are read from the same shop store the page uses.
 const shopNow = () => loadTs(new URL('../src/app/shop-store.ts', import.meta.url)).shopSnapshot();
 const saved = { version: 1, date: daily.localDay(), answers: ['괜찮게 잤어요', '보통', '든든하게 먹었어요', '잔잔해요'], note: '기존 기록', plantState: 'normal', completedCareIds: ['water'] };
-function mount(raw = null, hash = '', component = 'default', props = {}) {
+function mount(raw = null, hash = '', component = 'default', props = {}, legacyCare = true) {
   const slots = [], effects = [], tasks = [], listeners = new Map();
   let cursor = 0, first = true, failSave = false, interval;
   const data = new Map(raw ? [[daily.DAILY_KEY, raw]] : []);
@@ -38,7 +38,18 @@ function mount(raw = null, hash = '', component = 'default', props = {}) {
     document: { visibilityState: 'visible', addEventListener: window.addEventListener, removeEventListener() {} },
     queueMicrotask: fn => tasks.push(fn), clearInterval() {},
     setTimeout: fn => { tasks.push(fn); return 1; }, clearTimeout() {},
-    require: name => name === 'react' ? react : name === 'react/jsx-runtime' ? { jsx, jsxs: jsx, Fragment: 'fragment' } : name === './components/DeveloperSettings' ? { SettingsScreen: function SettingsScreen() {}, DeveloperSettings: function DeveloperSettings() {} } : name === './components/GrowthRewards' ? { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} } : name === './components/RecordScreens' ? { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} } : name.startsWith('./components/') ? { default: () => null } : loadTs(new URL(`../src/app/${name}.ts`, import.meta.url))
+    require(name) {
+      if (name === 'react') return react;
+      if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
+      if (name === './components/DeveloperSettings') return { SettingsScreen: function SettingsScreen() {}, DeveloperSettings: function DeveloperSettings() {} };
+      if (name === './components/GrowthRewards') return { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} };
+      if (name === './components/RecordScreens') return { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} };
+      if (name === './components/RecoveryMissions') return { default: function RecoveryMissions() {} };
+      if (name === './guardian-share') return { guardianAvailable: () => false, syncGuardianShare: async () => {} };
+      if (name.startsWith('./components/')) return { default: () => null };
+      const module = loadTs(new URL(`../src/app/${name}.ts`, import.meta.url));
+      return name === './app-storage' && legacyCare ? { ...module, dataScope: () => 'test' } : module;
+    }
   });
   function render() { cursor = 0; const tree = exports[component](props); first = false; return tree; }
   function find(node, name) {
@@ -84,7 +95,7 @@ test('new visitor: onboarding -> home -> check-in -> persisted care; refresh res
   assert.ok(refreshed.initialOnboarding);
   refreshed.start();
   refreshed.screen('HomeScreen').props.go('today');
-  assert.ok(refreshed.screen('TodayScreen').props.recorded);
+  assert.ok(refreshed.screen('RecordsCalendar').props.records.some(record => record.note === '새 기록'));
 });
 
 function nodes(node, predicate) {
@@ -151,12 +162,20 @@ test('completion offers the appropriate two choices and keeps the existing celeb
   }
 });
 
-test('today tab entry label follows today’s completion count', () => {
-  for (const [count, expected] of [[0, '오늘의 작은 돌봄 시작하기'], [1, '남은 작은 돌봄 이어하기'], [2, '남은 작은 돌봄 이어하기'], [3, '오늘의 돌봄 돌아보기']]) {
-    const app = mount(null, '', 'TodayScreen', { go() {}, recorded: true, completedCount: count });
-    assert.match(textContent(app.tree()), new RegExp(expected));
-    assert.match(textContent(app.tree()), new RegExp(`오늘의 작은 돌봄 ${count}/3 완료`));
-  }
+test('today links open the journal, and completed check-in returns to its live missions', () => {
+  const app = mount(null, '', 'default', {}, false);
+  app.start();
+  app.screen('HomeScreen').props.go('today');
+  assert.equal(app.hash(), '#garden');
+  app.screen('RecordsCalendar').props.onToday();
+  app.screen('CheckinScreen').props.onDone('normal', saved.answers, '오늘의 일기');
+  app.next();
+  app.next();
+  assert.equal(app.hash(), '#garden');
+  assert.equal(app.screen('CareScreen'), null);
+  assert.equal(app.screen('RecoveryMissions').props.record.note, '오늘의 일기');
+  assert.equal(app.screen('RecoveryMissions').props.onComplete('water-sip'), true);
+  assert.deepEqual(JSON.parse(app.raw()).completedMissionIds, ['water-sip']);
 });
 
 test('completed care remains reviewable without another completion action', () => {
@@ -307,7 +326,7 @@ test('calendar rollover via timer guards today care and preserves yesterday reco
     app.screen('CheckinScreen').props.onDone('normal',['good','normal','good','normal'],'새 날의 말');app.next();app.next();
     assert.deepEqual(app.screen('CareScreen').props.completedIds,[]);
     app.screen('CareScreen').props.goHome();app.screen('HomeScreen').props.go('garden');
-    const rows=app.screen('GardenScreen').props.records;assert.equal(rows.length,2);
+    const rows=app.screen('RecordsCalendar').props.records;assert.equal(rows.length,2);
     assert.equal(rows.find(r=>r.date===yesterday).note,'어제 남긴 말');assert.deepEqual(rows.find(r=>r.date===yesterday).completedCareIds,[id]);
   } finally { globalThis.Date=OriginalDate; }
 });
@@ -336,23 +355,24 @@ test('one shared tab bar remains outside both scrolling screens and follows tab 
   nav[0].props.go('garden');
   nav = nodes(app.tree(), n => n.type?.name === 'BottomNav');
   assert.equal(nav.length, 1); assert.equal(nav[0].props.active, 'garden');
-  assert.ok(app.screen('GardenScreen'));
+  assert.ok(app.screen('RecordsCalendar'));
   nav[0].props.go('home'); assert.ok(app.screen('HomeScreen'));
   app.screen('HomeScreen').props.go('checkin');
   assert.equal(nodes(app.tree(), n => n.type?.name === 'BottomNav').length, 0);
-  for (const [component, props] of [['HomeScreen',{state:'normal',go(){},recorded:false,completedCount:0}], ['GardenScreen',{records:[],onSave:()=>true}]]) {
+  for (const [component, props] of [['HomeScreen',{state:'normal',go(){}}]]) {
     const screen = mount(null, '', component, props);
     assert.equal(nodes(screen.tree(), n => n.type?.name === 'BottomNav' || n.type === 'nav').length, 0);
   }
 });
-test('shared navigation shows home, today, decorate, records and settings tabs with selected state and destinations', () => {
-  const tabs = ['home','today','decorate','garden','settings'];
+test('shared navigation shows home, journal, map, decorate and settings with a home diary reminder', () => {
+  const tabs = ['home','garden','map','decorate','settings'];
   for (const [index, active] of tabs.entries()) {
     let destination;
     const app = mount(null, '', 'BottomNav', { active, go: value => { destination = value; } });
     const buttons = nodes(app.tree(), n => n.type === 'button');
-    assert.deepEqual(buttons.map(textContent), ['홈','오늘','꾸미기','기록','설정']);
-    assert.deepEqual(nodes(app.tree(), n => n.type?.name === 'Icon').map(n => n.props.name), ['home','sun','brush','diary','settings']);
+    assert.deepEqual(buttons.map(textContent), ['홈','일기','지도','꾸미기','설정']);
+    assert.deepEqual(nodes(app.tree(), n => n.type?.name === 'Icon').map(n => n.props.name), ['home','diary','map','brush','settings']);
+    assert.equal(nodes(app.tree(), n => n.props?.className === 'diary-reminder').length, active === 'home' ? 1 : 0);
     assert.equal(buttons[index].props.className, 'active');
     buttons.forEach((button, i) => { button.props.onClick(); assert.equal(destination, tabs[i]); });
   }
@@ -393,6 +413,7 @@ test('50th committed activity auto-grants once and home links to persisted rewar
   app.screen('HomeScreen').props.go('checkin');
   app.screen('CheckinScreen').props.onDraft(['good','normal','good','low']);
   app.screen('CheckinScreen').props.onBack();
+  app.screen('BottomNav').props.go('home');
   const home = app.screen('HomeScreen'); assert.equal(shopNow().activeDays,50); assert.equal(shopNow().state.rewards.length,1);
   home.props.go('rewards'); const rewards = app.screen('GrowthRewardsScreen'); assert.equal(rewards.props.snapshot.state.rewards[0].id,'days-50');
   rewards.props.onRetry(); assert.equal(app.screen('GrowthRewardsScreen').props.snapshot.state.rewards.length,1);
@@ -402,7 +423,7 @@ test('50th committed activity auto-grants once and home links to persisted rewar
 test('page settings switch dataset immediately and restore test commerce without reload', async () => {
   const oldEnv = process.env.NODE_ENV; const oldFetch = globalThis.fetch; process.env.NODE_ENV = 'development'; globalThis.fetch = async () => Response.json({ok:true});
   try {
-    const app = mount(); await new Promise(resolve => setImmediate(resolve)); app.start(); app.screen('HomeScreen').props.go('settings');
+    const app = mount(null, '', 'default', {}, false); await new Promise(resolve => setImmediate(resolve)); app.start(); app.screen('HomeScreen').props.go('settings');
     app.screen('SettingsScreen').props.onDeveloper(); assert.equal(app.hash(),'#developer');
     await app.screen('DeveloperSettings').props.onToggle(true, '0728'); assert.equal(app.screen('DeveloperSettings').props.enabled,true);
     const dev = loadTs(new URL('../src/app/developer-state.ts',import.meta.url));
