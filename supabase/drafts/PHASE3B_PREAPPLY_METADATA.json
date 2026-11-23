@@ -1,0 +1,1022 @@
+{
+  "project": "yhzgucbiwvizjxpzwpqg",
+  "roles": [
+    {
+      "name": "pg_database_owner",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_read_all_data",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_write_all_data",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_monitor",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_read_all_settings",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_read_all_stats",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_stat_scan_tables",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_read_server_files",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_write_server_files",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_execute_server_program",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_signal_backend",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_checkpoint",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_maintain",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_use_reserved_connections",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pg_create_subscription",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "dashboard_user",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": true
+    },
+    {
+      "name": "authenticated",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "anon",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "service_role",
+      "login": false,
+      "super": false,
+      "bypass": true,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "supabase_privileged_role",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "supabase_admin",
+      "login": true,
+      "super": true,
+      "bypass": true,
+      "inherit": true,
+      "createrole": true
+    },
+    {
+      "name": "authenticator",
+      "login": true,
+      "super": false,
+      "bypass": false,
+      "inherit": false,
+      "createrole": false
+    },
+    {
+      "name": "supabase_auth_admin",
+      "login": true,
+      "super": false,
+      "bypass": false,
+      "inherit": false,
+      "createrole": true
+    },
+    {
+      "name": "supabase_storage_admin",
+      "login": true,
+      "super": false,
+      "bypass": false,
+      "inherit": false,
+      "createrole": true
+    },
+    {
+      "name": "supabase_replication_admin",
+      "login": true,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "supabase_read_only_user",
+      "login": true,
+      "super": false,
+      "bypass": true,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "supabase_etl_admin",
+      "login": true,
+      "super": false,
+      "bypass": true,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "pgbouncer",
+      "login": true,
+      "super": false,
+      "bypass": false,
+      "inherit": true,
+      "createrole": false
+    },
+    {
+      "name": "postgres",
+      "login": true,
+      "super": false,
+      "bypass": true,
+      "inherit": true,
+      "createrole": true
+    },
+    {
+      "name": "supabase_realtime_admin",
+      "login": false,
+      "super": false,
+      "bypass": false,
+      "inherit": false,
+      "createrole": false
+    }
+  ],
+  "defaults": [
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "type": "r",
+      "owner": "postgres",
+      "schema": "public"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "type": "f",
+      "owner": "postgres",
+      "schema": "public"
+    },
+    {
+      "acl": [
+        "postgres=rwU/postgres",
+        "anon=rwU/postgres",
+        "authenticated=rwU/postgres",
+        "service_role=rwU/postgres"
+      ],
+      "type": "S",
+      "owner": "postgres",
+      "schema": "public"
+    },
+    {
+      "acl": [
+        "postgres=rwU/supabase_admin",
+        "anon=rwU/supabase_admin",
+        "authenticated=rwU/supabase_admin",
+        "service_role=rwU/supabase_admin"
+      ],
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "public"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/supabase_admin",
+        "anon=arwdDxtm/supabase_admin",
+        "authenticated=arwdDxtm/supabase_admin",
+        "service_role=arwdDxtm/supabase_admin"
+      ],
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "public"
+    },
+    {
+      "acl": [
+        "postgres=X/supabase_admin",
+        "anon=X/supabase_admin",
+        "authenticated=X/supabase_admin",
+        "service_role=X/supabase_admin"
+      ],
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "public"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "anon=arwdDxtm/postgres",
+        "authenticated=arwdDxtm/postgres",
+        "service_role=arwdDxtm/postgres"
+      ],
+      "type": "r",
+      "owner": "postgres",
+      "schema": "storage"
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "type": "f",
+      "owner": "postgres",
+      "schema": "storage"
+    },
+    {
+      "acl": [
+        "postgres=rwU/postgres",
+        "anon=rwU/postgres",
+        "authenticated=rwU/postgres",
+        "service_role=rwU/postgres"
+      ],
+      "type": "S",
+      "owner": "postgres",
+      "schema": "storage"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/supabase_auth_admin",
+        "dashboard_user=arwdDxtm/supabase_auth_admin"
+      ],
+      "type": "r",
+      "owner": "supabase_auth_admin",
+      "schema": "auth"
+    },
+    {
+      "acl": [
+        "postgres=rwU/supabase_auth_admin",
+        "dashboard_user=rwU/supabase_auth_admin"
+      ],
+      "type": "S",
+      "owner": "supabase_auth_admin",
+      "schema": "auth"
+    },
+    {
+      "acl": [
+        "postgres=X/supabase_auth_admin",
+        "dashboard_user=X/supabase_auth_admin"
+      ],
+      "type": "f",
+      "owner": "supabase_auth_admin",
+      "schema": "auth"
+    },
+    {
+      "acl": [
+        "postgres=rwU/supabase_admin",
+        "anon=rwU/supabase_admin",
+        "authenticated=rwU/supabase_admin",
+        "service_role=rwU/supabase_admin"
+      ],
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "graphql_public"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/supabase_admin",
+        "anon=arwdDxtm/supabase_admin",
+        "authenticated=arwdDxtm/supabase_admin",
+        "service_role=arwdDxtm/supabase_admin"
+      ],
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "graphql_public"
+    },
+    {
+      "acl": [
+        "postgres=X/supabase_admin",
+        "anon=X/supabase_admin",
+        "authenticated=X/supabase_admin",
+        "service_role=X/supabase_admin"
+      ],
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "graphql_public"
+    },
+    {
+      "acl": [
+        "postgres=a*r*w*d*D*x*t*m*/supabase_admin"
+      ],
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "extensions"
+    },
+    {
+      "acl": [
+        "postgres=X*/supabase_admin"
+      ],
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "extensions"
+    },
+    {
+      "acl": [
+        "postgres=r*w*U*/supabase_admin"
+      ],
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "extensions"
+    },
+    {
+      "acl": [
+        "postgres=arwdDxtm/supabase_admin",
+        "anon=arwdDxtm/supabase_admin",
+        "authenticated=arwdDxtm/supabase_admin",
+        "service_role=arwdDxtm/supabase_admin"
+      ],
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "graphql"
+    },
+    {
+      "acl": [
+        "postgres=X/supabase_admin",
+        "anon=X/supabase_admin",
+        "authenticated=X/supabase_admin",
+        "service_role=X/supabase_admin"
+      ],
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "graphql"
+    },
+    {
+      "acl": [
+        "postgres=rwU/supabase_admin",
+        "anon=rwU/supabase_admin",
+        "authenticated=rwU/supabase_admin",
+        "service_role=rwU/supabase_admin"
+      ],
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "graphql"
+    },
+    {
+      "acl": [
+        "postgres=rwU/supabase_admin",
+        "dashboard_user=rwU/supabase_admin"
+      ],
+      "type": "S",
+      "owner": "supabase_admin",
+      "schema": "realtime"
+    },
+    {
+      "acl": [
+        "postgres=X/supabase_admin",
+        "dashboard_user=X/supabase_admin"
+      ],
+      "type": "f",
+      "owner": "supabase_admin",
+      "schema": "realtime"
+    },
+    {
+      "acl": [
+        "postgres=a*r*wdDxtm/supabase_admin",
+        "dashboard_user=arwdDxtm/supabase_admin"
+      ],
+      "type": "r",
+      "owner": "supabase_admin",
+      "schema": "realtime"
+    }
+  ],
+  "effective": [
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_attach_photo(date,uuid,bigint)"
+    },
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_buy_item(text)"
+    },
+    {
+      "role": "authenticated",
+      "execute": false,
+      "signature": "onestep_commit_activity(uuid,text,text)"
+    },
+    {
+      "role": "authenticated",
+      "execute": false,
+      "signature": "onestep_commit_reflection(uuid,text[],text[],text)"
+    },
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_ensure_garden()"
+    },
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_reserve_photo(date)"
+    },
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_retire_photo(uuid)"
+    },
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_save_layout(jsonb,bigint)"
+    },
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_save_writing(date,text,text,bigint)"
+    },
+    {
+      "role": "authenticated",
+      "execute": true,
+      "signature": "onestep_start_day()"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_attach_photo(date,uuid,bigint)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_buy_item(text)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_commit_activity(uuid,text,text)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_commit_reflection(uuid,text[],text[],text)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_ensure_garden()"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_reserve_photo(date)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_retire_photo(uuid)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_save_layout(jsonb,bigint)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_save_writing(date,text,text,bigint)"
+    },
+    {
+      "role": "anon",
+      "execute": false,
+      "signature": "onestep_start_day()"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_attach_photo(date,uuid,bigint)"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_buy_item(text)"
+    },
+    {
+      "role": "service_role",
+      "execute": true,
+      "signature": "onestep_commit_activity(uuid,text,text)"
+    },
+    {
+      "role": "service_role",
+      "execute": true,
+      "signature": "onestep_commit_reflection(uuid,text[],text[],text)"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_ensure_garden()"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_reserve_photo(date)"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_retire_photo(uuid)"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_save_layout(jsonb,bigint)"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_save_writing(date,text,text,bigint)"
+    },
+    {
+      "role": "service_role",
+      "execute": false,
+      "signature": "onestep_start_day()"
+    }
+  ],
+  "functions": [
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "f54df283c0b9bcd390c2eaca37cc1f9d",
+      "owner": "postgres",
+      "signature": "onestep_reserve_photo(date)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_reserve_photo(p_date date)\n RETURNS onestep_photos\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); photo uuid := gen_random_uuid(); result public.onestep_photos;\r\nbegin\r\n  perform onestep_private.ensure_garden(u);\r\n  -- The composite FK requires an existing record belonging to this account.\r\n  insert into public.onestep_photos(user_id,id,record_date,object_path)\r\n    values(u,photo,p_date,u::text || '/' || photo::text || '.jpg') returning * into result;\r\n  return result;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "716af2b505e7adeb396f0eb0b3af9d4b",
+      "owner": "postgres",
+      "signature": "onestep_attach_photo(date,uuid,bigint)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_attach_photo(p_date date, p_photo uuid, p_revision bigint)\n RETURNS bigint\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); old_photo uuid; current_revision bigint; asset public.onestep_photos;\r\nbegin\r\n  perform onestep_private.ensure_garden(u);\r\n  select photo_id,revision into old_photo,current_revision from public.onestep_daily_records where user_id = u and record_date = p_date;\r\n  if not found or current_revision is distinct from p_revision then raise exception 'Record missing or stale revision' using errcode = '40001'; end if;\r\n  if p_photo is not null then\r\n    select * into asset from public.onestep_photos where user_id = u and id = p_photo and record_date = p_date;\r\n    if not found or asset.status = 'retired' then raise exception 'Photo unavailable'; end if;\r\n    -- An upload must succeed before swapping references. No in-place overwrite.\r\n    if not exists(select 1 from storage.objects where bucket_id = 'onestep-photos' and name = asset.object_path) then\r\n      raise exception 'Photo upload has not completed';\r\n    end if;\r\n  end if;\r\n  if old_photo is not distinct from p_photo then return current_revision; end if;\r\n  update public.onestep_daily_records set photo_id = p_photo,revision = revision+1,updated_at = now()\r\n    where user_id = u and record_date = p_date returning revision into current_revision;\r\n  if old_photo is not null then update public.onestep_photos set status = 'retired' where user_id = u and id = old_photo; end if;\r\n  if p_photo is not null then update public.onestep_photos set status = 'attached' where user_id = u and id = p_photo; end if;\r\n  return current_revision;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "516826569518f1182e3881de26388e43",
+      "owner": "postgres",
+      "signature": "onestep_retire_photo(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_retire_photo(p_photo uuid)\n RETURNS text\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); path text;\r\nbegin\r\n  perform onestep_private.ensure_garden(u);\r\n  if exists(select 1 from public.onestep_daily_records where user_id = u and photo_id = p_photo) then raise exception 'Detach photo before deleting it'; end if;\r\n  update public.onestep_photos set status = 'retired' where user_id = u and id = p_photo returning object_path into path;\r\n  if not found then raise exception 'Photo unavailable'; end if;\r\n  return path;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "22ab6922c1f241b8eef0715d8f32f381",
+      "owner": "postgres",
+      "signature": "onestep_start_day()",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_start_day()\n RETURNS date\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); d date;\r\nbegin\r\n  perform onestep_private.ensure_garden(u);\r\n  d := onestep_private.today(u);\r\n  insert into public.onestep_daily_records(user_id, record_date) values (u, d) on conflict do nothing;\r\n  return d;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "hash": "c2cb729e1e783c6cf9e764814cdf53de",
+      "owner": "postgres",
+      "signature": "onestep_private.require_user()",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.require_user()\n RETURNS uuid\n LANGUAGE plpgsql\n STABLE\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := auth.uid();\r\nbegin\r\n  if u is null then raise exception 'Authentication required' using errcode = '42501'; end if;\r\n  return u;\r\nend $function$\n",
+      "security_definer": false
+    },
+    {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "hash": "78525d95d94c3c10dca9fc25153540f1",
+      "owner": "postgres",
+      "signature": "onestep_private.ensure_garden(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.ensure_garden(u uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\nbegin\r\n  if u is null then raise exception 'User required'; end if;\r\n  perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(u::text, 0));\r\n  insert into public.onestep_profiles(user_id) values (u) on conflict do nothing;\r\n  insert into public.onestep_gardens(user_id) values (u) on conflict do nothing;\r\n  insert into public.onestep_inventory(user_id, item_id, source)\r\n    select u, id, 'default' from public.onestep_item_catalog where default_owned on conflict do nothing;\r\n  insert into public.onestep_placements(user_id, slot_id, item_id)\r\n    values (u, 'background', 'default-sky') on conflict do nothing;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "hash": "b6638d860e52ef3917bcc3ff62acf3f0",
+      "owner": "postgres",
+      "signature": "onestep_private.new_user()",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\nbegin perform onestep_private.ensure_garden(new.id); return new; end $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "hash": "1187fb9ee9108a9c87b93f7204015974",
+      "owner": "postgres",
+      "signature": "onestep_private.today(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.today(u uuid)\n RETURNS date\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select (now() at time zone timezone)::date from public.onestep_profiles where user_id = u\r\n$function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "hash": "2ebd6a5807d9315857cee7a8576a89a3",
+      "owner": "postgres",
+      "signature": "onestep_private.award(uuid,date,text)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.award(u uuid, d date, why text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare amount integer; inserted integer;\r\nbegin\r\n  if d is distinct from onestep_private.today(u) then raise exception 'Rewards are today only'; end if;\r\n  amount := case why when 'reflection' then 10 when 'participation' then 5 when 'firstCare' then 10 end;\r\n  if amount is null then raise exception 'Invalid reward'; end if;\r\n  if not exists (select 1 from public.onestep_daily_records r where r.user_id = u and r.record_date = d\r\n    and not ('' = any(r.answers)) and r.stage <> 'checkin'\r\n    and (why = 'reflection' or r.stage = 'care')) then raise exception 'Ineligible record'; end if;\r\n  if why = 'firstCare' and not exists (select 1 from public.onestep_daily_cares c\r\n    where c.user_id = u and c.record_date = d and c.completed_at is not null) then raise exception 'No completed care'; end if;\r\n  insert into public.onestep_sunshine_ledger(user_id,event_key,record_date,reason,delta)\r\n    values(u,d::text || ':' || why,d,why,amount) on conflict do nothing;\r\n  get diagnostics inserted = row_count;\r\n  if inserted = 1 then update public.onestep_gardens set sunshine_balance = sunshine_balance + amount where user_id = u; end if;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres"
+      ],
+      "hash": "bd6480b2242e2f7fbfaa083478ab3ea8",
+      "owner": "postgres",
+      "signature": "onestep_private.sync_growth(uuid)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.sync_growth(u uuid)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare days integer; milestone integer;\r\nbegin\r\n  select count(*) into days from public.onestep_daily_records\r\n    where user_id = u and record_date <= onestep_private.today(u) and stage <> 'checkin';\r\n  update public.onestep_gardens set active_days = days where user_id = u;\r\n  foreach milestone in array array[50,100] loop\r\n    if days >= milestone then\r\n      insert into public.onestep_growth_grants(user_id,milestone_days,active_days) values(u,milestone,days) on conflict do nothing;\r\n      insert into public.onestep_inventory(user_id,item_id,source)\r\n        select u,id,'growth' from public.onestep_item_catalog where reward_days = milestone on conflict do nothing;\r\n    end if;\r\n  end loop;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "c44b8cb25c5fbed532f31caabececd7b",
+      "owner": "postgres",
+      "signature": "onestep_ensure_garden()",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_ensure_garden()\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\nbegin perform onestep_private.ensure_garden(onestep_private.require_user()); end $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "1a18d8c24d8499a38c7d107fc79e9c55",
+      "owner": "postgres",
+      "signature": "onestep_save_writing(date,text,text,bigint)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_save_writing(p_date date, p_note text, p_comment text, p_revision bigint)\n RETURNS bigint\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); result bigint;\r\nbegin\r\n  -- NULL is invalid, never an implicit erase. Send '' to explicitly clear text.\r\n  -- Reject rather than truncate so an invalid save preserves the entire record.\r\n  if p_date is null or p_revision is null or p_revision < 0 then\r\n    raise exception 'Date and nonnegative revision required' using errcode = '22023';\r\n  end if;\r\n  if p_note is null or p_comment is null then\r\n    raise exception 'Writing must not be NULL; use an empty string to clear' using errcode = '22004';\r\n  end if;\r\n  if char_length(p_note) > 300 or char_length(p_comment) > 100 then\r\n    raise exception 'Note limit is 300 characters; photo comment limit is 100' using errcode = '22001';\r\n  end if;\r\n  perform onestep_private.ensure_garden(u);\r\n  update public.onestep_daily_records set note = p_note,photo_comment = p_comment,revision = revision+1,updated_at = now()\r\n    where user_id = u and record_date = p_date and revision = p_revision returning revision into result;\r\n  if not found then raise exception 'Record missing or stale revision' using errcode = '40001'; end if;\r\n  return result;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "d0c46a1202dc52d335ac43e2a416dcf9",
+      "owner": "postgres",
+      "signature": "onestep_buy_item(text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_buy_item(p_item text)\n RETURNS bigint\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); item public.onestep_item_catalog; balance bigint;\r\nbegin\r\n  perform onestep_private.ensure_garden(u);\r\n  select * into item from public.onestep_item_catalog where id = p_item;\r\n  if not found then raise exception 'Unknown item'; end if;\r\n  select sunshine_balance into balance from public.onestep_gardens where user_id = u;\r\n  if exists(select 1 from public.onestep_inventory where user_id = u and item_id = p_item) then return balance; end if;\r\n  if item.reward_days is not null or item.default_owned or item.price <= 0 then raise exception 'Item is not for sale'; end if;\r\n  if balance < item.price then raise exception 'Insufficient sunshine'; end if;\r\n  insert into public.onestep_sunshine_ledger(user_id,event_key,reason,delta,item_id)\r\n    values(u,'purchase:' || p_item,'purchase',-item.price,p_item);\r\n  insert into public.onestep_purchases(user_id,item_id,cost,event_key) values(u,p_item,item.price,'purchase:' || p_item);\r\n  insert into public.onestep_inventory(user_id,item_id,source) values(u,p_item,'purchase');\r\n  update public.onestep_gardens set sunshine_balance = sunshine_balance-item.price where user_id = u returning sunshine_balance into balance;\r\n  return balance;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "f3aa77802200d536f0ab262d490db45e",
+      "owner": "postgres",
+      "signature": "onestep_save_layout(jsonb,bigint)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_save_layout(p_layout jsonb, p_revision bigint)\n RETURNS bigint\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare u uuid := onestep_private.require_user(); result bigint;\r\nbegin\r\n  perform onestep_private.ensure_garden(u);\r\n  if p_layout is null or jsonb_typeof(p_layout) <> 'object' or not (p_layout ? 'background') then raise exception 'Background required'; end if;\r\n  if exists(select 1 from jsonb_each(p_layout) e\r\n    left join public.onestep_slot_catalog s on s.id = e.key\r\n    left join public.onestep_item_catalog i on to_jsonb(i.id) = e.value\r\n    left join public.onestep_inventory inv on inv.user_id = u and inv.item_id = i.id\r\n    where s.id is null or i.id is null or s.kind <> i.slot_kind or inv.item_id is null) then raise exception 'Invalid or unowned placement'; end if;\r\n  if (select count(*) <> count(distinct value) from jsonb_each(p_layout)) then raise exception 'Only one copy is owned'; end if;\r\n  update public.onestep_gardens set layout_revision = layout_revision+1 where user_id = u and layout_revision = p_revision returning layout_revision into result;\r\n  if not found then raise exception 'Stale layout revision' using errcode = '40001'; end if;\r\n  delete from public.onestep_placements where user_id = u;\r\n  insert into public.onestep_placements(user_id,slot_id,item_id) select u,key,value from jsonb_each_text(p_layout);\r\n  return result;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "hash": "42e2d4beff51340201e0911cdd277040",
+      "owner": "postgres",
+      "signature": "onestep_commit_reflection(uuid,text[],text[],text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_commit_reflection(p_user uuid, p_answers text[], p_cares text[], p_title text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare d date; n integer;\r\nbegin\r\n  perform onestep_private.ensure_garden(p_user);\r\n  d := onestep_private.today(p_user);\r\n  if p_answers is null or array_ndims(p_answers) <> 1 or array_lower(p_answers,1) <> 1 or cardinality(p_answers) <> 4 then\r\n    raise exception 'Four answers required';\r\n  end if;\r\n  if array_position(p_answers,null) is not null or '' = any(p_answers) then\r\n    raise exception 'Four answers required';\r\n  end if;\r\n  if p_cares is null or cardinality(p_cares) <> 3 or array_ndims(p_cares) <> 1\r\n    or p_title is null or char_length(p_title) not between 1 and 200 or char_length(btrim(p_title)) = 0 then raise exception 'Three recommendations and title required'; end if;\r\n  select count(distinct id) into n from public.onestep_care_catalog where id = any(p_cares) and catalog_version = 2 and active;\r\n  if n <> 3 then raise exception 'Invalid recommendations'; end if;\r\n  insert into public.onestep_daily_records(user_id,record_date,answers,stage,plant_state,recommendation_title)\r\n    values(p_user,d,p_answers,'photo',case when p_answers && array['very_low','low'] then 'low' else 'normal' end,p_title)\r\n    on conflict(user_id,record_date) do update set answers = excluded.answers,\r\n      plant_state = excluded.plant_state,\r\n      stage = case when onestep_daily_records.stage = 'checkin' then 'photo' else onestep_daily_records.stage end,\r\n      recommendation_title = coalesce(onestep_daily_records.recommendation_title,excluded.recommendation_title),\r\n      revision = onestep_daily_records.revision + 1, updated_at = now();\r\n  -- A repeated request or edited answer must not reroll the daily care set.\r\n  if not exists(select 1 from public.onestep_daily_cares where user_id = p_user and record_date = d) then\r\n    insert into public.onestep_daily_cares(user_id,record_date,position,care_id,catalog_version)\r\n      select p_user,d,ordinality,id,2 from unnest(p_cares) with ordinality as c(id,ordinality);\r\n  end if;\r\n  perform onestep_private.award(p_user,d,'reflection');\r\n  perform onestep_private.sync_growth(p_user);\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "service_role=X/postgres"
+      ],
+      "hash": "60b4cf95855a16195af8e23f5e5a4ef1",
+      "owner": "postgres",
+      "signature": "onestep_commit_activity(uuid,text,text)",
+      "definition": "CREATE OR REPLACE FUNCTION public.onestep_commit_activity(p_user uuid, p_action text, p_care text DEFAULT NULL::text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\ndeclare d date; current_stage text;\r\nbegin\r\n  perform onestep_private.ensure_garden(p_user);\r\n  d := onestep_private.today(p_user);\r\n  select stage into current_stage from public.onestep_daily_records where user_id = p_user and record_date = d;\r\n  if current_stage is null or current_stage = 'checkin' then raise exception 'Complete reflection first'; end if;\r\n  if p_action = 'photo_done' then\r\n    if current_stage = 'photo' then\r\n      update public.onestep_daily_records set stage = 'growth',revision = revision+1,updated_at = now() where user_id = p_user and record_date = d;\r\n    end if;\r\n  elsif p_action = 'growth_done' then\r\n    if current_stage not in ('growth','care') then raise exception 'Complete photo step first'; end if;\r\n    update public.onestep_daily_records set stage = 'care',revision = revision+1,updated_at = now() where user_id = p_user and record_date = d;\r\n    -- Skipping the optional photo or diary still counts as participation.\r\n    perform onestep_private.award(p_user,d,'participation');\r\n  elsif p_action = 'care_done' then\r\n    if current_stage <> 'care' or p_care is null then raise exception 'Care is not available'; end if;\r\n    update public.onestep_daily_cares set completed_at = coalesce(completed_at,now())\r\n      where user_id = p_user and record_date = d and care_id = p_care;\r\n    if not found then raise exception 'Care was not recommended'; end if;\r\n    perform onestep_private.award(p_user,d,'firstCare');\r\n  else raise exception 'Unknown activity'; end if;\r\nend $function$\n",
+      "security_definer": true
+    },
+    {
+      "acl": [
+        "postgres=X/postgres",
+        "anon=X/postgres",
+        "authenticated=X/postgres"
+      ],
+      "hash": "9b924edd91cedffeaf197a94f7dedd9c",
+      "owner": "postgres",
+      "signature": "onestep_private.photo_access(text,text)",
+      "definition": "CREATE OR REPLACE FUNCTION onestep_private.photo_access(path text, operation text)\n RETURNS boolean\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO ''\nAS $function$\r\n  select auth.uid() is not null and exists (\r\n    select 1 from public.onestep_photos p where p.user_id = auth.uid() and p.object_path = path\r\n      and (operation = 'read' or (operation = 'upload' and p.status = 'staged') or (operation = 'delete' and p.status = 'retired'))\r\n  )\r\n$function$\n",
+      "security_definer": true
+    }
+  ],
+  "read_only": "on",
+  "memberships": [
+    {
+      "set": true,
+      "role": "pg_read_all_settings",
+      "admin": false,
+      "member": "pg_monitor",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_read_all_stats",
+      "admin": false,
+      "member": "pg_monitor",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_stat_scan_tables",
+      "admin": false,
+      "member": "pg_monitor",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_read_all_data",
+      "admin": false,
+      "member": "supabase_etl_admin",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_read_all_data",
+      "admin": false,
+      "member": "supabase_read_only_user",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "anon",
+      "admin": false,
+      "member": "authenticator",
+      "grantor": "supabase_admin",
+      "inherit": false
+    },
+    {
+      "set": true,
+      "role": "authenticated",
+      "admin": false,
+      "member": "authenticator",
+      "grantor": "supabase_admin",
+      "inherit": false
+    },
+    {
+      "set": true,
+      "role": "service_role",
+      "admin": false,
+      "member": "authenticator",
+      "grantor": "supabase_admin",
+      "inherit": false
+    },
+    {
+      "set": true,
+      "role": "authenticator",
+      "admin": false,
+      "member": "supabase_storage_admin",
+      "grantor": "supabase_admin",
+      "inherit": false
+    },
+    {
+      "set": true,
+      "role": "anon",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "authenticated",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "service_role",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "authenticator",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_monitor",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_read_all_data",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_signal_backend",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_monitor",
+      "admin": false,
+      "member": "supabase_etl_admin",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_monitor",
+      "admin": false,
+      "member": "supabase_read_only_user",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "pg_create_subscription",
+      "admin": true,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "supabase_privileged_role",
+      "admin": false,
+      "member": "postgres",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "supabase_privileged_role",
+      "admin": false,
+      "member": "supabase_etl_admin",
+      "grantor": "supabase_admin",
+      "inherit": true
+    },
+    {
+      "set": true,
+      "role": "anon",
+      "admin": false,
+      "member": "supabase_realtime_admin",
+      "grantor": "supabase_admin",
+      "inherit": false
+    },
+    {
+      "set": true,
+      "role": "authenticated",
+      "admin": false,
+      "member": "supabase_realtime_admin",
+      "grantor": "supabase_admin",
+      "inherit": false
+    },
+    {
+      "set": true,
+      "role": "service_role",
+      "admin": false,
+      "member": "supabase_realtime_admin",
+      "grantor": "supabase_admin",
+      "inherit": false
+    }
+  ],
+  "observed_at": "2026-11-13T13:22:47.891711+00:00"
+}

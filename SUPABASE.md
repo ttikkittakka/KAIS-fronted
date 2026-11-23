@@ -92,7 +92,7 @@ npm run build
 기록은 각각 원래 저장 위치에 남습니다.
 
 `auth-client.ts`는 브라우저에서만 생성하는 singleton입니다. Supabase SDK가
-프로젝트 호스트별 키 `little-garden.supabase-auth.v2.<host>` 및 해당 PKCE 보조 키에 인증 세션을 관리합니다.
+Supabase SDK의 프로젝트별 저장소 키와 해당 PKCE 보조 키에 인증 세션을 관리합니다.
 기존 정원 키·사진 DB는 변경하지 않습니다. 비밀번호는 폼과 인증 요청에서만 사용하고
 앱 저장소에 기록하지 않습니다. Supabase의 토큰 저장과 자동 갱신을 사용합니다.
 로그아웃은 `scope: local`로 현재 브라우저 세션을 종료하고 같은 세션을 공유하는 탭에도
@@ -158,13 +158,15 @@ npm run build
 ## Vercel 배포
 
 1. Vercel의 **Add New → Project**에서 GitHub 저장소 `ttikkittakka/KAIS-fronted`를 Import합니다. Root Directory는 **저장소 루트**(`.`)를 선택합니다. 루트 `vercel.json`의 Services에서 Next.js `app`과 Hono `backend`를 빌드합니다.
-2. **Settings → Environments → Production → Branch Tracking**에서 `feature/garden-companion-support`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터, 전시 판넬과 `mobile/`의 Expo 앱이 있습니다.
+2. **Settings → Environments → Production → Branch Tracking**에서 `onestepui`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터, 전시 판넬과 `mobile/`의 Expo 앱이 있습니다.
 3. Vercel 환경 변수에 위의 프로젝트 URL과 같은 프로젝트의 공개 키를 등록하고 다시 배포합니다. 배포 도메인이 정해지면 Supabase Auth의 Site URL과 인증·재설정 Redirect URLs를 그 HTTPS 주소로 등록합니다.
 4. 휴대폰에서 `https://<배포 주소>/demo`를 열어 체험합니다. Expo 앱을 배포 웹앱에 연결하려면 `mobile/.env`의 `EXPO_PUBLIC_GARDEN_WEB_URL`에 같은 주소를 넣습니다. [Expo 실행 안내](mobile/README.md)
 
 2026-11-23에 프로젝트 `yhzgucbiwvizjxpzwpqg`의 기존 정원 스키마를 확인한 뒤, 미적용 카탈로그·지원 신청·옷장·보호자 마이그레이션 네 개를 적용했습니다. 초기 정원 스키마는 이미 설치되어 있습니다. 마이그레이션 이력이 없는 초기 SQL을 적용할 때는 기존 스키마와 이력을 먼저 대조하세요.
 
-`app`이 `/` 아래 공개 경로를 담당합니다. `/api/v1/health`, `/api/v1/explain`, `/api/v1/benefits`는 Next.js Route Handler에서 Hono로 전달됩니다. Vercel이 호출 서비스에 `GARDEN_BACKEND_URL`을 자동 주입합니다. Vercel 환경 변수에는 Supabase 등 실제 제공자 설정을 넣으세요. 로컬에서 두 서비스를 함께 확인하려면 저장소 루트에서 `vercel dev -L`을 실행합니다.
+`app`이 `/` 아래 공개 경로를 담당합니다. `/api/v1/health`, `/api/v1/explain`, `/api/v1/benefits`는 Next.js Route Handler에서 Hono로 전달됩니다. Vercel이 호출 서비스에 `GARDEN_BACKEND_URL`을 자동 주입합니다. Vercel 환경 변수에는 Supabase 등 실제 제공자 설정을 넣으세요. 로컬에서 두 서비스를 함께 확인하려면 저장소 루트에서 `vercel dev --local`을 실행합니다.
+
+기존 계정 서버 설정(`ONESTEP_DB_HOST`)이 있는 배포는 서버 저장 화면을 엽니다. Supabase Auth 설정으로 시작하는 배포는 로그인 후 계정별 기기 저장을 사용하는 나무 정원을 엽니다.
 
 [Vercel Services](https://vercel.com/kb/guide/vercel-services) · [Supabase URL 설정](https://supabase.com/docs/guides/auth/redirect-urls)
 

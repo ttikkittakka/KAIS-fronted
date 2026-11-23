@@ -16,7 +16,7 @@ npm run typecheck
 
 프런트의 `/api/v1/*` Route Handler가 Hono의 `/v1/health`, `/v1/explain`, `/v1/benefits`를 호출합니다. Vercel에서는 `app`에 주입되는 `GARDEN_BACKEND_URL`을 사용합니다. 각각 따로 실행하는 로컬 개발에서는 기본값인 `http://localhost:8787` 또는 프런트의 `BACKEND_URL`을 사용합니다.
 
-Vercel 로컬 검증은 저장소 루트에서 `vercel dev -L`로 실행합니다. Hono는 `src/app.ts`의 기본 내보내기를 사용하고, `src/server.ts`는 기존 단독 실행 명령을 지원합니다. [Vercel Services 안내](https://vercel.com/kb/guide/vercel-services)
+Vercel 로컬 검증은 저장소 루트에서 `vercel dev --local`로 실행합니다. Hono는 `src/app.ts`의 기본 내보내기를 사용하고, `src/server.ts`는 기존 단독 실행 명령을 지원합니다. [Vercel Services 안내](https://vercel.com/kb/guide/vercel-services)
 백엔드가 꺼져 있어도 프런트는 고정 문구로 동작합니다.
 
 ## API

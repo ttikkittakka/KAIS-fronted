@@ -18,6 +18,57 @@ async function database() {
 }
 const bad = rows => rows.filter(r => ['FAIL', 'MISSING'].includes(r.status));
 
+test('004 review evidence distinguishes line endings from body changes and keeps every original REVIEW', async () => {
+  const db = await database();
+  const evidenceSql = read('supabase/tests/garden_004_review_evidence.sql');
+  const local = JSON.parse(evidenceSql.split('$local_definitions$')[1]);
+  const comparisons = rows => rows.filter(r => r.section === 'function_comparison');
+  const inspect = async () => {
+    await db.exec('begin read only');
+    const result = await db.exec(evidenceSql);
+    assert.equal(result.length, 1);
+    await db.exec('rollback');
+    return result[0].rows;
+  };
+  try {
+    await db.exec(migration);
+    let rows = await inspect();
+    assert.equal(comparisons(rows).length, 4);
+    assert.ok(comparisons(rows).every(r => r.status === 'PASS' && r.details.body_comparison === 'EXACT'));
+    // Simulate SQL Editor normalizing CRLF to LF; only disposable local functions change.
+    for (const fn of local) {
+      const alternate = fn.body.includes('\r\n')
+        ? fn.definition.replaceAll('\r\n', '\n')
+        : fn.definition.replaceAll('\n', '\r\n');
+      await db.exec(alternate);
+    }
+    rows = await inspect();
+    assert.ok(comparisons(rows).every(r => r.status === 'PASS' && r.details.body_comparison === 'LINE_ENDINGS_ONLY'));
+    assert.equal(rows.filter(r => r.section === 'original_audit' && r.kind === 'function' && r.status === 'REVIEW').length, 4);
+    const helper = local.find(f => f.name === 'photo_access');
+    await db.exec(helper.definition.replace("p.status = 'staged'", "p.status = 'retired'"));
+    rows = await inspect();
+    const changed = comparisons(rows).find(r => r.object_name.includes('photo_access'));
+    assert.equal(changed.status, 'REVIEW');
+    assert.equal(changed.details.body_comparison, 'BODY_REVIEW_REQUIRED');
+    assert.ok(changed.details.different_lines_after_lf_normalization.length > 0);
+    // Whitespace INSIDE a literal is not harmless formatting and must not be stripped.
+    await db.exec(helper.definition.replace("operation = 'read'", "operation = 're ad'"));
+    assert.equal(comparisons(await inspect()).find(r => r.object_name.includes('photo_access')).details.body_comparison, 'BODY_REVIEW_REQUIRED');
+    await db.exec(helper.definition);
+    await db.exec('alter function onestep_private.photo_access(text,text) security invoker');
+    assert.equal(comparisons(await inspect()).find(r => r.object_name.includes('photo_access')).status, 'FAIL');
+    await db.exec(helper.definition);
+    await db.exec('create policy external_restriction on storage.objects as restrictive for select to authenticated using(false)');
+    rows = await inspect();
+    const original = (await db.query(audit('verify'))).rows.filter(r => r.status === 'REVIEW');
+    const inventory = rows.find(r => r.section === 'review_inventory').details;
+    assert.equal(inventory.status_counts.REVIEW, original.length);
+    assert.deepEqual(inventory.all_reviews.map(r => r.object_name).sort(), original.map(r => r.object_name).sort());
+    assert.ok(inventory.all_reviews.some(r => r.object_name.endsWith(':external_restriction')));
+  } finally { await db.close(); }
+});
+
 test('004 audits are single read-only SELECTs; detect collisions, drift, missing policies and foreign restrictive policies', async () => {
   const db = await database();
   try {

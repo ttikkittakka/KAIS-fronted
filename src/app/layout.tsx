@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./fonts.css";
-import AppEntry from "./components/AppEntry";
+import AppSessionBoundary from "./components/AppSessionBoundary";
 import "@astryxdesign/core/astryx.css";
 import "@astryxdesign/theme-matcha/theme.css";
 import "leaflet/dist/leaflet.css";
@@ -26,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="ko"
       className="h-full antialiased"
     >
-      <body className="min-h-full flex flex-col" data-astryx-theme="matcha"><AppEntry>{children}</AppEntry></body>
+      <body className="min-h-full flex flex-col" data-astryx-theme="matcha"><AppSessionBoundary serverAccount={!!process.env.ONESTEP_DB_HOST}>{children}</AppSessionBoundary></body>
     </html>
   );
 }

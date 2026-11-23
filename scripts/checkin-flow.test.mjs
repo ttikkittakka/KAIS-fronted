@@ -8,9 +8,10 @@ import { loadTs } from './helpers/load-ts.mjs';
 const daily = loadTs(new URL('../src/app/daily-checkin.ts', import.meta.url));
 const { recommendCares } = loadTs(new URL('../src/app/recommend-cares.ts', import.meta.url));
 
-const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), {
-  compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX }
-}).outputText + '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen; exports.BottomNav = BottomNav;';
+const compilerOptions = { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX };
+const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), { compilerOptions }).outputText +
+  '\nexports.CheckinScreen = CheckinScreen; exports.CareScreen = CareScreen; exports.HomeScreen = HomeScreen; exports.BottomNav = BottomNav;';
+const accountCompiled = ts.transpileModule(readFileSync(new URL('../src/app/components/OneStepScreens.tsx', import.meta.url), 'utf8'), { compilerOptions }).outputText;
 // The home is only the friend now; balances and rewards are read from the same shop store the page uses.
 const shopNow = () => loadTs(new URL('../src/app/shop-store.ts', import.meta.url)).shopSnapshot();
 const saved = { version: 1, date: daily.localDay(), answers: ['괜찮게 잤어요', '보통', '든든하게 먹었어요', '잔잔해요'], note: '기존 기록', plantState: 'normal', completedCareIds: ['water'] };
@@ -34,13 +35,18 @@ function mount(raw = null, hash = '', component = 'default', props = {}, legacyC
   };
   const jsx = (type, props) => ({ type, props });
   const exports = {};
-  runInNewContext(compiled, { exports, URL, crypto: { randomUUID: () => 'test-owner' }, localStorage: storage, window,
+  const account = component.startsWith('Account');
+  runInNewContext(account ? accountCompiled : compiled, { exports, URL, crypto: { randomUUID: () => 'test-owner' }, localStorage: storage, window,
     document: { visibilityState: 'visible', addEventListener: window.addEventListener, removeEventListener() {} },
     queueMicrotask: fn => tasks.push(fn), clearInterval() {},
     setTimeout: fn => { tasks.push(fn); return 1; }, clearTimeout() {},
     require(name) {
       if (name === 'react') return react;
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
+      if (name === './CareTimer') return { default: function CareTimer() {} };
+      if (name.endsWith('.css')) return { default: { active: 'timer-active' } };
+      if (account && name.startsWith('./')) name = './components/' + name.slice(2);
+      if (account && name.startsWith('../')) return loadTs(new URL(`../src/app/components/${name}.ts`, import.meta.url));
       if (name === './components/DeveloperSettings') return { SettingsScreen: function SettingsScreen() {}, DeveloperSettings: function DeveloperSettings() {} };
       if (name === './components/GrowthRewards') return { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} };
       if (name === './components/RecordScreens') return { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} };
@@ -51,7 +57,7 @@ function mount(raw = null, hash = '', component = 'default', props = {}, legacyC
       return name === './app-storage' && legacyCare ? { ...module, dataScope: () => 'test' } : module;
     }
   });
-  function render() { cursor = 0; const tree = exports[component](props); first = false; return tree; }
+  function render() { cursor = 0; const tree = exports[account ? component.slice(7) : component](props); first = false; return tree; }
   function find(node, name) {
     if (!node || typeof node !== 'object') return null;
     if (node.type?.name === name || node.props?.role === name) return node;
@@ -131,15 +137,16 @@ test('care cards open details before the two-step completion action', () => {
   ]) {
     const completed = [];
     const recommendation = recommendCares(answers, { date: '2026-10-08' });
-    const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
+    const app = mount(null, '', 'AccountCareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
     assert.deepEqual(nodes(app.tree(), node => node.type === 'h3').map(textContent), recommendation.cares.map(care => care.title));
-    const cardButton = nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1);
+    const cardButton = nodes(app.tree(), node => node.type === 'article')[0].props.children.find(child => child?.type === 'button');
     cardButton.props.onClick();
     assert.match(textContent(app.tree()), /해볼게요/);
     const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
     action().props.onClick(); assert.equal(completed.length, 0);
-    assert.equal(textContent(action()), '완료했어요');
-    action().props.onClick(); assert.equal(completed.length, 1);
+    const timer = nodes(app.tree(), node => node.type?.name === 'CareTimer')[0];
+    assert.equal(timer.props.minutes, recommendation.cares[0].minutes);
+    timer.props.onComplete(); assert.equal(completed.length, 1);
   }
 });
 
@@ -178,19 +185,15 @@ test('today links open the journal, and completed check-in returns to its live m
   assert.deepEqual(JSON.parse(app.raw()).completedMissionIds, ['water-sip']);
 });
 
-test('completed care remains reviewable without another completion action', () => {
+test('completed care shows a check without selection or another completion action', () => {
   const recommendation = recommendCares(['very_low', 'very_low', 'very_low', 'very_low'], { date: '2026-10-08' });
   const id = recommendation.cares[0].id;
   let completedAgain = false;
-  const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [id], onComplete() { completedAgain = true; }, onShowList() {}, goHome() {} });
+  const app = mount(null, '', 'AccountCareScreen', { state: 'normal', recommendation, completed: null, completedIds: [id], onComplete() { completedAgain = true; }, onShowList() {}, goHome() {} });
   const card = nodes(app.tree(), node => node.type === 'article')[0];
   assert.match(textContent(card), /완료했어요/);
-  card.props.children.at(-1).props.onClick();
-  assert.match(textContent(app.tree()), /완료했어요/);
-  assert.doesNotMatch(textContent(app.tree()), /해볼게요/);
-  const buttons = nodes(app.tree(), node => node.type === 'button');
-  assert.deepEqual(buttons.map(textContent), ['목록으로 돌아가기']);
-  buttons[0].props.onClick();
+  assert.equal(nodes(card, node => node.type === 'button').length, 0);
+  assert.equal(nodes(card, node => node.props?.['aria-label'] === '완료한 돌봄').length, 1);
   assert.equal(completedAgain, false);
   assert.equal(nodes(app.tree(), node => node.type === 'article').length, 3);
 });
@@ -336,12 +339,12 @@ test('all 30 active mission details render instructions, optional examples and h
   for (const care of ACTIVE_CARES) {
     const completed = [];
     const recommendation = { title: '작은 돌봄', cares: [care, ...ACTIVE_CARES.filter(other => other.id !== care.id).slice(0, 2)] };
-    const app = mount(null, '', 'CareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
-    nodes(app.tree(), node => node.type === 'article')[0].props.children.at(-1).props.onClick();
+    const app = mount(null, '', 'AccountCareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
+    nodes(app.tree(), node => node.type === 'article')[0].props.children.find(child => child?.type === 'button').props.onClick();
     const content = textContent(app.tree());
     for (const value of [care.title, care.instruction, care.helper, care.meta, ...(care.example ? [care.example] : [])]) assert.ok(content.includes(value), care.id + ': ' + value);
     const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
-    action().props.onClick(); assert.equal(completed.length, 0); action().props.onClick(); assert.deepEqual(completed, [care.id]);
+    action().props.onClick(); assert.equal(completed.length, 0); nodes(app.tree(), node => node.type?.name === 'CareTimer')[0].props.onComplete(); assert.deepEqual(completed, [care.id]);
   }
 });
 
@@ -435,4 +438,16 @@ test('page settings switch dataset immediately and restore test commerce without
     app.screen('DeveloperSettings').props.onOpen('home'); assert.equal(shopNow().balance,0); assert.deepEqual(app.screen('HomeScreen').props.shop.placed,['default-sky']);
     app.screen('HomeScreen').props.go('developer'); await app.screen('DeveloperSettings').props.onToggle(true, '0728'); app.screen('DeveloperSettings').props.onOpen('home'); assert.equal(shopNow().balance,850); assert.equal(app.screen('HomeScreen').props.shop.layout['friend-left'],'momo');
   } finally { globalThis.fetch = oldFetch; if (oldEnv === undefined) delete process.env.NODE_ENV; else process.env.NODE_ENV = oldEnv; }
+});
+
+test('account question preview walks all four questions without drafts or rewards', () => {
+ let calls = 0;
+ const app = mount(null, '', 'AccountCheckinScreen', { readOnly: true, initialRecord: null, onBack() {}, onDraft() { calls++; return true; }, onDone() { calls++; } });
+ for (let i = 0; i < 4; i++) {
+  const choices = nodes(app.tree(), n => n.type === 'button' && n.props?.className === '');
+  for (const choice of choices) { assert.equal(choice.props.disabled, true); choice.props.onClick(); }
+  const next = nodes(app.tree(), n => n.type === 'button' && textContent(n) === '다음 질문 보기')[0];
+  assert.ok(next); next.props.onClick(); app.advanceChoice();
+ }
+ assert.equal(calls, 0);
 });

@@ -13,7 +13,9 @@ export function loadTs(file) {
   const loaded = { exports: {} };
   cache.set(path, loaded);
   const nativeRequire = createRequire(path);
-  const require = name => name.startsWith('.') ? loadTs(resolve(dirname(path), name + '.ts')) : nativeRequire(name);
+  // Next handles this build-time boundary internally. Node tests execute only on the server;
+  // the production build still checks the real server/client import graph.
+  const require = name => name === 'server-only' ? {} : name.startsWith('.') ? loadTs(resolve(dirname(path), name + '.ts')) : nativeRequire(name);
   const compiled = ts.transpileModule(readFileSync(path, 'utf8'), {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;

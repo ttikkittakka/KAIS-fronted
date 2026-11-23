@@ -25,10 +25,11 @@ import { shopItem, type OutfitSlot, type ShopItem } from './shop-catalog';
 
 import { DAILY_KEY, localDay, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
+import type { CareRecommendation } from './recommend-cares';
 import { displayCareRecommendation, ensureCareHistory } from './daily-cares';
 import { cleanupPhotos, emptyRecord, readRecords, recordStorageWarning, RECORDS_KEY, saveRecord } from './record-store';
-import { StepHeader, ReflectionExtras, RecordsCalendar, hasUnsavedDrafts } from './components/RecordScreens';
-import type { CareRecommendation } from './recommend-cares';
+import { ReflectionExtras, RecordsCalendar, StepHeader, hasUnsavedDrafts } from './components/RecordScreens';
+
 import { type SunshineReason } from './sunshine';
 import { GREETING } from './chat';
 import GardenShop from './components/GardenShop';
@@ -398,7 +399,7 @@ export default function HomePage() {
     return () => window.clearTimeout(timer);
   }, [sunshineFeedback?.id]);
 
-  const startCare = (state: PlantState, answers: string[], note: string) => {
+  const startCare = (state: 'low' | 'normal', answers: string[], note: string) => {
     const existing = readToday();
     if (existing?.stage === 'care') { show('care', true, existing); return; }
     const history = records.flatMap(r => r.careRecommendations ?? []);

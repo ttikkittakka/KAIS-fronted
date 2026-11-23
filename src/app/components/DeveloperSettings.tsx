@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { dataScope, deleteAllLocalData, developerToolsAvailable, resetTestData } from '../app-storage';
 import { clearSampleData, grantTestSunshine, readTestControls, seedSampleData, setBondRule, setPurchaseFailure, setUnlimited, simulateActivityDays, UNLIMITED_SUNSHINE, type TestControls } from '../developer-state';
 import { DEFAULT_BOND } from '../companions';
@@ -76,6 +76,13 @@ export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { 
       {error && <p role="alert" className="shop-error">{error}</p>}
     </section>
     {developerToolsAvailable() && scope !== 'demo' && <button type="button" className="settings-menu" onClick={onDeveloper}><strong>개발자 코드 입력</strong><span>{scope === 'test' ? '개발자 버전 사용 중 · 끄면 유저 버전' : '코드를 넣으면 햇살 무제한 · 모두 열림'} <span aria-hidden="true">→</span></span></button>}
+  </div>;
+}
+
+export function AccountSettingsScreen({ onDeveloper, developerEntry, account = false, onRefresh, onLogout }: { onDeveloper?: () => void; developerEntry?: ReactNode; account?: boolean; onRefresh?: () => void; onLogout?: () => void }) {
+  return <div className="settings-content"><section className="settings-card"><h2>나의 정원 설정</h2><p>{account ? '기록과 햇살은 로그인한 계정에 보관돼요. 선택한 사진 미리보기는 저장되지 않아요.' : '기록과 사진은 이 브라우저에 보관돼요.'}</p></section>
+    {account && <><button className="settings-menu" onClick={onRefresh}><strong>기록 새로고침</strong><span aria-hidden="true">→</span></button><button className="settings-menu" onClick={onLogout}><strong>로그아웃</strong><span aria-hidden="true">→</span></button></>}
+    {developerToolsAvailable() && onDeveloper && <><button type="button" className="settings-menu" onClick={onDeveloper}><strong>개발자 테스트</strong><span>격리된 테스트 모드 ON / OFF <span aria-hidden="true">→</span></span></button>{developerEntry}</>}
   </div>;
 }
 export function DeveloperSettings({ enabled, snapshot, dataError, onToggle, onRefresh, onOpen, canReset }: {

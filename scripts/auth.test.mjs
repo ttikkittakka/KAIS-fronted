@@ -102,7 +102,7 @@ test('failed logout retains session and reports failure; missing config fails cl
 
 const source = readFileSync(new URL('../src/app/components/AuthBoundary.tsx', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-function boundary(environment = 'development') {
+function boundary(environment = 'development', serverAccount = true) {
   let snapshot = { phase: 'loading', user: null, busy: false, message: '', error: false, epoch: 0 };
   const slots = []; let cursor = 0; const exports = {}; let unlocks = 0; const scopes = [];
   const submissions = [];
@@ -124,13 +124,15 @@ function boundary(environment = 'development') {
       if (name === '../install-phone') return loadTs(new URL('../src/app/install-phone.ts', import.meta.url));
       if (name === '../install-intent') return { saveInstallIntent() {}, async sendInstallIntent() { return null; } };
       if (name === './Companions') return { CompanionArt: props => jsx('tree-mark', props) };
+      if (name === './AccountGarden') return { default: 'account-garden' };
+      if (name === './GardenLoading') return { default: 'GardenLoading' };
       throw Error(name);
     },
   });
   const child = { legacyPrivateRecords: 'SENTINEL_NEVER_SHOW' };
   return {
     update(value) { snapshot = { ...snapshot, ...value }; },
-    render() { cursor = 0; return exports.default({ children: child }); },
+    render() { cursor = 0; return exports.default({ children: child, serverAccount }); },
     unlocks: () => unlocks,
     scope: () => scopes.at(-1),
     submissions,
@@ -145,7 +147,7 @@ function find(node, predicate) {
 
 const A = '00000000-0000-4000-8000-00000000000a', B = '00000000-0000-4000-8000-00000000000b';
 test('user version: a signed-in account opens its own account-scoped garden; it stays during a logout attempt and closes after', () => {
-  const app = boundary('production');
+  const app = boundary('production', false);
   app.update({ phase: 'signed-in', user: { id: A, email: 'A@example.test' } });
   assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   assert.equal(app.scope(), A);
@@ -156,8 +158,34 @@ test('user version: a signed-in account opens its own account-scoped garden; it 
   assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   assert.equal(app.scope(), null);
 });
-test('auth boundary shows a garden only to a signed-in account or the developer PIN, never while loading, recovering or signed out', async () => {
-  const app = boundary();
+
+test('connected screen mounts only the keyed account garden and preserves logout errors', () => {
+  const app = boundary('production');
+  app.update({ phase: 'signed-in', user: { id: 'A', email: 'A@example.test' } });
+  const screen = app.render();
+  assert.equal(screen.type, 'account-garden');
+  assert.equal(screen.props.userId, 'A');
+  assert.doesNotMatch(JSON.stringify(screen), /SENTINEL_NEVER_SHOW|나의 정원으로 가기/);
+  assert.equal(find(screen, n => n.type === 'button' && n.props.className === 'primary-button'), null);
+  screen.props.onLogout();
+  assert.deepEqual(app.submissions, [['logout']]);
+  app.update({ busy: true, error: true, message: '로그아웃을 다시 시도해 주세요.' });
+  const busyScreen = app.render();
+  assert.equal(find(busyScreen, n => n.type === 'button' && n.props.className === 'auth-secondary').props.disabled, true);
+  assert.ok(find(busyScreen, n => n.props?.role === 'alert'));
+});
+
+test('same-user token refresh retains the account subtree identity; switching user replaces it', () => {
+  const app = boundary('production');
+  app.update({ phase: 'signed-in', user: { id: 'A' }, epoch: 1 });
+  const initial = app.render();
+  app.update({ epoch: 2 });
+  assert.equal(app.render().props.userId, initial.props.userId);
+  app.update({ user: { id: 'B' }, epoch: 3 });
+  assert.equal(app.render().props.userId, 'B');
+});
+test('actual auth boundary hides local readers during loading, logout, recovery, A/B and production', async () => {
+  const app = boundary('development', false);
   for (const phase of ['loading', 'signed-out', 'unavailable', 'recovery']) {
     for (const id of [A, B]) {
       app.update({ phase, user: phase === 'recovery' ? { id, email: `${id}@example.test` } : null });
@@ -194,7 +222,28 @@ test('auth modules never import garden stores or manually persist credentials; l
     assert.doesNotMatch(text, /localStorage\.|indexedDB\.|record-store|shop-store|console\./);
   }
   const layout = readFileSync(new URL('../src/app/layout.tsx', import.meta.url), 'utf8');
-  const entry = readFileSync(new URL('../src/app/components/AppEntry.tsx', import.meta.url), 'utf8');
-  assert.match(layout, /<AppEntry>/);
-  assert.match(entry, /<AuthBoundary><RecordSessionBoundary>/);
+  assert.match(layout, /<AppSessionBoundary\b/);
+  const wrapper = readFileSync(new URL('../src/app/components/AppSessionBoundary.tsx', import.meta.url), 'utf8');
+  assert.match(wrapper, /<AuthBoundary[^>]*><RecordSessionBoundary>/);
+  assert.match(wrapper, /process\.env\.NODE_ENV === 'development' && \['\/dev\/care-completion', '\/dev\/ai-mind'\]\.includes\(pathname\)/);
+});
+
+test('로그인한 개발자도 PIN 확인 후에만 로컬 앱을 열며 계정 전환 시 닫힌다', async () => {
+  const app = boundary();
+  app.update({ phase: 'signed-in', user: { id: 'fixture-user' }, epoch: 1 });
+  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  app.render().props.onDeveloper();
+  const form = app.render().props.developerEntry;
+  assert.equal(form.type, 'form');
+  await form.props.onSubmit({ preventDefault() {}, currentTarget: { reset() {} } });
+  assert.equal(app.unlocks(), 1);
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.deepEqual(app.submissions, []);
+  app.update({ user: { id: 'different-fixture-user' }, epoch: 2 });
+  assert.equal(app.render().type, 'account-garden');
+  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  const prod = boundary('production');
+  prod.update({ phase: 'signed-in', user: { id: 'fixture-user' } });
+  assert.equal(prod.render().props.onDeveloper, undefined);
+  assert.equal(prod.render().props.developerEntry, undefined);
 });

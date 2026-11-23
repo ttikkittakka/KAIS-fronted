@@ -1,0 +1,20 @@
+/* Home only. The existing sibling tab bar already reserves 72px plus its safe-area margin. */
+.phone-frame > .home-screen:has(> .home-scroll-content) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 0;
+}
+.home-screen > .home-scroll-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  scroll-padding-block: 12px;
+}
+.home-screen > .home-progress-actions {
+  flex: 0 0 auto;
+  padding-block: 12px;
+}

@@ -13,8 +13,8 @@ export function GrowthProgress({ snapshot, onOpen }: { snapshot: Snapshot | null
     <strong>누적 활동 {snapshot?.activeDays ?? '—'}일 <span aria-hidden="true">→</span></strong>
   </button>;
 }
-export function GrowthRewardsScreen({ snapshot, error, onRetry, onChange, onPlace, onExtra }: {
-  snapshot: Snapshot | null; error: string; onRetry: () => void; onChange: (next: Snapshot) => void; onPlace: (id: string) => void; onExtra: () => void;
+export function GrowthRewardsScreen({ snapshot, error, onRetry, onChange, onPlace, onExtra, readOnly = false }: {
+  readOnly?: boolean; snapshot: Snapshot | null; error: string; onRetry: () => void; onChange: (next: Snapshot) => void; onPlace: (id: string) => void; onExtra: () => void;
 }) {
   const [saveError, setSaveError] = useState('');
   return <div className="growth-content">
@@ -28,12 +28,12 @@ export function GrowthRewardsScreen({ snapshot, error, onRetry, onChange, onPlac
         <p className="eyebrow">누적 {milestone.days}일 · {grant ? '선물 지급 완료' : remaining === 0 && snapshot ? '지급 대기' : '함께 쌓아 가는 중'}</p>
         <h2 id={milestone.id + '-title'}>{grant ? milestone.title : milestone.days + '일의 작은 선물'}</h2>
         <p>{grant ? milestone.description : '서두르지 않아도 괜찮아요. ' + remaining + '일의 돌봄이 더 쌓이면 만날 수 있어요.'}</p>
-        <ul className="growth-gifts">{milestone.itemIds.map(id => { const item = shopItem(id)!; return <li key={id}><span className="growth-gift-art"><ItemArt item={item}/></span><div><strong>{item.name}</strong><small>기념 선물</small></div>{grant && <button type="button" className="shop-secondary" onClick={() => onPlace(id)}>정원에 배치하기</button>}</li>; })}</ul>
-        {grant && !grant.seenAt && <button type="button" className="shop-secondary" onClick={() => { try { onChange(acknowledgeGrowthReward(grant.id)); setSaveError(''); } catch (cause) { setSaveError(cause instanceof Error ? cause.message : '확인 상태를 저장하지 못했어요.'); } }}>선물 확인했어요</button>}
+        <ul className="growth-gifts">{milestone.itemIds.map(id => { const item = shopItem(id)!; return <li key={id}><span className="growth-gift-art"><ItemArt item={item}/></span><div><strong>{item.name}</strong><small>기념 선물</small></div>{grant && <button type="button" className="shop-secondary" disabled={readOnly} onClick={() => onPlace(id)}>정원에 배치하기</button>}</li>; })}</ul>
+        {!readOnly && grant && !grant.seenAt && <button type="button" className="shop-secondary" onClick={() => { try { onChange(acknowledgeGrowthReward(grant.id)); setSaveError(''); } catch (cause) { setSaveError(cause instanceof Error ? cause.message : '확인 상태를 저장하지 못했어요.'); } }}>선물 확인했어요</button>}
         {milestone.id === 'days-100' && grant && <div className="growth-extra"><p>기본 돌봄 3개는 그대로예요. 마음이 내킬 때만 추가 공간에 들러도 좋아요.</p><button type="button" className="shop-secondary" onClick={onExtra}>선택형 돌봄 둘러보기</button></div>}
       </section>;
     })}
-    <p className="shop-storage-note">활동일은 오늘의 나 응답 4개 또는 기본 돌봄을 완료한 날짜로 세어요. 하루 여러 활동도 1일이며, 작성 중인 기록과 미래 날짜는 제외해요. 기록 당시 기기 현지 날짜를 유지해요. 기존 기록도 같은 기준으로 포함해요.</p>
+    <p className="shop-storage-note">활동일은 오늘의 나 응답 4개 또는 기본 돌봄을 완료한 날짜로 세어요. 하루 여러 활동도 1일이며, 작성 중인 기록과 미래 날짜는 제외해요. {readOnly ? '계정 기록은 서버의 서울 날짜를 기준으로 조회해요. 보상 변경은 준비 중이에요.' : '기록 당시 기기 현지 날짜를 유지해요. 기존 기록도 같은 기준으로 포함해요.'}</p>
   </div>;
 }
 export function OptionalCareScreen({ snapshot, onHome }: { snapshot: Snapshot | null; onHome: () => void }) {

@@ -12,6 +12,8 @@ export default function RivePlant({
   const [error, setError] = useState(false);
   const [renderedRive, setRenderedRive] = useState<Rive | null>(null);
   const touch = useRef<() => void>(() => {});
+  const gesture = useRef<{ id: number; x: number; y: number; accepted: boolean } | null>(null);
+  const probe = useRef<CanvasRenderingContext2D | null>(null);
   const previousState = useRef(state);
   const previousCelebrate = useRef(celebrate);
   const { rive, canvas, RiveComponent } = useRive({
@@ -22,6 +24,32 @@ export default function RivePlant({
   });
 
   const ready = !!rive && renderedRive === rive && !error;
+
+  // Sample the rendered silhouette, not the artboard's transparent rectangle.
+  // CSS coordinates are converted to backing pixels (including devicePixelRatio).
+  const hitsPlant = (x: number, y: number) => {
+    if (!ready || !canvas) return false;
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height || x < rect.left || y < rect.top || x >= rect.right || y >= rect.bottom) return false;
+    try {
+      if (!probe.current) {
+        const pixel = document.createElement('canvas');
+        pixel.width = pixel.height = 1;
+        probe.current = pixel.getContext('2d', { willReadFrequently: true });
+      }
+      const context = probe.current;
+      if (!context) return false;
+      context.clearRect(0, 0, 1, 1);
+      context.drawImage(canvas, Math.floor((x - rect.left) * canvas.width / rect.width), Math.floor((y - rect.top) * canvas.height / rect.height), 1, 1, 0, 0, 1, 1);
+      return context.getImageData(0, 0, 1, 1).data[3] >= 32;
+    } catch { return false; } // Unreadable frames never broaden the hit target.
+  };
+
+  useEffect(() => {
+    const cancel = () => { gesture.current = null; };
+    window.addEventListener('scroll', cancel, true);
+    return () => window.removeEventListener('scroll', cancel, true);
+  }, []);
 
   useEffect(() => {
     if (!rive || !canvas) return;
@@ -104,7 +132,27 @@ export default function RivePlant({
 
   return <button type="button" className={plantClassName} aria-label={label}
     disabled={!ready} aria-busy={!ready && !error}
-    onClick={() => touch.current()} style={{ background: 'transparent', padding: 0 }}>
+    onPointerDown={event => {
+      gesture.current = event.isPrimary && event.button === 0 && hitsPlant(event.clientX, event.clientY)
+        ? { id: event.pointerId, x: event.clientX, y: event.clientY, accepted: false } : null;
+    }}
+    onPointerMove={event => {
+      const start = gesture.current;
+      if (start && (start.id !== event.pointerId || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8)) gesture.current = null;
+    }}
+    onPointerUp={event => {
+      const start = gesture.current;
+      if (start) start.accepted = start.id === event.pointerId && Math.hypot(event.clientX - start.x, event.clientY - start.y) <= 8 && hitsPlant(event.clientX, event.clientY);
+    }}
+    onPointerCancel={() => { gesture.current = null; }}
+    // Touch browsers emit pointerleave after pointerup, before their click.
+    // Keep only an already validated release for that single compatibility click.
+    onPointerLeave={() => { if (!gesture.current?.accepted) gesture.current = null; }}
+    onClick={event => {
+      const accepted = gesture.current?.accepted;
+      gesture.current = null;
+      if (event.detail === 0 || accepted) touch.current();
+    }} style={{ background: 'transparent', padding: 0 }}>
     {content}
   </button>;
 }

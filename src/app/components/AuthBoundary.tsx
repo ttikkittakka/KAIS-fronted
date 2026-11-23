@@ -8,6 +8,8 @@ import { SAFETY_CONTACTS } from '../safety';
 import { koreanMobile } from '../install-phone';
 import { saveInstallIntent, sendInstallIntent } from '../install-intent';
 import { CompanionArt } from './Companions';
+import AccountGarden from './AccountGarden';
+import GardenLoading from './GardenLoading';
 
 function clearAuthRedirect() {
   const url = new URL(window.location.href);
@@ -15,7 +17,8 @@ function clearAuthRedirect() {
   window.history.replaceState(window.history.state, '', url);
 }
 
-export default function AuthBoundary({ children }: { children: ReactNode }) {
+export default function AuthBoundary({ children, serverAccount = false }: { children: ReactNode; serverAccount?: boolean }) {
+  const developer = serverAccount ? process.env.NODE_ENV === 'development' : developerToolsAvailable();
   const [store] = useState(createAuthStore);
   const state = useSyncExternalStore(store.subscribe, store.getSnapshot, () => INITIAL_AUTH);
   const [mode, setMode] = useState<'login' | 'signup' | 'reset'>('login');
@@ -117,7 +120,7 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
 
   const unlockDeveloper = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (pinLock.current || state.phase !== 'signed-out' || state.busy) return;
+    if (!developer || pinLock.current || !['signed-out', 'signed-in'].includes(state.phase) || state.busy || state.error) return;
     pinLock.current = true;
     setPinBusy(true); setPinError('');
     const epoch = state.epoch;
@@ -127,26 +130,40 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
     try {
       await setDeveloperMode(true, pin);
       const current = store.getSnapshot();
-      if (current.phase === 'signed-out' && !current.busy && current.epoch === epoch) setDeveloperEpoch(epoch);
+      if (current.phase === state.phase && current.user?.id === state.user?.id && !current.busy && !current.error && current.epoch === epoch) {
+        setDeveloperEpoch(epoch); setPinOpen(false);
+      } else {
+        // 인증 상태가 바뀐 동안 도착한 PIN 응답으로 로컬 모드를 열지 않아요.
+        await setDeveloperMode(false);
+      }
     } catch { setPinError('개발용 PIN을 확인하지 못했어요. PIN과 개발 서버 설정을 확인해 주세요.'); }
     finally { pinLock.current = false; setPinBusy(false); }
   };
 
-  // User version: a signed-in account gets its own garden on this device (account-scoped storage). The scope is set
-  // during render, before the garden mounts and reads storage; the key remounts the garden when the account changes.
-  // The legacy unscoped device garden is never shown to an account.
   const account = state.phase === 'signed-in' ? state.user : null;
   setAccountScope(account?.id ?? null);
-  if (account) return <Fragment key={account.id}>{smsStatus && <div className="install-toast" role="status"><span>{smsStatus}</span><a href="/install">설치 안내</a><button type="button" aria-label="안내 닫기" onClick={() => setSmsStatus('')}>×</button></div>}{children}</Fragment>;
-  // Developer version: the PIN opens the isolated test garden without an account.
-  if (developerToolsAvailable() && state.phase === 'signed-out' && !state.busy && developerEpoch === state.epoch) {
-    return <><aside className="auth-dev-banner">개발자 버전 · 테스트 정원 · Supabase 계정과 연결되지 않아요. <button onClick={() => window.location.reload()}>테스트 나가기</button></aside>{children}</>;
+  // Distinct mounts keep device data and account server data in their own scopes.
+  if (developer && ['signed-out', 'signed-in'].includes(state.phase) && !state.busy && !state.error && developerEpoch === state.epoch) {
+    return <div className="auth-local-mode"><aside className="auth-dev-banner">개발용 로컬 정원 · Supabase 계정과 연결되지 않아요. <button onClick={() => window.location.reload()}>테스트 나가기</button></aside>{children}</div>;
   }
 
   const loading = state.phase === 'loading';
   const signedIn = state.phase === 'signed-in';
   const recovery = state.phase === 'recovery';
   const available = state.phase === 'signed-out' || recovery;
+  const developerEntry = developer && pinOpen ? <form onSubmit={unlockDeveloper} className="auth-form">
+    <p className="auth-help">현재 앱의 로컬 개발자 모드를 열어요. 계정 기록은 가져오지 않으며, 추가한 햇살은 이 브라우저의 테스트 저장소에만 보관돼요.</p>
+    <label>개발용 PIN<input name="pin" type="password" inputMode="numeric" autoComplete="off" pattern="[0-9]{4}" minLength={4} maxLength={4} required disabled={pinBusy || state.busy}/></label>
+    {pinError && <p className="auth-message auth-error" role="alert">{pinError}</p>}
+    <button className="primary-button" disabled={pinBusy || state.busy}>{pinBusy ? '확인 중…' : '개발자 모드 열기'}</button>
+  </form> : undefined;
+  const installNotice = smsStatus && <div className="install-toast" role="status"><span>{smsStatus}</span><a href="/install">설치 안내</a><button type="button" aria-label="안내 닫기" onClick={() => setSmsStatus('')}>×</button></div>;
+  if (account && !serverAccount) return <Fragment key={account.id}>{installNotice}{children}</Fragment>;
+  if (account && !state.busy && !state.error) {
+    const garden = <AccountGarden key={account.id} userId={account.id} onLogout={logout} onDeveloper={developer ? () => { if (!pinLock.current) { setPinError(''); setPinOpen(!pinOpen); } } : undefined} developerEntry={developerEntry}/>;
+    return installNotice ? <>{installNotice}{garden}</> : garden;
+  }
+  if (loading) return <main className="app-shell" ref={panel}><div className="phone-frame"><GardenLoading/></div></main>;
   return <main className="app-shell" ref={panel}>
     <div className="phone-frame">
     <div className="screen auth-screen">
@@ -158,10 +175,11 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
         {!signedIn && <p className="auth-intro">나만의 정원에서 오늘의 나를 돌봐요.</p>}
       </header>
       <div className="auth-body">
-      {loading && <p role="status">로그인 상태를 안전하게 확인하고 있어요.</p>}
-      {state.message && (!signedIn || state.error) && <p className={state.error ? 'auth-message auth-error' : 'auth-message'} role={state.error ? 'alert' : 'status'}>{state.message}</p>}
-      {signedIn && <div className="auth-account" key={state.user?.id}>
-        <span className="auth-connected-label">계정 연결 중</span>
+      {state.message && (!account || state.error) && <p className={state.error ? 'auth-message auth-error' : 'auth-message'} role={state.error ? 'alert' : 'status'}>{state.message}</p>}
+      {account && <div className="auth-account" key={state.user?.id}>
+        <span className="auth-connected-label">계정 연결 완료</span>
+        <h2>반가워요!</h2>
+        <p>이제 나만의 작은 정원을 만나볼까요?</p>
         <p className="auth-email">{state.user?.email}</p>
         <button className="auth-secondary" disabled={state.busy} onClick={logout}>{state.busy ? '로그아웃 중…' : '다른 계정으로 로그인'}</button>
       </div>}

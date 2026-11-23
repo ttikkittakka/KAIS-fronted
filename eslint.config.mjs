@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Ignored local backups, diagnostic builds and browser artifacts are not source files.
+    ".env*/**",
+    ".playwright-results/**",
+    "playwright-report/**",
+    "test-results/**",
     // Prebuilt Rive bundles and a separate downloaded CLI project, not app sources.
     "design-output/rive.js",
     "public/design-preview/rive.js",
