@@ -158,9 +158,9 @@ Supabase SDK의 프로젝트별 저장소 키와 해당 PKCE 보조 키에 인�
 ## Vercel 배포
 
 1. Vercel의 **Add New → Project**에서 GitHub 저장소 `ttikkittakka/KAIS-fronted`를 Import합니다. Root Directory는 **저장소 루트**(`.`)를 선택합니다. 루트 `vercel.json`의 Services에서 Next.js `app`과 Hono `backend`를 빌드합니다.
-2. **Settings → Environments → Production → Branch Tracking**에서 `onestepui`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터, 전시 판넬과 `mobile/`의 Expo 앱이 있습니다.
+2. **Settings → Environments → Production → Branch Tracking**에서 `onestepui`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터와 전시 판넬이 있습니다.
 3. Vercel 환경 변수에 위의 프로젝트 URL과 같은 프로젝트의 공개 키를 등록하고 다시 배포합니다. 배포 도메인이 정해지면 Supabase Auth의 Site URL과 인증·재설정 Redirect URLs를 그 HTTPS 주소로 등록합니다.
-4. 휴대폰에서 `https://<배포 주소>/demo`를 열어 체험합니다. Expo 앱을 배포 웹앱에 연결하려면 `mobile/.env`의 `EXPO_PUBLIC_GARDEN_WEB_URL`에 같은 주소를 넣습니다. [Expo 실행 안내](mobile/README.md)
+4. 휴대폰 브라우저에서 `https://<배포 주소>/demo`를 열어 체험합니다. `/install`에서 웹앱을 바로 열거나 홈 화면에 추가할 수 있습니다.
 
 2026-11-23에 프로젝트 `yhzgucbiwvizjxpzwpqg`의 기존 정원 스키마를 확인한 뒤, 미적용 카탈로그·지원 신청·옷장·보호자 마이그레이션 네 개를 적용했습니다. 초기 정원 스키마는 이미 설치되어 있습니다. 마이그레이션 이력이 없는 초기 SQL을 적용할 때는 기존 스키마와 이력을 먼저 대조하세요.
 
@@ -178,6 +178,8 @@ Vercel에 배포할 때 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PU
 2. AI 후보 조정에는 선택적으로 서버의 `ANTHROPIC_API_KEY`와 `ANTHROPIC_MODEL`을 설정합니다. 로그인한 사용자가 설정에서 동의했을 때만 모델에 답변 범주와 미션 후보 또는 연락 횟수를 보냅니다. 서비스 키가 없거나 응답이 늦으면 정해진 기준으로 고릅니다.
 3. 설치 문자를 켜려면 `GARDEN_PUBLIC_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`, 32자 이상의 임의 `INSTALL_SMS_PEPPER`를 서버에 설정합니다. Twilio 발신 서비스는 운영할 국가의 발송 요건을 충족해야 합니다. 가입자가 선택 동의 후 같은 브라우저에서 이메일 인증을 완료하면 처음 입력한 번호에 배포 도메인의 `/install` 링크를 한 번 요청합니다.
 4. 프로덕션에는 예시 데이터와 실사용자를 분리합니다. 스테이징에서 실제 가입, SMS 수신, 보호자 링크 교차 기기 열람, 철회 후 접근 차단을 확인한 뒤 운영 환경에 연결합니다.
+
+사진 미션의 AI 확인을 사용하려면 서버 환경 변수 `OPENAI_API_KEY`를 설정합니다. 로그인한 사용자가 확인할 사진마다 동의하면 크기를 줄인 JPEG를 Responses API로 전송하고 앱에는 판별 결과만 남깁니다. 약 포장 글자는 브라우저에서 읽습니다. 기기 판별과 직접 기록은 AI 환경 변수 없이도 이용할 수 있습니다.
 
 키와 실제 번호는 저장소에 추가하지 않습니다. 주소록과 개별 연락 기록은 기기에 남고, 실계정 공유에는 사용자가 동의한 상태 선택값만 전송됩니다.
 

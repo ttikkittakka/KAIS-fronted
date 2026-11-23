@@ -29,6 +29,7 @@ const ICONS = {
   drop: <path d="M12 3s6.5 7 6.5 11A6.5 6.5 0 1 1 5.5 14c0-4 6.5-11 6.5-11Z"/>,
   more: <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3.4"/>,
   camera: <><path d="m3 7 5-1 1.5-2h5L16 6l5 1v12H3V7Z"/><circle cx="12" cy="12.5" r="3.5"/></>,
+  upload: <path d="M12 16V4M8 8l4-4 4 4M5 15v5h14v-5"/>,
   note: <><path d="M6 4h12v16H6z"/><path d="M9 8h6m-6 4h6m-6 4h3"/></>,
   edit: <><path d="m4 20 4-1 11-11-3-3L5 16l-1 4Zm10-13 3 3"/></>,
   target: <><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></>,

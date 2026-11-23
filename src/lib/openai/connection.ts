@@ -35,7 +35,10 @@ const responseSchema = z.object({
   })),
 });
 
-type JsonRequest = { instructions: string; input: string; name: string; schema: Record<string, unknown>; maxOutputTokens: number; signal?: AbortSignal };
+type ImageInput = { role: 'user'; content: (
+  { type: 'input_text'; text: string } | { type: 'input_image'; image_url: string; detail: 'low' | 'high' }
+)[] }[];
+type JsonRequest = { instructions: string; input: string | ImageInput; name: string; schema: Record<string, unknown>; maxOutputTokens: number; signal?: AbortSignal };
 export type JsonResponse = ConnectionResult & { attempted: boolean; value?: unknown; usage?: { inputTokens: number; outputTokens: number } };
 
 /** 서버 전용 공통 전송 계층. 고정 모델·목적지, 저장 비활성화, 재시도 없음. */

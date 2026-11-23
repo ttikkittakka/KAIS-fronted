@@ -2,7 +2,7 @@ import type { AnswerValue } from './questions';
 import { isLow, type MoodTag, type Outing } from './wellbeing';
 
 export const RECOVERY_MISSIONS = [
-  { id: 'water-sip', title: '물 한 모금 마시기', detail: '손이 닿는 곳에 물을 두고 한 모금만 마셔요.', minutes: 1, setting: 'inside', icon: 'drop', camera: 'cup' },
+  { id: 'water-sip', title: '물 한 모금 마시기', detail: '물을 담은 컵을 찍거나 마신 뒤 직접 체크해요.', minutes: 1, setting: 'inside', icon: 'drop', camera: 'cup' },
   { id: 'window-30', title: '창가에서 바깥 보기', detail: '가까운 창가에서 눈에 들어오는 색 하나를 찾아요.', minutes: 1, setting: 'inside', icon: 'leaf' },
   { id: 'three-breaths', title: '편하게 숨 세 번 쉬기', detail: '평소 숨 쉬는 속도로 호흡을 세 번 느껴 봐요.', minutes: 1, setting: 'inside', icon: 'breathe' },
   { id: 'stretch-together', title: '두 팔 들어 기지개 켜기', detail: '편한 상태에서 두 팔을 들어 올렸다가 천천히 내려요.', minutes: 1, setting: 'inside', icon: 'wave', camera: 'arms' },
@@ -12,11 +12,15 @@ export const RECOVERY_MISSIONS = [
   { id: 'outdoor-visit', title: '산책할 장소 한 곳 고르기', detail: '지도에서 한 곳을 보고, 마음이 가는 곳만 저장해요.', minutes: 2, setting: 'anywhere', icon: 'map' },
   { id: 'name-good', title: '괜찮았던 순간 하나 떠올리기', detail: '아주 짧은 장면 하나면 충분해요.', minutes: 1, setting: 'inside', icon: 'hug' },
   { id: 'send-hello', title: '생각나는 사람에게 안부 전하기', detail: '한 문장이면 충분해요. 보내는 건 직접 골라요.', minutes: 2, setting: 'anywhere', icon: 'chat' },
+  { id: 'book-page', title: '책 한 페이지 펼치기', detail: '펼친 책이 사진의 가운데에 오게 찍어 봐요.', minutes: 2, setting: 'inside', icon: 'note', camera: 'book' },
+  { id: 'meal-photo', title: '오늘 챙긴 한 끼 찍기', detail: '밥이나 음식이 눈에 잘 보이도록 찍어요.', minutes: 1, setting: 'inside', icon: 'snack', camera: 'meal' },
+  { id: 'music-now', title: '지금 듣는 곡 남기기', detail: '제목과 재생 중 표시를 화면에 담아 올려요.', minutes: 1, setting: 'inside', icon: 'sing', camera: 'music' },
 ] as const;
 export type RecoveryMission = typeof RECOVERY_MISSIONS[number];
 export type RecoveryId = RecoveryMission['id'];
-export type VisionKind = 'arms' | 'cup';
 export const isRecoveryId = (id: unknown): id is RecoveryId => RECOVERY_MISSIONS.some(mission => mission.id === id);
+export const PHOTO_RECOVERY_IDS: RecoveryId[] = RECOVERY_MISSIONS.flatMap(mission =>
+  'camera' in mission && mission.camera !== 'arms' ? [mission.id] : []);
 
 export const DAY_PARTS = ['morning', 'afternoon', 'evening'] as const;
 export const MISSION_PACES = ['any', 'inside', 'outside'] as const;
@@ -48,6 +52,9 @@ export function rankMissions({ answers, tags, outing, part, pace, recent, skippe
     'outdoor-visit': pace === 'outside' ? 10 : 4,
     'name-good': part === 'evening' || gentle ? 10 : 5,
     'send-hello': tags.includes('외로움') && !gentle ? 10 : 3,
+    'book-page': gentle ? 7 : 6,
+    'meal-photo': hasCheckin && isLow(meal) ? 8 : 4,
+    'music-now': isLow(mood) ? 7 : 5,
   };
   const ids = RECOVERY_MISSIONS.filter(mission => !skipped.includes(mission.id) &&
     (mission.setting !== 'near' || (hasCheckin && !gentle && pace !== 'inside' && part !== 'evening')))
