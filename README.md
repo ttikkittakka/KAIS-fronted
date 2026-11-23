@@ -31,9 +31,7 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+저장소 루트의 `vercel.json`에 Next.js `app`과 Hono `backend`를 정의합니다. 공개 경로는 Next.js가 처리하고, Next.js Route Handler가 Hono를 내부 바인딩으로 호출합니다. [배포 설정](SUPABASE.md#vercel-배포)
 
 ## 빠른 실행 (개발 확인용)
 
@@ -76,7 +74,7 @@ AI 돌봄 설명과 공공서비스 조회를 사용하려면 별도 터미널�
 - `/demo`는 로그인 없이 열리는 예시 정원입니다. `/guardian#demo`에서 보호자 열람 화면을 볼 수 있습니다. 체험 화면의 기록은 현재 문서의 메모리에서만 사용합니다.
 - [Expo Go 실행과 빌드](mobile/README.md)에서 카메라·주소록 연동과 QR 출력 방법을 확인합니다.
 - [전시 판넬](design-output/exhibition/README.md)에 120 × 130 cm 인쇄용 시안 1과 시안 3 PDF를 제공합니다.
-- Vercel에서 `ttikkittakka/KAIS-fronted`의 `feature/garden-companion-support` 브랜치를 배포합니다. Framework Preset은 Next.js, Root Directory는 저장소 루트(`.`)입니다. [배포 브랜치와 Supabase 설정](SUPABASE.md#vercel-배포)
+- Vercel에서 `ttikkittakka/KAIS-fronted`의 `feature/garden-companion-support` 브랜치를 Services 프로젝트로 가져옵니다. Root Directory는 저장소 루트(`.`)입니다. [배포 브랜치와 Supabase 설정](SUPABASE.md#vercel-배포)
 
 ## 오늘의 나 기록하기
 

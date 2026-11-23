@@ -157,18 +157,20 @@ npm run build
 공식 인증 흐름: https://supabase.com/docs/guides/auth/passwords
 ## Vercel 배포
 
-1. Vercel의 **Add New → Project**에서 GitHub 저장소 `ttikkittakka/KAIS-fronted`를 Import합니다. Framework Preset은 **Next.js**, Root Directory는 **저장소 루트**(`.`)를 선택합니다.
+1. Vercel의 **Add New → Project**에서 GitHub 저장소 `ttikkittakka/KAIS-fronted`를 Import합니다. Root Directory는 **저장소 루트**(`.`)를 선택합니다. 루트 `vercel.json`의 Services에서 Next.js `app`과 Hono `backend`를 빌드합니다.
 2. **Settings → Environments → Production → Branch Tracking**에서 `feature/garden-companion-support`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터, 전시 판넬과 `mobile/`의 Expo 앱이 있습니다.
 3. Vercel 환경 변수에 위의 프로젝트 URL과 같은 프로젝트의 공개 키를 등록하고 다시 배포합니다. 배포 도메인이 정해지면 Supabase Auth의 Site URL과 인증·재설정 Redirect URLs를 그 HTTPS 주소로 등록합니다.
 4. 휴대폰에서 `https://<배포 주소>/demo`를 열어 체험합니다. Expo 앱을 배포 웹앱에 연결하려면 `mobile/.env`의 `EXPO_PUBLIC_GARDEN_WEB_URL`에 같은 주소를 넣습니다. [Expo 실행 안내](mobile/README.md)
 
 2026-11-23에 프로젝트 `yhzgucbiwvizjxpzwpqg`의 기존 정원 스키마를 확인한 뒤, 미적용 카탈로그·지원 신청·옷장·보호자 마이그레이션 네 개를 적용했습니다. 초기 정원 스키마는 이미 설치되어 있습니다. 마이그레이션 이력이 없는 초기 SQL을 적용할 때는 기존 스키마와 이력을 먼저 대조하세요.
 
-[Vercel Git 배포](https://vercel.com/docs/git) · [Supabase URL 설정](https://supabase.com/docs/guides/auth/redirect-urls)
+`app`이 `/` 아래 공개 경로를 담당합니다. `/api/v1/health`, `/api/v1/explain`, `/api/v1/benefits`는 Next.js Route Handler에서 Hono로 전달됩니다. Vercel이 호출 서비스에 `GARDEN_BACKEND_URL`을 자동 주입합니다. Vercel 환경 변수에는 Supabase 등 실제 제공자 설정을 넣으세요. 로컬에서 두 서비스를 함께 확인하려면 저장소 루트에서 `vercel dev -L`을 실행합니다.
+
+[Vercel Services](https://vercel.com/kb/guide/vercel-services) · [Supabase URL 설정](https://supabase.com/docs/guides/auth/redirect-urls)
 
 ## 일기ㆍ보호자ㆍ설치 문자 연결
 
-Vercel에 Next.js를 배포할 때 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 설정하고, Supabase Auth의 Site URL과 Redirect URLs에 배포한 HTTPS 오리진을 등록합니다. `/api/v1/*`에서 기존 Hono 설명과 정부24 조회를 연결하려면 배포된 Hono의 `BACKEND_URL`을 설정합니다. 미션과 안부 제안은 Next.js의 `/api/wellbeing`이 처리합니다.
+Vercel에 배포할 때 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 설정하고, Supabase Auth의 Site URL과 Redirect URLs에 배포한 HTTPS 오리진을 등록합니다. Hono의 정부24 조회를 활성화하려면 서버 환경 변수 `GOV24_SERVICE_KEY`를 설정합니다. 미션과 안부 제안은 Next.js의 `/api/wellbeing`이 처리합니다.
 
 1. 기존 마이그레이션 이후 `202611200001_guardian_and_install.sql`을 적용합니다. 보호자 링크는 7일 동안 유효하며 로그인한 사용자가 갱신하거나 중단할 수 있습니다. 링크에는 14일의 상태 선택값만 들어갑니다. 서비스 역할로 `onestep_housekeeping()`을 매일 실행하도록 배포 환경에서 예약합니다.
 2. AI 후보 조정에는 선택적으로 서버의 `ANTHROPIC_API_KEY`와 `ANTHROPIC_MODEL`을 설정합니다. 로그인한 사용자가 설정에서 동의했을 때만 모델에 답변 범주와 미션 후보 또는 연락 횟수를 보냅니다. 서비스 키가 없거나 응답이 늦으면 정해진 기준으로 고릅니다.

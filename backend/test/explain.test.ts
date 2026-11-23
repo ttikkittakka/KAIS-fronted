@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app';
 import { fallbackReason, guard, type Llm } from '../src/explain';
-import { ACTIVE_CARES } from '../../src/app/cares';
+import { ACTIVE_CARES } from '../src/catalog/cares';
 
 const careIds = ACTIVE_CARES.slice(0, 3).map(care => care.id);
 const body = { answers: ['low', 'very_low', 'normal', 'good'], careIds };

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
-import { ExplainInput, PROMPT_VERSION, explain, type Llm } from './explain';
-import type { BenefitSource } from './benefits';
+import { ExplainInput, PROMPT_VERSION, claudeLlm, explain, type Llm } from './explain';
+import { gov24Source, type BenefitSource } from './benefits';
 
 const BENEFITS_WAIT_MS = 8000; // the first daily scan can take longer; the app shows its curated list meanwhile
 
@@ -26,3 +26,5 @@ export function createApp(llm: Llm | null, benefits: BenefitSource | null = null
   app.onError((error, c) => { console.error('unhandled', error.name); return c.json({ error: 'server-error' }, 500); });
   return app;
 }
+
+export default createApp(claudeLlm(), gov24Source());

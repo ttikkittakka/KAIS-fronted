@@ -1,8 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { z } from 'zod';
-// The app's catalogs are the single source of truth; the backend only reads them.
-import { CARES, isCareId } from '../../src/app/cares';
-import { QUESTIONS } from '../../src/app/questions';
+import { CARES, isCareId } from './catalog/cares';
+import { QUESTIONS } from './catalog/questions';
 
 export const PROMPT_VERSION = 'explain-v1';
 const MODEL = 'claude-opus-5-5';
