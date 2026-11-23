@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { CompanionArt } from './Companions';
 import { FEELINGS, INTERACTIONS, friendReply, unlockLabel, type Emotion, type InteractionId } from '../chat';
 import { recordUtterance } from '../voice';
-import { unlocked, type Growth } from '../pet-growth';
+import { unlocked, type Growth, type TreeLevel } from '../pet-growth';
 import type { CompanionId } from '../companions';
 import type { Outfit } from '../wardrobe';
 import { Icon } from './PetIcon';
@@ -144,8 +144,8 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
         <button type="button" className="pet-help" onClick={event => { remember(event.currentTarget); setHelp(true); }} aria-label="도움말: 함께 노는 법과 성장 단계">
           <Icon name="help" size={20}/><span>도움말</span></button>
         <button type="button" className="pet-level" onClick={event => { remember(event.currentTarget); setHelp(true); }}
-          aria-label={`레벨 ${growth.level}, 친밀도 ${growth.bond.level}단계, 마음 성숙도 ${growth.mind.level}단계. 도움말 열기`}>
-          <strong>Lv.{growth.level}</strong><span aria-hidden="true">{hearts}</span></button>
+          aria-label={`${name} ${growth.tree.stage.name}, 함께 자란 날 ${growth.tree.days}일. 성장 도움말 열기`}>
+          <strong>{growth.tree.stage.name}</strong><span aria-hidden="true">{hearts}</span></button>
         <button type="button" className="pet-menu-toggle" aria-haspopup="menu" aria-expanded={menu} onClick={event => toggleMenu(event.currentTarget)}
           aria-label={menu ? '함께할 일 메뉴 닫기' : '함께할 일 메뉴 열기'}><Icon name="wave"/></button>
       </div>
@@ -156,7 +156,7 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
         {!menu && <button type="button" key={speech.listening ? 'live' : live} className={'friend-bubble' + (speech.listening ? ' friend-bubble--listening' : '')}
           onClick={event => openChat(event.currentTarget)} aria-label={`${name}: ${live}. 눌러서 대화 열기`}>{live}</button>}
         <p className="sr-only" aria-live="polite">{bubble}</p>
-        <div className="hero-plant"><CompanionArt id={id} low={low} emote={emote} outfit={outfit} className="plant-art"
+        <div className="hero-plant"><CompanionArt id={id} stage={growth.tree.stage.level} low={low} emote={emote} outfit={outfit} className="plant-art"
           onInteract={kind => interact(kind, true)} onTap={() => toggleMenu(document.activeElement)}/></div>
         {menu && <PetMenu items={menuItems} onPick={pick} onClose={closeMenu}/>}
       </div>
@@ -172,14 +172,14 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
         </div>
       </div>
     </div>
-    {open && <ChatSheet id={id} name={name} messages={messages} typing={typing} speech={speech} saveError={saveError}
+    {open && <ChatSheet id={id} stage={growth.tree.stage.level} name={name} messages={messages} typing={typing} speech={speech} saveError={saveError}
       actions={INTERACTIONS.filter(action => unlocked(growth, action.unlock))} onSend={say} onInteract={kind => interact(kind)} onClose={closeChat}/>}
     {help && <HelpSheet name={name} growth={growth} onClose={() => { setHelp(false); giveBackFocus(); }}/>}
   </>;
 }
 
-function ChatSheet({ id, name, messages, typing, speech, saveError, actions, onSend, onInteract, onClose }: {
-  id: CompanionId; name: string; messages: Message[]; typing: boolean; speech: Speech; saveError: string;
+function ChatSheet({ id, stage, name, messages, typing, speech, saveError, actions, onSend, onInteract, onClose }: {
+  id: CompanionId; stage: TreeLevel; name: string; messages: Message[]; typing: boolean; speech: Speech; saveError: string;
   actions: readonly (typeof INTERACTIONS)[number][]; onSend: (text: string) => void; onInteract: (kind: InteractionId) => void; onClose: () => void;
 }) {
   const [text, setText] = useState('');
@@ -198,7 +198,7 @@ function ChatSheet({ id, name, messages, typing, speech, saveError, actions, onS
   // Portal: the screen's entry animation (a transform) would otherwise trap the sheet inside the scroller.
   return createPortal(<section className="chat-sheet" role="dialog" aria-modal="false" aria-labelledby="chat-title">
     <header className="chat-head">
-      <Image className="chat-avatar" src={`/characters/${id}.webp`} alt="" width={44} height={44} unoptimized/>
+      <Image className="chat-avatar" src={`/trees/${id}-${stage}.webp`} alt="" width={44} height={44} unoptimized/>
       <div><h2 id="chat-title">{name}</h2><p>대화는 저장되지 않아요 · 자주 쓴 단어 수만 기기에 남아요</p></div>
       <button type="button" ref={close} className="chat-close" onClick={onClose} aria-label="대화 닫기"><Icon name="close"/></button>
     </header>

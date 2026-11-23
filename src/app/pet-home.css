@@ -29,7 +29,7 @@
 .pet-home .hero-plant { width: var(--pet); bottom: 42px; }
 .pet-home .hero-plant .companion-art.plant-art { width: 100%; }
 .pet-stage .friend-bubble { bottom: calc(42px + var(--pet) * .97); max-width: min(80%, 300px); font-size: 15px; }
-.pet-scene--hat .pet-stage .friend-bubble { bottom: calc(42px + var(--pet) * 1.14); } /* clears the tallest hat on the dog */
+.pet-scene--hat .pet-stage .friend-bubble { bottom: calc(42px + var(--pet) * 1.14); }
 
 /* Top: help balloon (left), level (centre), fan-menu button (right). */
 .pet-hud { position: absolute; z-index: 6; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }

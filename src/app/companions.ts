@@ -4,16 +4,20 @@ import { isCareId } from './cares';
 import { activeDayCount } from './growth-rewards';
 import { bondRuleOverride, developerUnlimited } from './developer-state';
 
-// Companions stay babies; what deepens is the bond between the user and the friend.
 export const COMPANIONS = [
-  { id: 'plant', name: '새싹이', kind: '새싹' },
-  { id: 'cat', name: '나비', kind: '아기 고양이' },
-  { id: 'dog', name: '보리', kind: '아기 강아지' },
-  { id: 'pegasus', name: '비비', kind: '아기 페가수스' },
+  { id: 'bonsai', name: '분재', kind: '굽은 가지의 단풍나무' },
+  { id: 'pine', name: '소나무', kind: '사계절 푸른 침엽수' },
+  { id: 'oak', name: '참나무', kind: '둥근 잎과 도토리' },
+  { id: 'metasequoia', name: '메타세쿼이아', kind: '곧게 자라는 깃잎' },
 ] as const;
 export type CompanionId = typeof COMPANIONS[number]['id'];
 export const companion = (id: CompanionId) => COMPANIONS.find(c => c.id === id)!;
 const isCompanionId = (id: unknown): id is CompanionId => COMPANIONS.some(c => c.id === id);
+const LEGACY_COMPANIONS = { plant: 'bonsai', cat: 'pine', dog: 'oak', pegasus: 'metasequoia' } as const;
+export function restoreCompanionId(id: unknown): CompanionId | undefined {
+  if (isCompanionId(id)) return id;
+  if (typeof id === 'string' && Object.hasOwn(LEGACY_COMPANIONS, id)) return LEGACY_COMPANIONS[id as keyof typeof LEGACY_COMPANIONS];
+}
 
 export type BondLevel = 1 | 2 | 3;
 export const BOND_LEVELS = ['처음 만난 사이', '친해지는 사이', '단짝'] as const;
@@ -43,9 +47,16 @@ export type CompanionState = { version: 1; active: CompanionId; adopted: Adoptio
 export function readCompanions(): CompanionState | null {
   try {
     const state = JSON.parse(appStorage.getItem(COMPANIONS_KEY) ?? 'null') as CompanionState | null;
-    if (state?.version !== 1 || !Array.isArray(state.adopted) || !state.adopted.some(a => a.id === state.active)) return null;
-    const valid = state.adopted.every(a => isCompanionId(a?.id) && /^\d{4}-\d{2}-\d{2}$/.test(a.adoptedOn) && [1, 2, 3].includes(a.seenLevel));
-    return valid && new Set(state.adopted.map(a => a.id)).size === state.adopted.length ? state : null;
+    if (state?.version !== 1 || !Array.isArray(state.adopted)) return null;
+    const active = restoreCompanionId(state.active);
+    const adopted: Adoption[] = [];
+    for (const entry of state.adopted) {
+      const id = restoreCompanionId(entry?.id);
+      if (!id || !/^\d{4}-\d{2}-\d{2}$/.test(entry.adoptedOn) ||
+        ![1, 2, 3].includes(entry.seenLevel) || adopted.some(a => a.id === id)) return null;
+      adopted.push({ id, adoptedOn: entry.adoptedOn, seenLevel: entry.seenLevel });
+    }
+    return active && adopted.some(a => a.id === active) ? { version: 1, active, adopted } : null;
   } catch { return null; }
 }
 const save = (state: CompanionState) => { appStorage.setItem(COMPANIONS_KEY, JSON.stringify(state)); return state; };

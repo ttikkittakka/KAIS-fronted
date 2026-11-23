@@ -9,6 +9,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 ROOT = Path(__file__).resolve().parent
 CHARACTERS = ROOT / "../../public/characters"
+LEGACY_ANIMALS = ROOT / "../characters/legacy"
 COMPANIONS = ("plant", "cat", "dog", "pegasus")
 ITEMS = (
     "straw-hat", "flower-crown", "knit-beanie", "party-hat",
@@ -98,7 +99,7 @@ def main():
     single_items = [(name.replace("-", " "), "", (name,)) for name in ITEMS]
     expressions = {expression for _, expression, _ in (*single_items, *OUTFITS)}
     characters = {
-        (name, expression): load_rgba(CHARACTERS / f"{name}{expression}.webp")
+        (name, expression): load_rgba((CHARACTERS if name == "plant" else LEGACY_ANIMALS) / f"{name}{expression}.webp")
         for name in COMPANIONS
         for expression in expressions
     }

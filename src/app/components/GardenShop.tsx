@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { ALL_GARDEN_ITEMS, SHOP_CATALOG, SHOP_CATEGORIES, shopItem, type ShopItem, type ShopCategory } from '../shop-catalog';
 import { buyItem, ownedItemIds, type shopSnapshot } from '../shop-store';
 import GardenEditor from './GardenEditor';
@@ -10,8 +10,8 @@ function Preview({ item }: { item: ShopItem }) {
   return <div className={'shop-preview shop-preview--' + item.category}><ItemArt key={item.id} item={item}/></div>;
 }
 // inventory = 집 꾸미기 (owned garden items to place); otherwise the shop, where outfits are sold too.
-export default function GardenShop({ inventory, snapshot, storageError, onChange, onRetry, onHome, onSwitch, onDress, plantState = 'normal', initialItem = null, initialSelect = null }: {
-  initialItem?: string | null; initialSelect?: string | null; plantState?: 'normal' | 'low'; inventory: boolean; snapshot: Snapshot | null; storageError: string; onChange: (value: Snapshot) => void;
+export default function GardenShop({ inventory, snapshot, storageError, onChange, onRetry, onHome, onSwitch, onDress, gardenPreview, initialItem = null, initialSelect = null }: {
+  initialItem?: string | null; initialSelect?: string | null; gardenPreview: ReactNode; inventory: boolean; snapshot: Snapshot | null; storageError: string; onChange: (value: Snapshot) => void;
   onRetry: () => void; onHome: () => void; onSwitch: () => void; onDress: (itemId: string) => void;
 }) {
   const [editing, setEditing] = useState<string | null>(initialItem);
@@ -32,7 +32,7 @@ export default function GardenShop({ inventory, snapshot, storageError, onChange
     finally { pending.current = false; setBusy(false); }
   };
   const choose = (id: string) => { setSelected(id); setPurchased(null); setError(''); };
-  if (editing && snapshot && owned.includes(editing) && !storageError) return <GardenEditor key={editing} snapshot={snapshot} itemId={editing} plantState={plantState} onChange={onChange} onHome={onHome} onClose={() => { setEditing(null); setPurchased(null); setSelected(null); }}/>;
+  if (editing && snapshot && owned.includes(editing) && !storageError) return <GardenEditor key={editing} snapshot={snapshot} itemId={editing} gardenPreview={gardenPreview} onChange={onChange} onHome={onHome} onClose={() => { setEditing(null); setPurchased(null); setSelected(null); }}/>;
   return <div className="shop-content">
     <div className="shop-summary"><span>모아 둔 햇살 <strong>☀️ {snapshot?.unlimited ? '무제한 (개발자)' : snapshot?.balance ?? '—'}</strong></span><button type="button" onClick={onSwitch}>{inventory ? '상점 구경하기' : '보관함 열기'}</button></div>
     {storageError && <div className="shop-error" role="alert"><p>{storageError}</p><button type="button" onClick={onRetry}>다시 확인하기</button></div>}

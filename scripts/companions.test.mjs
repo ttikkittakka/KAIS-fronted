@@ -10,8 +10,8 @@ const day = n => `2026-01-${String(n).padStart(2, '0')}`;
 const record = (date, cares = []) => ({ version: 1, date, answers: ['normal', 'normal', 'normal', 'normal'], note: '', plantState: 'normal', completedCareIds: cares });
 const days = (from, to, cares) => Array.from({ length: to - from + 1 }, (_, i) => record(day(from + i), cares));
 
-test('friends never grow up: there is one look and no stage data', () => {
-  for (const friend of c.COMPANIONS) assert.equal('stages' in friend, false, friend.id);
+test('the picker offers four tree species', () => {
+  assert.deepEqual(c.COMPANIONS.map(friend => friend.id), ['bonsai', 'pine', 'oak', 'metasequoia']);
 });
 
 test('bond level 2 needs only visits; level 3 counts care days, one per day, from adoption on', () => {
@@ -33,22 +33,23 @@ test('an admin rule of 0/0 previews the closest bond at once', () => {
 test('pick one friend first; the next joins only after every friend is a 단짝', () => {
   data.clear();
   assert.equal(c.readCompanions(), null);
-  assert.equal(c.adoptCompanion('cat', []).active, 'cat');
-  assert.throws(() => c.adoptCompanion('dog', []), /단짝이 되면/);
-  assert.throws(() => c.adoptCompanion('cat', []), /이미/);
-  // Pretend the cat joined in January and has 10 care days since.
+  assert.equal(c.adoptCompanion('pine', []).active, 'pine');
+  assert.throws(() => c.adoptCompanion('oak', []), /단짝이 되면/);
+  assert.throws(() => c.adoptCompanion('pine', []), /이미/);
+  // An existing adoption takes its records and bond into the new catalog.
   data.set(c.COMPANIONS_KEY, JSON.stringify({ version: 1, active: 'cat', adopted: [{ id: 'cat', adoptedOn: day(1), seenLevel: 1 }] }));
+  assert.deepEqual(c.readCompanions(), { version: 1, active: 'pine', adopted: [{ id: 'pine', adoptedOn: day(1), seenLevel: 1 }] });
   const close = days(1, 10, ['water']);
   assert.equal(c.canAdopt(c.readCompanions(), close), true);
-  assert.equal(c.adoptCompanion('dog', close).active, 'dog');
-  assert.equal(c.chooseCompanion('cat').active, 'cat', 'switching back to an earlier friend is allowed');
-  assert.throws(() => c.chooseCompanion('pegasus'), /아직/);
+  assert.equal(c.adoptCompanion('oak', close).active, 'oak');
+  assert.equal(c.chooseCompanion('pine').active, 'pine', 'switching back to an earlier friend is allowed');
+  assert.throws(() => c.chooseCompanion('metasequoia'), /아직/);
 });
 
 test('seen level only moves forward, and damaged data is ignored instead of crashing', () => {
   data.set(c.COMPANIONS_KEY, JSON.stringify({ version: 1, active: 'cat', adopted: [{ id: 'cat', adoptedOn: day(1), seenLevel: 1 }] }));
-  c.markLevelSeen('cat', 3);
-  assert.equal(c.markLevelSeen('cat', 2).adopted[0].seenLevel, 3);
+  c.markLevelSeen('pine', 3);
+  assert.equal(c.markLevelSeen('pine', 2).adopted[0].seenLevel, 3);
   for (const bad of ['{', '{"version":1,"active":"cat","adopted":[]}', '{"version":1,"active":"fox","adopted":[{"id":"fox","adoptedOn":"2026-01-01","seenLevel":1}]}']) {
     data.set(c.COMPANIONS_KEY, bad);
     assert.equal(c.readCompanions(), null, bad);

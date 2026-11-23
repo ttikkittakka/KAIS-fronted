@@ -5,7 +5,8 @@ const storage = loadTs(new URL('../src/app/app-storage.ts', import.meta.url));
 const dev = loadTs(new URL('../src/app/developer-state.ts', import.meta.url));
 const shop = loadTs(new URL('../src/app/shop-store.ts', import.meta.url));
 const companions = loadTs(new URL('../src/app/companions.ts', import.meta.url));
-const { mindGrowth, petGrowth, unlocked, MIND_STEPS } = loadTs(new URL('../src/app/pet-growth.ts', import.meta.url));
+const { mindGrowth, petGrowth, treeGrowth, unlocked, MIND_STEPS, TREE_STAGES } = loadTs(new URL('../src/app/pet-growth.ts', import.meta.url));
+const { RECOVERY_MISSIONS } = loadTs(new URL('../src/app/mission-policy.ts', import.meta.url));
 const { readOutfit, wear, FIT, WARDROBE_KEY } = loadTs(new URL('../src/app/wardrobe.ts', import.meta.url));
 const { SHOP_CATALOG, OUTFIT_SLOTS } = loadTs(new URL('../src/app/shop-catalog.ts', import.meta.url));
 const { compatibleSlot, GARDEN_SLOTS } = loadTs(new URL('../src/app/garden-layout.ts', import.meta.url));
@@ -53,7 +54,7 @@ test('developer version: the code opens an unlimited sandbox; switching accounts
   assert.equal(dev.developerUnlimited(), true, 'unlimited by default after the code');
   for (const item of SHOP_CATALOG.filter(entry => !entry.defaultOwned)) shop.buyItem(item.id);
   assert.equal(shop.shopSnapshot().unlimited, true);
-  assert.ok(companions.canAdopt({ version: 1, active: 'cat', adopted: [{ id: 'cat', adoptedOn: '2026-11-01', seenLevel: 1 }] }, []), 'no bond wait');
+  assert.ok(companions.canAdopt({ version: 1, active: 'pine', adopted: [{ id: 'pine', adoptedOn: '2026-11-01', seenLevel: 1 }] }, []), 'no bond wait');
   dev.setUnlimited(false, dev.UNLIMITED_SUNSHINE - shop.shopSnapshot().balance);
   assert.equal(dev.developerUnlimited(), false);
   assert.equal(shop.shopSnapshot().balance, 0, 'switching off covers what unlimited spent, never a negative balance');
@@ -75,7 +76,7 @@ test('마음 성숙도 counts days with all four answers; 레벨 adds both meter
   assert.deepEqual(mindGrowth([], '2026-10-30'), { level: 1, days: 0, next: MIND_STEPS[1] });
   const records = [1, 2, 3, 3, 4, 5, 6, 7].map(n => day(n)).concat([day(8, { answers: ['good', '', '', ''] }), day(31)]);
   assert.deepEqual(mindGrowth(records, '2026-10-30'), { level: 3, days: 7, next: 15 }, 'duplicates, partial answers and future days do not count');
-  const state = { version: 1, active: 'cat', adopted: [{ id: 'cat', adoptedOn: '2026-10-01', seenLevel: 1 }] };
+  const state = { version: 1, active: 'pine', adopted: [{ id: 'pine', adoptedOn: '2026-10-01', seenLevel: 1 }] };
   const growth = petGrowth(state, records);
   assert.equal(growth.level, growth.bond.level + growth.mind.level - 1);
   const rule = id => INTERACTIONS.find(i => i.id === id).unlock;
@@ -95,18 +96,40 @@ test('outfits: only owned items of the right slot are worn, per friend, and neve
     assert.ok(FIT.items[item.id], item.id + ' has a fit');
     assert.ok(GARDEN_SLOTS.every(slot => !compatibleSlot(item.id, slot.id)), item.id + ' is not a garden item');
   }
-  for (const id of ['plant', 'cat', 'dog', 'pegasus']) for (const slot of OUTFIT_SLOTS) assert.ok(FIT.anchors[id][slot.id], id + ' ' + slot.id);
+  for (const slot of OUTFIT_SLOTS) assert.ok(FIT.anchors[slot.id], slot.id + ' has a pot or crown anchor');
   const owned = ['straw-hat', 'round-glasses'];
-  assert.throws(() => wear('cat', 'head', 'party-hat', owned), /보관함/);
-  assert.throws(() => wear('cat', 'face', 'straw-hat', owned), /보관함/);
-  assert.deepEqual(wear('cat', 'head', 'straw-hat', owned), { head: 'straw-hat' });
-  assert.deepEqual(wear('cat', 'face', 'round-glasses', owned), { head: 'straw-hat', face: 'round-glasses' });
-  assert.deepEqual(readOutfit('dog', owned), {}, 'each friend dresses separately');
-  assert.deepEqual(wear('cat', 'head', null, owned), { face: 'round-glasses' });
-  assert.deepEqual(readOutfit('cat', ['straw-hat']), {}, 'an item no longer owned is not shown');
-  assert.deepEqual(wear('cat', 'head', null, []), {}, 'unknown ownership shows nothing…');
-  assert.deepEqual(readOutfit('cat', owned), { face: 'round-glasses' }, '…but never erases the other saved slots');
+  data.set(WARDROBE_KEY, JSON.stringify({ version: 1, worn: { cat: { face: 'round-glasses' } } }));
+  assert.deepEqual(readOutfit('pine', owned), { face: 'round-glasses' }, 'saved outfits follow their adoption into the new catalog');
+  assert.throws(() => wear('pine', 'head', 'party-hat', owned), /보관함/);
+  assert.throws(() => wear('pine', 'face', 'straw-hat', owned), /보관함/);
+  assert.deepEqual(wear('pine', 'head', 'straw-hat', owned), { head: 'straw-hat', face: 'round-glasses' });
+  assert.equal(JSON.parse(data.get(WARDROBE_KEY)).worn.cat, undefined);
+  assert.deepEqual(readOutfit('oak', owned), {}, 'each friend dresses separately');
+  assert.deepEqual(wear('pine', 'head', null, owned), { face: 'round-glasses' });
+  assert.deepEqual(readOutfit('pine', ['straw-hat']), {}, 'an item no longer owned is not shown');
+  assert.deepEqual(wear('pine', 'head', null, []), {}, 'unknown ownership shows nothing…');
+  assert.deepEqual(readOutfit('pine', owned), { face: 'round-glasses' }, '…but never erases the other saved slots');
   data.set(WARDROBE_KEY, '{');
-  assert.deepEqual(readOutfit('cat', owned), {});
-  assert.deepEqual(wear('cat', 'head', 'straw-hat', owned), { head: 'straw-hat' }, 'a damaged file is rewritten');
+  assert.deepEqual(readOutfit('pine', owned), {});
+  assert.deepEqual(wear('pine', 'head', 'straw-hat', owned), { head: 'straw-hat' }, 'a damaged file is rewritten');
+});
+
+test('tree growth counts each eligible local date after adoption, including hard days with self-care', () => {
+  const good = n => day(n, { answers: ['', '', '', 'good'] });
+  const records = [
+    good(1), day(2), day(3, { answers: ['', '', '', '잔잔해요'] }),
+    day(4, { completedCareIds: ['water'] }), good(4),
+    day(5, { note: '힘들었지만 잠깐 쉬었다.' }),
+    day(6, { completedMissionIds: [RECOVERY_MISSIONS[0].id] }),
+    day(7, { photoId: 'owner:photo' }), day(8, { photoComment: '기억하고 싶은 빛' }),
+    day(9, { note: '  ' }), good(11), { ...good(1), date: '2026-09-31' },
+  ];
+  const result = treeGrowth(records, '2026-10-02', '2026-10-10', { '2026-10-10': ['send-hello'], '2026-10-04': ['send-hello'] });
+  assert.deepEqual(result, { stage: TREE_STAGES[2], days: 7, next: 14 });
+  assert.equal(treeGrowth([day(2)], '2026-10-02', '2026-10-02').stage.level, 1);
+  const growthDays = Array.from({ length: 15 }, (_, index) => good(index + 2));
+  for (const milestone of TREE_STAGES) {
+    assert.equal(treeGrowth(growthDays.slice(0, milestone.days), '2026-10-02', '2026-10-31').stage.level, milestone.level);
+  }
+  assert.equal(treeGrowth([...growthDays, day(18)], '2026-10-02', '2026-10-31').stage.level, 4);
 });

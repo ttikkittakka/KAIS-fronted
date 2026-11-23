@@ -24,7 +24,7 @@ export function Demo() {
         ];
         const days = trailingDays(9, localDay());
         samples.forEach((sample, index) => saveRecord({ ...emptyRecord(), ...sample, stage: 'care', date: days[index * 2 + 1] }));
-        if (!readCompanions()) adoptCompanion('plant', readRecords());
+        if (!readCompanions()) adoptCompanion('bonsai', readRecords());
       }
       setReady(true);
     });

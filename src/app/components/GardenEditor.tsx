@@ -1,15 +1,14 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { GARDEN_SLOTS, assignGardenSlot, clearGardenSlot, compatibleSlot, type GardenLayout, type GardenSlotId } from '../garden-layout';
 import { shopItem } from '../shop-catalog';
 import { saveGardenLayout, shopSnapshot } from '../shop-store';
 import GardenPlacement from './GardenPlacement';
-import RivePlant from './RivePlant';
 
 type Snapshot = ReturnType<typeof shopSnapshot>;
-export default function GardenEditor({ snapshot, itemId, plantState, onChange, onClose, onHome }: {
-  snapshot: Snapshot; itemId: string; plantState: 'normal' | 'low'; onChange: (snapshot: Snapshot) => void; onClose: () => void; onHome: () => void;
+export default function GardenEditor({ snapshot, itemId, gardenPreview, onChange, onClose, onHome }: {
+  snapshot: Snapshot; itemId: string; gardenPreview: ReactNode; onChange: (snapshot: Snapshot) => void; onClose: () => void; onHome: () => void;
 }) {
   const [draft, setDraft] = useState<GardenLayout>(() => ({ ...snapshot.state.layout }));
   const [revision, setRevision] = useState(snapshot.state.revision);
@@ -38,7 +37,7 @@ export default function GardenEditor({ snapshot, itemId, plantState, onChange, o
     <div className="garden-editor-preview home-screen" aria-label="정원 배치 미리보기">
       <div className={'garden-scene garden-scene--' + draft.background}>
         <div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div>
-        <div className="hero-plant"><RivePlant state={plantState} className="plant-art" /></div>
+        <div className="hero-plant">{gardenPreview}</div>
         <div className="soil-floor"/><GardenPlacement layout={draft}/>
       </div>
     </div>

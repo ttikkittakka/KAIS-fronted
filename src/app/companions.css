@@ -1,5 +1,5 @@
 /* Companion motion. Shared by the app (layout.tsx) and design-output/characters/index.html.
-   Physics rules: the feet stay on the ground line (transform-origin at the feet), squash and
+   Physics rules: the pot base stays on the ground line, squash and
    stretch roughly keep volume, rises decelerate and falls accelerate (gravity), the shadow is
    separate and shrinks while airborne, and every hop's air time follows sqrt(height). */
 
@@ -9,7 +9,7 @@
 div.companion-art { cursor: default; }
 .companion-art--low { --hop-scale: .5; --hop-tempo: .85; }
 
-/* Images share one 512px canvas: feet on y = 95%, character 80% tall. */
+/* Images share one 512px canvas with a common ground line. */
 .companion-art__shadow { position: absolute; top: 93%; left: calc(50% - var(--shadow-w) / 2); width: var(--shadow-w); height: 5%; border-radius: 50%; background: radial-gradient(closest-side, rgba(70, 66, 56, .2), rgba(70, 66, 56, 0)); }
 .companion-art__jump { position: absolute; inset: 0; display: block; }
 .companion-art__body { position: absolute; inset: 0; display: block; transform-origin: 50% 95%;
@@ -27,6 +27,25 @@ div.companion-art { cursor: default; }
 .companion-art--face-low .companion-art__img { transition-duration: .6s; }
 .companion-art--face-normal .companion-art__img--normal, .companion-art--face-low .companion-art__img--low,
 .companion-art--face-happy .companion-art__img--happy, .companion-art--face-excited .companion-art__img--excited { opacity: 1; }
+
+.companion-art__tree { opacity: 1; }
+.tree-face { position: absolute; top: var(--pot-face-y, 80.5%); left: 50%; width: 15%; height: 10%; transform: translate(-50%, -25%); color: #382b23; pointer-events: none; }
+.tree-eye { position: absolute; top: 0; width: 17%; height: 37%; border-radius: 50%; background: currentColor;
+  box-shadow: inset 0 1px 1px #2b1f1b40; transform-origin: center; transition: height .2s ease, border-radius .2s ease; }
+.tree-eye::before { content: ''; position: absolute; top: 15%; left: 22%; width: 33%; height: 30%; border-radius: 50%; background: #fffaed; opacity: .8; }
+.tree-eye:first-child { left: 5%; }.tree-eye:nth-child(2) { right: 5%; }
+.tree-face::before, .tree-face::after { content: ''; position: absolute; top: 38%; width: 21%; height: 20%; border-radius: 50%; background: #d87965; opacity: .48; }
+.tree-face::before { left: -6%; }.tree-face::after { right: -6%; }
+.tree-mouth { position: absolute; top: 26%; left: 37%; width: 26%; height: 19%; border-bottom: 1.6px solid currentColor; border-radius: 0 0 50% 50%; }
+.companion-art--face-normal .tree-eye { animation: tree-blink 6.4s linear var(--blink-delay, 0s) infinite; }
+.companion-art--face-blink .tree-eye, .companion-art--face-low .tree-eye { transform: scaleY(.18); }
+.companion-art--face-low .tree-mouth { border-bottom: 0; border-top: 1.6px solid currentColor; border-radius: 50% 50% 0 0; top: 37%; }
+.companion-art--face-happy .tree-eye { height: 24%; background: transparent; border-top: 1.6px solid currentColor; box-shadow: none; }
+.companion-art--face-happy .tree-eye::before { content: none; }
+.companion-art--face-happy .tree-mouth, .companion-art--face-excited .tree-mouth { height: 30%; background: currentColor; }
+.companion-art--face-excited .tree-mouth { height: 44%; border-radius: 45%; }
+@keyframes tree-blink { 0%, 55%, 59%, 100% { transform: scaleY(1); } 57% { transform: scaleY(.14); } }
+@media (prefers-reduced-motion: reduce) { .companion-art--face-normal .tree-eye { animation: none; } }
 
 /* Petting: a hand presses gently, so the body squashes a little (volume kept) and leans with the stroke;
    on release it springs back with a small overshoot before breathing again. */

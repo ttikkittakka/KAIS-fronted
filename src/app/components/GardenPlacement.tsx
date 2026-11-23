@@ -4,10 +4,12 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { GARDEN_SLOTS, type GardenLayout } from '../garden-layout';
 import { shopItem, type ShopItem } from '../shop-catalog';
+import { CompanionArt } from './Companions';
 
 /** An item's picture: backgrounds are a small sky swatch, outfits public/wardrobe/<id>.webp, the rest public/garden/<id>.webp. */
 export function ItemArt({ item }: { item: ShopItem }) {
   const [missing, setMissing] = useState(false);
+  if (item.tree) return <CompanionArt id={item.tree} stage={2} className="item-art" interactive={false}/>;
   if (item.category === 'background') return <span className={'garden-scene item-swatch garden-scene--' + item.id} aria-hidden="true"/>;
   // A missing picture falls back to the catalog glyph instead of a broken image.
   if (missing) return <span className="item-glyph" aria-hidden="true">{item.icon}</span>;

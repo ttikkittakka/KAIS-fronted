@@ -7,6 +7,7 @@ import { developerToolsAvailable, setAccountScope, setDeveloperMode } from '../a
 import { SAFETY_CONTACTS } from '../safety';
 import { koreanMobile } from '../install-phone';
 import { saveInstallIntent, sendInstallIntent } from '../install-intent';
+import { CompanionArt } from './Companions';
 
 function clearAuthRedirect() {
   const url = new URL(window.location.href);
@@ -151,7 +152,7 @@ export default function AuthBoundary({ children }: { children: ReactNode }) {
     <div className="screen auth-screen">
     <section className={`auth-content${signedIn ? ' auth-content--connected' : ''}`} aria-labelledby="auth-title" aria-busy={loading || state.busy}>
       <header className="auth-brand">
-        <div className="auth-plant" role="img" aria-label="OneStep의 작은 새싹 캐릭터" />
+        <CompanionArt id="bonsai" className="auth-plant" interactive={false}/>
         <p className="auth-eyebrow">오늘도, 나의 속도로</p>
         <h1 id="auth-title">나의 작은 정원</h1>
         {!signedIn && <p className="auth-intro">나만의 정원에서 오늘의 나를 돌봐요.</p>}

@@ -4,7 +4,7 @@
 .auth-screen { background: radial-gradient(ellipse at 50% 16%, #e6eedc 0%, transparent 48%), var(--background); scroll-padding-block: 24px; }
 .auth-content { min-height: 100%; display: flex; flex-direction: column; gap: 24px; padding: 24px 24px max(24px, env(safe-area-inset-bottom)); text-align: center; font-size: 13px; line-height: 1.65; }
 .auth-brand { margin-top: auto; flex-shrink: 0; }
-.auth-plant { width: 144px; height: 144px; margin: 0 auto; background: url('/figma-plant-normal.svg') center / contain no-repeat; }
+.auth-plant { width: 144px; height: 144px; margin: 0 auto; }
 .auth-eyebrow { margin: 4px 0 6px; color: var(--primary); font-size: 10px; letter-spacing: .12em; }
 .auth-brand h1 { margin: 0; font-size: 23px; font-weight: 400; letter-spacing: -.045em; color: var(--deep-green); }
 .auth-intro { margin: 8px 0 0; color: #5f695d; font-size: 13px; }

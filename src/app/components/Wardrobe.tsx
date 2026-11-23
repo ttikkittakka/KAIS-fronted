@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { CompanionArt } from './Companions';
 import { ItemArt } from './GardenPlacement';
 import { companion, type CompanionId, type CompanionState } from '../companions';
+import type { DailyCheckin } from '../daily-checkin';
+import { treeGrowth } from '../pet-growth';
+import { readMissionLog } from '../missions';
 import { ALL_GARDEN_ITEMS, OUTFIT_SLOTS, SHOP_CATALOG, type OutfitSlot, type ShopCategory, type ShopItem } from '../shop-catalog';
 import { ownedItemIds, type shopSnapshot } from '../shop-store';
 import { readOutfit, wear, type Outfit } from '../wardrobe';
@@ -11,8 +14,8 @@ type Snapshot = ReturnType<typeof shopSnapshot>;
 const priceLabel = (item: ShopItem) => item.rewardDays ? `${item.rewardDays}일 기념 선물` : `햇살 ${item.price}`;
 
 /** 옷 입히기: the friend in the middle, slot tabs, and every outfit (owned ones put on with one tap). */
-export function DressUp({ snapshot, companions, slot: initialSlot = 'head', friend: initialFriend = null, onWear, onShop, onChoose }: {
-  snapshot: Snapshot | null; companions: CompanionState | null; slot?: OutfitSlot; friend?: CompanionId | null;
+export function DressUp({ snapshot, companions, records, slot: initialSlot = 'head', friend: initialFriend = null, onWear, onShop, onChoose }: {
+  snapshot: Snapshot | null; companions: CompanionState | null; records: DailyCheckin[]; slot?: OutfitSlot; friend?: CompanionId | null;
   onWear: () => void; onShop: (itemId: string, friend: CompanionId) => void; onChoose: () => void;
 }) {
   const owned = snapshot ? ownedItemIds(snapshot.state) : [];
@@ -20,7 +23,8 @@ export function DressUp({ snapshot, companions, slot: initialSlot = 'head', frie
   const [slot, setSlot] = useState<OutfitSlot>(initialSlot);
   const [outfit, setOutfit] = useState<Outfit>(() => friend ? readOutfit(friend, owned) : {});
   const [error, setError] = useState('');
-  if (!companions || !friend) return <div className="settings-content"><p className="shop-caption">옷을 입힐 친구를 먼저 골라 주세요.</p>
+  const adoption = companions?.adopted.find(a => a.id === friend);
+  if (!companions || !friend || !adoption) return <div className="settings-content"><p className="shop-caption">꾸밀 나무를 먼저 골라 주세요.</p>
     <button type="button" className="primary-button" onClick={onChoose}>함께할 친구 고르기</button></div>;
   const put = (id: string | null) => {
     if (!snapshot) { setError('보관함을 아직 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.'); return; } // unknown ownership must not change outfits
@@ -28,8 +32,9 @@ export function DressUp({ snapshot, companions, slot: initialSlot = 'head', frie
     catch (cause) { setError(cause instanceof Error ? cause.message : '옷을 저장하지 못했어요. 다시 시도해 주세요.'); }
   };
   const worn = outfit[slot];
+  const stage = treeGrowth(records, adoption.adoptedOn, undefined, readMissionLog().done).stage;
   return <div className="dress">
-    <div className="dress-stage"><CompanionArt id={friend} outfit={outfit} interactive={false} className="dress-art"
+    <div className="dress-stage"><CompanionArt id={friend} stage={stage.level} outfit={outfit} interactive={false} className="dress-art"
       label={`${companion(friend).name}${Object.keys(outfit).length ? ' · ' + Object.values(outfit).map(id => ALL_GARDEN_ITEMS.find(i => i.id === id)?.name).join(', ') + ' 착용' : ''}`}/></div>
     {companions.adopted.length > 1 && <div className="dress-friends" role="group" aria-label="옷을 입힐 친구">
       {companions.adopted.map(a => <button key={a.id} type="button" aria-pressed={a.id === friend} onClick={() => { setFriend(a.id); setOutfit(readOutfit(a.id, owned)); setError(''); }}>{companion(a.id).name}</button>)}

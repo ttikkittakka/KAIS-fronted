@@ -1,4 +1,4 @@
-# Supabase 연결 준비
+# Supabase 연결
 
 현재 앱은 Next.js App Router를 사용합니다. `src/lib/supabase/client.ts`의
 `getSupabaseClient()`는 필요할 때 클라이언트를 초기화하고 재사용합니다.
@@ -9,10 +9,10 @@
 ## 환경변수
 
 프로젝트 루트의 `.env.local`에 다음 두 항목을 추가하세요. 기존 파일이나
-관리자 비밀번호 설정은 덮어쓰지 마세요. `.env.example`은 빈 설정 예시입니다.
+관리자 비밀번호 설정은 덮어쓰지 마세요. `.env.example`에 대상 프로젝트 URL이 있습니다.
 
 ```dotenv
-NEXT_PUBLIC_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://yhzgucbiwvizjxpzwpqg.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_YOUR_KEY
 ```
 
@@ -87,13 +87,12 @@ npm run build
 ## 2단계: 이메일/비밀번호 인증
 
 앱 진입점은 `AuthBoundary`로 보호합니다. 로그인 상태를 복원하는 동안 기존
-`RecordSessionBoundary`와 정원 페이지를 마운트하지 않습니다. 로그인 성공 후에도
-현재는 계정 연결 완료 화면만 표시합니다. 기존 로컬 기록을 계정 기록으로 표시하거나
-업로드하지 않으며, 계정 A/B 전환에도 이 원칙을 유지합니다. 운영 환경에서는
-계정별 데이터 저장을 구현하기 전까지 기존 로컬 정원을 사용할 수 없습니다.
+`RecordSessionBoundary`와 정원 페이지를 마운트하지 않습니다. 로그인 후에는
+브라우저에서 해당 계정의 정원을 엽니다. 로그인 전 기기 기록과 기존 프로젝트 계정의
+기록은 각각 원래 저장 위치에 남습니다.
 
 `auth-client.ts`는 브라우저에서만 생성하는 singleton입니다. Supabase SDK가
-새 키 `little-garden.supabase-auth.v1` 및 해당 PKCE 보조 키에 인증 세션을 관리합니다.
+프로젝트 호스트별 키 `little-garden.supabase-auth.v2.<host>` 및 해당 PKCE 보조 키에 인증 세션을 관리합니다.
 기존 정원 키·사진 DB는 변경하지 않습니다. 비밀번호는 폼과 인증 요청에서만 사용하고
 앱 저장소에 기록하지 않습니다. Supabase의 토큰 저장과 자동 갱신을 사용합니다.
 로그아웃은 `scope: local`로 현재 브라우저 세션을 종료하고 같은 세션을 공유하는 탭에도
@@ -156,7 +155,18 @@ npm run build
 - 운영 관리자 권한은 서버에서 검증하는 별도 설계 (개발용 PIN과 분리)
 
 공식 인증 흐름: https://supabase.com/docs/guides/auth/passwords
-# 일기ㆍ보호자ㆍ설치 문자 연결
+## Vercel 배포
+
+1. Vercel의 **Add New → Project**에서 GitHub 저장소 `ttikkittakka/KAIS-fronted`를 Import합니다. Framework Preset은 **Next.js**, Root Directory는 **저장소 루트**(`.`)를 선택합니다.
+2. **Settings → Environments → Production → Branch Tracking**에서 `feature/garden-companion-support`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터, 전시 판넬과 `mobile/`의 Expo 앱이 있습니다.
+3. Vercel 환경 변수에 위의 프로젝트 URL과 같은 프로젝트의 공개 키를 등록하고 다시 배포합니다. 배포 도메인이 정해지면 Supabase Auth의 Site URL과 인증·재설정 Redirect URLs를 그 HTTPS 주소로 등록합니다.
+4. 휴대폰에서 `https://<배포 주소>/demo`를 열어 체험합니다. Expo 앱을 배포 웹앱에 연결하려면 `mobile/.env`의 `EXPO_PUBLIC_GARDEN_WEB_URL`에 같은 주소를 넣습니다. [Expo 실행 안내](mobile/README.md)
+
+2026-11-23에 프로젝트 `yhzgucbiwvizjxpzwpqg`의 기존 정원 스키마를 확인한 뒤, 미적용 카탈로그·지원 신청·옷장·보호자 마이그레이션 네 개를 적용했습니다. 초기 정원 스키마는 이미 설치되어 있습니다. 마이그레이션 이력이 없는 초기 SQL을 적용할 때는 기존 스키마와 이력을 먼저 대조하세요.
+
+[Vercel Git 배포](https://vercel.com/docs/git) · [Supabase URL 설정](https://supabase.com/docs/guides/auth/redirect-urls)
+
+## 일기ㆍ보호자ㆍ설치 문자 연결
 
 Vercel에 Next.js를 배포할 때 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 설정하고, Supabase Auth의 Site URL과 Redirect URLs에 배포한 HTTPS 오리진을 등록합니다. `/api/v1/*`에서 기존 Hono 설명과 정부24 조회를 연결하려면 배포된 Hono의 `BACKEND_URL`을 설정합니다. 미션과 안부 제안은 Next.js의 `/api/wellbeing`이 처리합니다.
 

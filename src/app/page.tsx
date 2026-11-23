@@ -17,10 +17,9 @@ import type { RecoveryId } from './mission-policy';
 import TalkToFriend from './components/TalkToFriend';
 import SupportPrograms, { PrivacyPolicy } from './components/SupportPrograms';
 import { SettingsScreen, DeveloperSettings } from './components/DeveloperSettings';
-import RivePlant, { RivePlantState } from './components/RivePlant';
 import { GardenTools } from './components/GardenFeatures';
 import { DressUp, Inventory } from './components/Wardrobe';
-import { petGrowth } from './pet-growth';
+import { petGrowth, type Growth } from './pet-growth';
 import { readOutfit, wear } from './wardrobe';
 import { shopItem, type OutfitSlot, type ShopItem } from './shop-catalog';
 
@@ -38,7 +37,7 @@ import { GrowthProgress, GrowthRewardsScreen, OptionalCareScreen } from './compo
 import { SHOP_KEY, ownedItemIds, shopSnapshot, syncGrowthRewards, type ShopState } from './shop-store';
 import { newSunshineNotices, enqueueSunshineNotices, SUNSHINE_NOTICE_MS, type SunshineNotice } from './sunshine-notifications';
 type View = GardenView;
-type PlantState = RivePlantState;
+type PlantState = DailyCheckin['plantState'];
 type IconName = 'leaf' | 'note' | 'settings' | 'back' | 'drop' | 'cloud' | 'walk' | 'check' | 'arrow' | 'diary' | 'heart' | 'home' | 'sun' | 'brush' | 'map';
 // Night follows the device clock; the default sky turns into a night sky.
 const isNight = (now = new Date()) => now.getHours() < 6 || now.getHours() >= 19;
@@ -63,11 +62,9 @@ function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   return <svg {...p}><path d="m9 6 6 6-6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-// The garden's main character: the chosen companion. The plant keeps the original Rive sprout.
-type ActiveCompanion = { id: CompanionId } | null;
-function Plant({ state = 'normal', className = '', celebrate = false, active = null }: { state?: PlantState; className?: string; celebrate?: boolean; active?: ActiveCompanion }) {
-  if (!active) return <RivePlant state={state} className={className} celebrate={celebrate} />;
-  return <CompanionArt id={active.id} low={state === 'low'} celebrate={celebrate} className={className}/>;
+type ActiveCompanion = { id: CompanionId; stage: Growth['tree']['stage']['level'] } | null;
+function Plant({ state = 'normal', className = '', celebrate = false, active = null, outfit }: { state?: PlantState; className?: string; celebrate?: boolean; active?: ActiveCompanion; outfit?: ReturnType<typeof readOutfit> }) {
+  return <CompanionArt id={active?.id ?? 'bonsai'} stage={active?.stage} low={state === 'low'} celebrate={celebrate} className={className} outfit={outfit} interactive={false}/>;
 }
 
 // The help link takes whichever side slot is free, so every top bar can open the safety center.
@@ -81,7 +78,7 @@ const STYLE_VIEWS: View[] = ['decorate', 'dress', 'items', 'shop', 'rewards', 'e
 // The tab a screen belongs to; null = a focused flow (check-in, completion, sub pages) without the bar.
 const tabOf = (view: View, caring: boolean): Tab | null => view === 'home' || view === 'map' || view === 'garden' || view === 'settings' ? view
   : view === 'care' ? (caring ? 'garden' : null) : STYLE_VIEWS.includes(view) ? 'decorate' : ['companions', 'guardian', 'connections'].includes(view) ? 'settings' : null;
-const journalView = (target: string) => target === 'today' || (target === 'care' && dataScope() !== 'test') ? 'garden' : target;
+const journalView = (target: string) => target === 'today' || target === 'diary' || (target === 'care' && dataScope() !== 'test') ? 'garden' : target;
 const SWIPE_MIN = 70; // px; shorter or mostly vertical drags stay scrolls
 const SWIPE_IGNORE = '.companion-art, .pet-menu, .pet-menu-backdrop, .insights-chart, .missions-carousel, .period-rail, .places-rail, .places-map, .garden-mood-strip, .camera-sheet, .chat-sheet, .help-sheet, input, textarea, select'; // these own their sideways gestures
 function BottomNav({ active, go }: { active: Tab; go: (v: View) => void }) {
@@ -102,7 +99,7 @@ function Onboarding({ start }: { start: (firstTime: boolean) => void }) {
   };
   return <section className="screen onboarding-screen">
 
-    <div className="onboarding-visual"><RivePlant idleOnly className="plant-art" label="작은 정원에서 기다리는 식물" /></div>
+    <div className="onboarding-visual"><Plant className="plant-art"/></div>
     <div className="onboarding-copy"><h1>오늘의 나를<br/>만나러 가볼까요?</h1><p>작은 정원에서<br/>천천히 나를 돌봐요.</p></div>
     <div className="onboarding-action">
       {asking ? <fieldset className="consent-box"><legend>시작하기 전에 확인해 주세요</legend>
@@ -117,15 +114,15 @@ function Onboarding({ start }: { start: (firstTime: boolean) => void }) {
 }
 
 // The friend fills the screen. The help balloon, level and fan menu float on top; the talk bar sits above the tab bar.
-function HomeScreen({ state, go, shop, companion, companions, records, outfit, night, news }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; companions: CompanionState | null; records: DailyCheckin[]; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode }) {
+function HomeScreen({ state, go, shop, companion, growth, outfit, night, news }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; growth: Growth | null; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode }) {
   const background = shop?.layout.background ?? 'default-sky';
   const sceneClass = 'garden-scene pet-scene garden-scene--' + background + (night && background === 'default-sky' ? ' garden-scene--night' : '');
   const ground = <><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></>;
   return <section className="screen pet-home">
     <h1 className="sr-only">오늘의 정원</h1>
     <ConnectionNudge onOpen={() => go('connections')}/>
-    {companion && companions ? <TalkToFriend id={companion.id} name={companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass} intro={GREETING}
-      growth={petGrowth(companions, records)} outfit={outfit} news={news} onOpen={go}>{ground}</TalkToFriend>
+    {companion && growth ? <TalkToFriend id={companion.id} name={companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass} intro={GREETING}
+      growth={growth} outfit={outfit} news={news} onOpen={go}>{ground}</TalkToFriend>
       : <div className={sceneClass}><div className="pet-ground" aria-hidden="true"/><div className="pet-stage">{ground}<div className="hero-plant"><Plant state={state} className="plant-art"/></div></div>
         <div className="pet-bottom"><button type="button" className="primary-button" onClick={() => go('companion')}>함께할 친구를 골라 보세요</button></div></div>}
   </section>;
@@ -470,8 +467,8 @@ export default function HomePage() {
     go(next[0]);
   };
   useEffect(() => { if (!slide) return; const t = setTimeout(() => setSlide(''), 400); return () => clearTimeout(t); }, [slide]);
-  const activeAdoption = companions?.adopted.find(a => a.id === companions.active);
-  const activeCompanion: ActiveCompanion = activeAdoption ? { id: activeAdoption.id } : null;
+  const growth = companions ? petGrowth(companions, records) : null;
+  const activeCompanion: ActiveCompanion = companions && growth ? { id: companions.active, stage: growth.tree.stage.level } : null;
   const owned = commerce ? ownedItemIds(commerce.state) : [];
   void outfitTick; // a new tick re-reads the outfits after a change in 옷 입히기
   const outfit = activeCompanion ? readOutfit(activeCompanion.id, owned) : undefined;
@@ -493,6 +490,7 @@ export default function HomePage() {
   };
   const bondNews = companions ? <CompanionStatus state={companions} records={records} onSeen={level => companionAction(() => markLevelSeen(companions.active, level))} onOpen={go}/> : null;
   const plantState = daily?.plantState ?? 'normal';
+  const gardenPreview = <Plant state={plantState} active={activeCompanion} outfit={outfit} className="plant-art"/>;
   const todayCares = daily?.careRecommendations?.find(entry => entry.date === daily.date);
 
   return <main className="app-shell"><div className="phone-frame" data-slide={slide || undefined} onPointerDown={swipeStart} onPointerUp={swipeEnd} onPointerCancel={() => { swipe.current = null; }}>
@@ -505,7 +503,7 @@ export default function HomePage() {
         </div>}
       </div>
       {view === 'onboarding' && <Onboarding start={firstTime => firstTime && !readCompanions() ? show('companion', true) : goHome()}/>}
-      {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} companions={companions} records={records} outfit={outfit} night={night} news={bondNews}/>}
+      {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} growth={growth} outfit={outfit} night={night} news={bondNews}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={() => go('garden')} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
@@ -522,14 +520,14 @@ export default function HomePage() {
       {view === 'map' && <section className="screen work-screen places-screen"><TopBar title="지도"/><Places energy={normalizeAnswers(daily?.answers)[1]}/></section>}
       {view === 'connections' && <section className="screen work-screen"><TopBar title="연락처" onBack={() => go('settings')}/><ConnectionsScreen/></section>}
       {view === 'guardian' && <section className="screen work-screen"><TopBar title="보호자 공유" onBack={() => go('settings')}/><GuardianSettings records={records}/></section>}
-      {view === 'decorate' && <StyleHub view={view} go={go} giftPending={giftPending}><GardenShop key={datasetEpoch + ':decorate:' + (decorationItem ?? '')} initialItem={decorationItem} plantState={plantState} inventory snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go('shop')} onDress={dressItem}/></StyleHub>}
-      {view === 'dress' && <StyleHub view={view} go={go} giftPending={giftPending}><DressUp key={datasetEpoch + ':' + dressSlot + ':' + (commerce ? 'ready' : 'loading') + ':' + companions?.active + ':' + dressFriend} snapshot={commerce} companions={companions} slot={dressSlot} friend={dressFriend} onWear={() => setOutfitTick(tick => tick + 1)} onShop={shopFor} onChoose={() => go('companion')}/></StyleHub>}
+      {view === 'decorate' && <StyleHub view={view} go={go} giftPending={giftPending}><GardenShop key={datasetEpoch + ':decorate:' + (decorationItem ?? '')} initialItem={decorationItem} gardenPreview={gardenPreview} inventory snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go('shop')} onDress={dressItem}/></StyleHub>}
+      {view === 'dress' && <StyleHub view={view} go={go} giftPending={giftPending}><DressUp key={datasetEpoch + ':' + dressSlot + ':' + (commerce ? 'ready' : 'loading') + ':' + companions?.active + ':' + dressFriend} snapshot={commerce} companions={companions} records={records} slot={dressSlot} friend={dressFriend} onWear={() => setOutfitTick(tick => tick + 1)} onShop={shopFor} onChoose={() => go('companion')}/></StyleHub>}
       {view === 'items' && <StyleHub view={view} go={go} giftPending={giftPending}><Inventory snapshot={commerce} worn={worn} onUse={openItem}/></StyleHub>}
-      {view === 'shop' && <section className="screen shop-screen"><TopBar title="작은 정원 상점" onBack={() => go('decorate')}/><GardenShop key={datasetEpoch + ':shop:' + (shopSelect ?? '')} initialSelect={shopSelect} plantState={plantState} inventory={false} snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go('decorate')} onDress={dressItem}/></section>}
+      {view === 'shop' && <section className="screen shop-screen"><TopBar title="작은 정원 상점" onBack={() => go('decorate')}/><GardenShop key={datasetEpoch + ':shop:' + (shopSelect ?? '')} initialSelect={shopSelect} gardenPreview={gardenPreview} inventory={false} snapshot={commerce} storageError={shopError} onChange={setCommerce} onRetry={() => { readToday(); }} onHome={goHome} onSwitch={() => go('decorate')} onDress={dressItem}/></section>}
       {view === 'rewards' && <section className="screen"><TopBar title="함께한 날의 선물" onBack={() => go('decorate')}/><GrowthRewardsScreen snapshot={commerce} error={shopError || rewardError} onRetry={refreshCommerce} onChange={setCommerce} onPlace={id => { show('decorate'); setDecorationItem(id); }} onExtra={() => go('extra-care')}/></section>}
       {view === 'extra-care' && <section className="screen"><TopBar title="선택형 돌봄" onBack={() => go('rewards')}/><OptionalCareScreen snapshot={commerce} onHome={goHome}/></section>}
       {view === 'settings' && <section className="screen settings-screen"><TopBar title="설정"/><SettingsScreen onDeveloper={() => go('developer')} records={records} snapshot={commerce} canDelete={assertNoDrafts}/></section>}
-      {view === 'support' && <section className="screen"><TopBar title="지원 제도 신청 도우미" onBack={() => window.history.back()}/><SupportPrograms friend={activeCompanion ? { id: activeCompanion.id, name: companionInfo(activeCompanion.id).name } : null}/></section>}
+      {view === 'support' && <section className="screen"><TopBar title="지원 제도 신청 도우미" onBack={() => window.history.back()}/><SupportPrograms friend={activeCompanion ? { ...activeCompanion, name: companionInfo(activeCompanion.id).name } : null}/></section>}
       {view === 'privacy' && <section className="screen"><TopBar title="개인정보 처리방침" help={false} onBack={() => window.history.back()}/><PrivacyPolicy/></section>}
       {view === 'safety' && <section className="screen"><TopBar title="도움 받을 수 있는 곳" help={false} onBack={() => window.history.back()}/><SafetyCenter/></section>}
       {view === 'developer' && developerToolsAvailable() && <section className="screen"><TopBar title="개발자 테스트" onBack={() => go('settings')}/><DeveloperSettings enabled={testEnabled} snapshot={commerce} dataError={shopError || rewardError} onToggle={toggleTestMode} onRefresh={refreshDataset} onOpen={go} canReset={assertNoDrafts}/></section>}

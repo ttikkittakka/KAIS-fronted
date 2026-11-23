@@ -70,7 +70,7 @@ for (const c of COMPANIONS) {
   figure.innerHTML = `<div class="stage"><button type="button" class="companion-art companion-art--face-normal" aria-label="${c.name} 점프">
     <span class="companion-art__shadow" aria-hidden="true"></span>
     <span class="companion-art__jump"><span class="companion-art__body">
-      ${['normal', 'low', 'happy', 'excited'].map(f => `<img class="companion-art__img companion-art__img--${f}" src="../../public/characters/${c.id}${f === 'normal' ? '' : '-' + f}.webp" alt="">`).join('')}
+      ${['normal', 'low', 'happy', 'excited'].map(f => `<img class="companion-art__img companion-art__img--${f}" src="${c.id === 'plant' ? '../../public/characters' : './legacy'}/${c.id}${f === 'normal' ? '' : '-' + f}.webp" alt="">`).join('')}
     </span></span></button></div><figcaption>${c.name}<small>${c.kind}</small></figcaption>`;
   const art = figure.querySelector('.companion-art');
   art.addEventListener('click', () => {

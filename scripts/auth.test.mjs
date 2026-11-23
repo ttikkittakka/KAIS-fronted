@@ -123,6 +123,7 @@ function boundary(environment = 'development') {
       if (name.endsWith('/safety')) return loadTs(new URL('../src/app/safety.ts', import.meta.url));
       if (name === '../install-phone') return loadTs(new URL('../src/app/install-phone.ts', import.meta.url));
       if (name === '../install-intent') return { saveInstallIntent() {}, async sendInstallIntent() { return null; } };
+      if (name === './Companions') return { CompanionArt: props => jsx('tree-mark', props) };
       throw Error(name);
     },
   });

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } f
 import { createPortal } from 'react-dom';
 import { INTERACTIONS, unlockLabel } from '../chat';
 import { bondName, bondRule } from '../companions';
-import { MIND_NAMES, unlocked, type Growth } from '../pet-growth';
+import { TREE_STAGES, unlocked, type Growth } from '../pet-growth';
 import { Icon, type IconName } from './PetIcon';
 
 export type MenuItem = { id: string; label: string; icon: IconName; locked?: string };
@@ -67,20 +67,19 @@ export function HelpSheet({ name, growth, onClose }: { name: string; growth: Gro
     return () => behind.forEach(el => { el.inert = false; });
   }, []);
   const rule = bondRule();
-  const { bond, mind } = growth;
+  const { bond, tree } = growth;
   const meters = [
-    { label: '레벨', level: growth.level, max: 6, note: '친밀도와 마음 성숙도가 오를 때마다 함께 올라요.' },
     { label: '친밀도', level: bond.level, max: 3, note: bondName(bond.level) + ' · ' + (bond.level === 1 ? `정원에 들른 날 ${bond.visitDays}/${rule.visitDays}일` : bond.level === 2 ? `작은 돌봄을 한 날 ${bond.careDays}/${rule.careDays}일` : '단짝이 되었어요') },
-    { label: '마음 성숙도', level: mind.level, max: 4, note: MIND_NAMES[mind.level - 1] + ' · ' + (mind.next ? `오늘의 나를 기록한 날 ${mind.days}/${mind.next}일` : `기록한 날 ${mind.days}일`) },
+    { label: '나무 성장', level: tree.stage.level, max: TREE_STAGES.length, note: tree.stage.name + ' · ' + (tree.next ? `다음 단계까지 ${tree.next - tree.days}일` : `함께 자란 날 ${tree.days}일`) },
   ];
   return createPortal(<section className="help-sheet" role="dialog" aria-modal="true" aria-labelledby="help-title">
     <header className="chat-head"><div><h2 id="help-title">{name}와 함께하는 법</h2><p>천천히 함께할수록 할 수 있는 일이 늘어나요</p></div>
       <button type="button" ref={close} className="chat-close" onClick={onClose} aria-label="도움말 닫기"><Icon name="close"/></button></header>
     <div className="help-body">
       <h3>함께 자라요</h3>
-      <ul className="help-meters">{meters.map(m => <li key={m.label}><div><strong>{m.label} Lv.{m.level}</strong><span>{m.note}</span></div>
+      <ul className="help-meters">{meters.map(m => <li key={m.label}><div><strong>{m.label} {m.level}단계</strong><span>{m.note}</span></div>
         <i role="img" aria-label={`${m.label} ${m.level}/${m.max}`} style={{ '--fill': (m.level / m.max) * 100 + '%' } as CSSProperties}/></li>)}</ul>
-      <p className="help-note">친밀도는 정원에 들르고 작은 돌봄을 한 날만큼, 마음 성숙도는 오늘의 나를 기록한 날만큼 자라요. 쉬어 간 날이 있어도 줄어들지 않아요.</p>
+      <p className="help-note">잔잔하거나 좋은 마음을 기록한 날, 또는 미션·마음 돌봄·일기를 남긴 날에 나무가 하루만큼 자라요. 쉬어 간 날에도 지금 크기를 간직해요.</p>
       <h3>이렇게 놀아요</h3>
       <ul className="help-gestures">{GESTURES.map(([icon, title, copy]) => <li key={title}><span><Icon name={icon} size={20}/></span><div><strong>{title}</strong><p>{copy}</p></div></li>)}</ul>
       <h3>함께할 수 있는 일</h3>

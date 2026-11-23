@@ -5,6 +5,7 @@ import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, t
 import { getAuthClient } from '../../lib/supabase/auth-client';
 import { beginStorageOperation, dataScope, type DataScope } from '../app-storage';
 import type { CompanionId } from '../companions';
+import type { TreeLevel } from '../pet-growth';
 import {
   findSupportProgram, recommendSupportPrograms, SUPPORT_AGE_GROUPS, SUPPORT_CHECKED_AT, SUPPORT_NEEDS, SUPPORT_PROGRAMS,
   SUPPORT_REGIONS, SUPPORT_TOPICS, type LiveBenefit, type SupportAgeGroup, type SupportNeed, type SupportProgram,
@@ -27,8 +28,8 @@ const STEPS = {
   history: ['내 신청 현황', '운영팀이 어디까지 도왔는지 여기서 볼 수 있어요.'],
 } as const;
 type Step = keyof typeof STEPS;
-type Friend = { id: CompanionId; name: string };
-const DEFAULT_FRIEND: Friend = { id: 'plant', name: '새싹이' };
+type Friend = { id: CompanionId; name: string; stage: TreeLevel };
+const DEFAULT_FRIEND: Friend = { id: 'bonsai', name: '분재', stage: 1 };
 const TEST_NOTICE = '테스트 신청 · 실제로 보내지 않아요';
 const RETENTION = '지원 요청을 처리하는 동안과 완료·취소일부터 1년 동안 보관해요. 그 전에 동의를 철회하면 신청 건에서 계정 연결과 입력한 정보를 바로 지워요.';
 const COLLECTION_ITEMS = '계정 식별자, 지원 제도, 이름, 생년월일, 휴대전화, 시·도와 시·군·구, 연락 가능 시간, 이메일(선택), 접수·처리 일시와 상태, 동의 이력';
@@ -610,7 +611,7 @@ function SupportFlow({ friend, scope }: { friend: Friend; scope: DataScope }) {
     <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{title}</p>
     <section className="settings-card support-step" aria-labelledby={headingId}>
       <header className="support-guide">
-        <Image className="support-avatar" src={'/characters/' + friend.id + '.webp'} alt="" width={48} height={48} unoptimized/>
+        <Image className="support-avatar" src={`/trees/${friend.id}-${friend.stage}.webp`} alt="" width={48} height={48} unoptimized/>
         <div>
           <h2 ref={heading} id={headingId} tabIndex={-1}>{title}</h2>
           <p><strong>{friend.name}</strong>: {guide}</p>
@@ -681,7 +682,7 @@ function SupportFlow({ friend, scope }: { friend: Friend; scope: DataScope }) {
   </div>;
 }
 
-export default function SupportPrograms({ friend }: { friend?: { id: CompanionId; name: string } | null }) {
+export default function SupportPrograms({ friend }: { friend?: Friend | null }) {
   const scope = dataScope();
   return <SupportFlow key={scope} scope={scope} friend={friend ?? DEFAULT_FRIEND}/>;
 }

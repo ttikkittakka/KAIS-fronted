@@ -6,6 +6,8 @@ import { BOND_LEVELS, COMPANIONS, bond, bondName, bondRule, canAdopt, companion,
 import type { DailyCheckin } from '../daily-checkin';
 import type { Emotion } from '../chat';
 import { FIT, type Outfit } from '../wardrobe';
+import { TREE_STAGES, treeGrowth, type TreeLevel } from '../pet-growth';
+import { readMissionLog } from '../missions';
 
 // Korean particles depend on whether the last syllable has a final consonant.
 const final = (word: string) => { const code = word.charCodeAt(word.length - 1) - 0xac00; return code >= 0 && code < 11172 ? code % 28 : 0; };
@@ -32,30 +34,34 @@ const EMOTES: Record<Emotion, { face: typeof FACES[number]; motion: string; mark
   sleepy: { face: 'low', motion: 'doze', mark: 'z', count: 3 },
   love: { face: 'happy', motion: 'hug', mark: '♥', count: 5 },
   surprised: { face: 'excited', motion: 'startle', mark: '!', count: 1 },
-  wave: { face: 'happy', motion: 'wave', mark: 'hand', count: 3 },
+  wave: { face: 'happy', motion: 'wave', mark: '✦', count: 3 },
   sing: { face: 'happy', motion: 'sing', mark: '♪', count: 5, ms: 2300 },
   dance: { face: 'excited', motion: 'dance', mark: '♪', count: 4, ms: 2300 },
   calm: { face: 'blink', motion: 'breathe', mark: '', count: 0, ms: 4200 },
   walk: { face: 'happy', motion: 'walk', mark: '✦', count: 2, ms: 2700 },
 };
-const MARK_CLASS: Record<string, string> = { '♥': 'heart', '✦': 'spark', '?': 'mark', '!': 'mark', z: 'zz', '♪': 'note', hand: 'hand' };
-const HAND = <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V12m0-6.5V5a1.5 1.5 0 0 1 3 0v7m0-5.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a5 5 0 0 1-4.2-2.3L4 14.5a1.5 1.5 0 0 1 2.4-1.8L8 14.5"/></svg>;
+const MARK_CLASS: Record<string, string> = { '♥': 'heart', '✦': 'spark', '?': 'mark', '!': 'mark', z: 'zz', '♪': 'note' };
+const CROWN_HEIGHT: Record<CompanionId, readonly number[]> = {
+  bonsai: [49, 34, 24, 12],
+  pine: [55, 38, 25, 12],
+  oak: [51, 33, 17, 9],
+  metasequoia: [63, 38, 22, 13],
+};
 // Outfit layers ride inside the body so they hop, sway and squash with the friend (fit numbers: wardrobe.ts).
-function Wear({ id, outfit }: { id: CompanionId; outfit: Outfit }) {
+function Wear({ id, stage, outfit }: { id: CompanionId; stage: TreeLevel; outfit: Outfit }) {
   return <>{Object.entries(outfit).map(([slot, item]) => {
-    const anchor = FIT.anchors[id][slot as keyof typeof FIT.anchors[CompanionId]];
+    const anchor = FIT.anchors[slot as keyof typeof FIT.anchors];
+    const y = slot === 'head' ? CROWN_HEIGHT[id][stage - 1] : anchor.y + (id === 'metasequoia' ? 2.8 : 0);
     const fit = FIT.items[item!] ?? { sink: 0, scale: 1 };
     // A missing picture hides itself rather than showing a broken-image icon on the friend.
     return <Image key={slot} className={'companion-art__wear companion-art__wear--' + slot} src={`/wardrobe/${item}.webp`} alt="" width={256} height={256} unoptimized draggable={false}
-      onError={event => { event.currentTarget.style.display = 'none'; }} style={{ '--x': anchor.x, '--y': anchor.y, '--w': anchor.w * fit.scale, '--r': anchor.r, '--sink': fit.sink } as CSSProperties}/>;
+      onError={event => { event.currentTarget.style.display = 'none'; }} style={{ '--x': 50, '--y': y, '--w': anchor.w * fit.scale, '--r': 0, '--sink': fit.sink } as CSSProperties}/>;
   })}</>;
 }
-const faceFile = (id: CompanionId, face: typeof FACES[number]) => `/characters/${id}${face === 'normal' ? '' : '-' + face}.webp`;
-
-/** The friend's baby look with five faces; companions.css moves it with ground-contact physics.
+/** The potted tree and its expression move together.
  *  A new `emote.key` plays that emotion once. Tap = hop (+ onTap), stroke = pet, hold still = hug. */
-export function CompanionArt({ id, low = false, celebrate = false, interactive = true, className = '', label, emote = null, outfit, onInteract, onTap }: {
-  id: CompanionId; low?: boolean; celebrate?: boolean; interactive?: boolean; className?: string; label?: string;
+export function CompanionArt({ id, stage = 1, low = false, celebrate = false, interactive = true, className = '', label, emote = null, outfit, onInteract, onTap }: {
+  id: CompanionId; stage?: TreeLevel; low?: boolean; celebrate?: boolean; interactive?: boolean; className?: string; label?: string;
   emote?: { kind: Emotion; key: number } | null; outfit?: Outfit; onInteract?: (kind: 'pet' | 'hug') => void; onTap?: () => void;
 }) {
   const [hopping, setHopping] = useState(false);
@@ -131,23 +137,23 @@ export function CompanionArt({ id, low = false, celebrate = false, interactive =
   const classes = ['companion-art', 'companion-art--face-' + face, low && 'companion-art--low', celebrate && 'companion-art--celebrate',
     hopping && 'companion-art--hop', petting && 'companion-art--petting', glow && 'companion-art--glow',
     playing && !petting && 'companion-art--emote-' + playing.motion, className].filter(Boolean).join(' ');
-  const name = label ?? `${companion(id).name} · ${companion(id).kind}`;
-  // All faces stay mounted so a change cross-fades instead of popping.
-  // unoptimized: the WebP files are already 512px and small; resizing them only blurs.
+  const name = label ?? `${companion(id).name} · ${TREE_STAGES[stage - 1].name}`;
+  const style = { '--lean': lean, '--blink-delay': blinkDelay(id), '--pot-face-y': id === 'metasequoia' ? '83.3%' : '80.5%' } as CSSProperties;
   const figure = <>
     <span className="companion-art__shadow" aria-hidden="true"/>
     <span className="companion-art__jump"><span className="companion-art__body">
-      {FACES.map(f => <Image key={f} className={'companion-art__img companion-art__img--' + f} src={faceFile(id, f)} alt="" width={512} height={512} unoptimized draggable={false}/>)}
-      {outfit && <Wear id={id} outfit={outfit}/>}
+      <Image className="companion-art__img companion-art__tree" src={`/trees/${id}-${stage}.webp`} alt="" width={512} height={512} unoptimized draggable={false}/>
+      <span className="tree-face" aria-hidden="true"><i className="tree-eye"/><i className="tree-eye"/><i className="tree-mouth"/></span>
+      {outfit && <Wear id={id} stage={stage} outfit={outfit}/>}
     </span></span>
-    {marks.length > 0 && <span className="companion-art__hearts" aria-hidden="true">{marks.map(({ key, mark }) => <i key={key} className={'mark-' + MARK_CLASS[mark]} style={{ '--drift': `${Math.round(((key * 997) % 1) * 60 - 30)}px` } as CSSProperties}>{mark === 'hand' ? HAND : mark === '♥' || mark === '♪' ? mark + '\uFE0E' : mark}</i>)}</span>}
+    {marks.length > 0 && <span className="companion-art__hearts" aria-hidden="true">{marks.map(({ key, mark }) => <i key={key} className={'mark-' + MARK_CLASS[mark]} style={{ '--drift': `${Math.round(((key * 997) % 1) * 60 - 30)}px` } as CSSProperties}>{mark === '♥' || mark === '♪' ? mark + '\uFE0E' : mark}</i>)}</span>}
   </>;
   return interactive
-    ? <button type="button" className={classes} style={{ '--lean': lean, '--blink-delay': blinkDelay(id) } as CSSProperties}
+    ? <button type="button" className={classes} style={style}
         aria-label={`${name}. ${onTap ? '누르면 함께할 일을 골라요' : '누르면 점프해요'}. 옆으로 쓸어 주면 쓰다듬고, 꾹 누르고 있으면 안아 줘요.`} aria-haspopup={onTap ? 'menu' : undefined}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
         onClick={event => { if (event.detail === 0) { setHopping(true); onTap?.(); } }}>{figure}</button>
-    : <div className={classes} style={{ '--blink-delay': blinkDelay(id) } as CSSProperties} role="img" aria-label={name}>{figure}</div>;
+    : <div className={classes} style={style} role="img" aria-label={name}>{figure}</div>;
 }
 
 export function CompanionPicker({ state, onAdopt }: { state: CompanionState | null; onAdopt: (id: CompanionId) => void }) {
@@ -166,15 +172,18 @@ export function CompanionPicker({ state, onAdopt }: { state: CompanionState | nu
 
 export function CompanionCollection({ state, records, onChoose, onAdopt }: { state: CompanionState | null; records: DailyCheckin[]; onChoose: (id: CompanionId) => void; onAdopt: () => void }) {
   const bonding = !canAdopt(state, records);
+  const missions = readMissionLog().done;
   return <div className="settings-content">
     {state && <p className="companion-rule">{bondProgress(state, records).copy}</p>}
     <div className="companion-grid">{COMPANIONS.map(c => {
       const adoption = state?.adopted.find(a => a.id === c.id);
       if (!adoption) return <article key={c.id} className="companion-card companion-card--locked"><CompanionArt id={c.id} interactive={false} label={`${c.name} · 아직 만나지 않은 친구`}/><strong>{c.name}</strong><span>{bonding ? '지금 친구와 단짝이 되면 만날 수 있어요' : '데려올 수 있어요'}</span></article>;
       const { level } = bond(records, adoption.adoptedOn);
+      const growth = treeGrowth(records, adoption.adoptedOn, undefined, missions);
       const active = state!.active === c.id;
       return <article key={c.id} className={'companion-card' + (active ? ' companion-card--selected' : '')}>
-        <CompanionArt id={c.id} interactive={false}/><strong>{c.name}</strong>
+        <CompanionArt id={c.id} stage={growth.stage.level} interactive={false}/><strong>{c.name}</strong>
+        <span>{growth.stage.name} · 함께 자란 날 {growth.days}일</span>
         <span><span className="companion-hearts" aria-hidden="true">{hearts(level)}</span> {bondName(level)} · {Number(adoption.adoptedOn.slice(5, 7))}월 {Number(adoption.adoptedOn.slice(8))}일부터</span>
         {active ? <span className="companion-badge">정원 대표</span> : <button type="button" className="shop-secondary" onClick={() => onChoose(c.id)}>정원 대표로</button>}
       </article>;
