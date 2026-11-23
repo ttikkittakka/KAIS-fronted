@@ -13,7 +13,7 @@ function mount(days=20,inventory=false){
  const slots=[];let cursor=0,first=true,home=0,switched=0;const props={inventory,snapshot:shop.shopSnapshot(),storageError:'',onChange:value=>props.snapshot=value,onRetry(){},onHome(){home++;},onSwitch(){switched++;}};
  const react={useState(initial){const i=cursor++;if(first)slots[i]=initial;return[slots[i],value=>slots[i]=value];},useRef(initial){const i=cursor++;if(first)slots[i]={current:initial};return slots[i];}};
  const jsx=(type,props)=>({type,props});const exports={};
- runInNewContext(compiled,{exports,Error,require:name=>name==='react'?react:name==='react/jsx-runtime'?{jsx,jsxs:jsx,Fragment:'fragment'}:name==='./GardenEditor'?{default:props=>jsx('editor',props)}:loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
+ runInNewContext(compiled,{exports,Error,require:name=>name==='react'?react:name==='react/jsx-runtime'?{jsx,jsxs:jsx,Fragment:'fragment'}:name==='./GardenEditor'?{default:props=>jsx('editor',props)}:name==='./GardenPlacement'?{ItemArt:props=>jsx('item-art',props)}:loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
  function expand(n){if(!n||typeof n!=='object')return n;if(Array.isArray(n))return n.map(expand);if(typeof n.type==='function')return expand(n.type(n.props));return {...n,props:{...n.props,children:expand(n.props?.children)}};}
  function render(){cursor=0;const tree=exports.default(props);first=false;return expand(tree);}
  function text(n){if(n==null||typeof n==='boolean')return '';if(Array.isArray(n))return n.map(text).join('');return typeof n==='object'?text(n.props?.children):String(n);}

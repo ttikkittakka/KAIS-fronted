@@ -1,0 +1,138 @@
+/* Home v3: the friend fills the screen; other features live in tabs behind a floating, see-through tab bar. */
+
+/* Floating tab bar over every tab screen (frosted glass; .7 keeps 11px labels at 4.5:1 even over the night sky). */
+.phone-frame > .bottom-nav { position: absolute; z-index: 25; inset: auto 12px max(10px, env(safe-area-inset-bottom)); height: 64px; flex: none; margin: 0; padding: 5px;
+  border: 1px solid rgba(255, 255, 255, .7); border-radius: 22px; background: rgba(255, 255, 255, .7);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5); backdrop-filter: blur(18px) saturate(1.5); box-shadow: 0 8px 28px rgba(52, 56, 50, .14); }
+.bottom-nav button { min-width: 0; gap: 2px; color: #4f574d; }
+.bottom-nav button.active { background: rgba(255, 255, 255, .9); color: var(--deep-green); font-weight: 600; box-shadow: 0 2px 8px rgba(63, 74, 63, .08); }
+.bottom-nav button span:last-child { font-size: 11px; }
+.phone-frame:has(> .bottom-nav) > .screen:not(.pet-home) { padding-bottom: calc(96px + env(safe-area-inset-bottom)); scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+/* The pet home: sky fills the screen, the garden stage keeps the original scene size so slot positions still fit. */
+.pet-home { position: relative; overflow: hidden; padding: 0; }
+.pet-home .pet-scene { position: absolute; inset: 0; height: auto; margin: 0; border: 0; border-radius: 0; box-shadow: none; overflow: hidden;
+  --pet: clamp(230px, min(38vh, 76vw), 300px); }
+.pet-ground { position: absolute; left: 0; right: 0; bottom: 0; height: 170px; background: #cbd8bb; }
+.garden-scene--night .pet-ground { background: #6f8a76; }
+.pet-stage { position: absolute; left: 0; right: 0; bottom: calc(150px + env(safe-area-inset-bottom)); height: 470px; transform-origin: 50% 100%;
+  transition: bottom .32s cubic-bezier(.2, .9, .3, 1), transform .32s cubic-bezier(.2, .9, .3, 1); }
+/* While chatting, the garden shrinks and rises above the sheet so the friend stays in view and still reacts. */
+.chat-sheet { height: min(54%, 480px); }
+.pet-scene--chat .pet-stage { bottom: calc(max(min(54%, 480px), min(100%, 380px)) - 24px); transform: scale(.7); }
+.pet-scene--chat .friend-bubble, .pet-scene--chat .pet-bottom, .pet-scene--chat .pet-news { visibility: hidden; }
+.chat-log { min-height: 120px; }
+.chat-actions { display: flex; overflow-x: auto; scrollbar-width: none; }
+.chat-actions::-webkit-scrollbar { display: none; }
+.chat-actions button { flex: none; padding: 0 12px; }
+.pet-stage .soil-floor { z-index: 1; }
+.pet-home .hero-plant { width: var(--pet); bottom: 42px; }
+.pet-home .hero-plant .companion-art.plant-art { width: 100%; }
+.pet-stage .friend-bubble { bottom: calc(42px + var(--pet) * .97); max-width: min(80%, 300px); font-size: 15px; }
+.pet-scene--hat .pet-stage .friend-bubble { bottom: calc(42px + var(--pet) * 1.14); }
+
+/* Top: help balloon (left), level (centre), fan-menu button (right). */
+.pet-hud { position: absolute; z-index: 6; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pet-help { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px 0 11px; border-radius: 22px 22px 22px 6px;
+  background: rgba(255, 255, 255, .9); color: var(--deep-green); font-size: 14px; font-weight: 600; box-shadow: 0 4px 14px rgba(52, 56, 50, .12); }
+.pet-level { min-height: 44px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 16px; border-radius: 16px;
+  background: rgba(255, 255, 255, .78); color: var(--deep-green); line-height: 1.15; box-shadow: 0 2px 8px rgba(52, 56, 50, .08); }
+.pet-level strong { font-size: 15px; font-weight: 700; }
+.pet-level span { color: #c96a7d; font-size: 10px; letter-spacing: 1px; }
+.pet-menu-toggle { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .9); color: var(--deep-green); box-shadow: 0 4px 14px rgba(52, 56, 50, .12); transition: background .2s, color .2s; }
+.pet-menu-toggle[aria-expanded="true"] { background: var(--deep-green); color: #fff; }
+.pet-help:focus-visible, .pet-level:focus-visible, .pet-menu-toggle:focus-visible { outline: 2px solid var(--deep-green); outline-offset: 3px; }
+.pet-news { position: absolute; z-index: 6; top: calc(66px + env(safe-area-inset-top)); left: 12px; right: 12px; }
+.pet-news .companion-status { width: 100%; margin: 0; background: rgba(255, 255, 255, .94); box-shadow: var(--shadow); }
+
+/* Bottom: crisis / support links and the talk bar, just above the tab bar. */
+.pet-bottom { position: absolute; z-index: 6; left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); display: grid; gap: 8px; }
+.pet-bottom .talk-bar, .pet-bottom .friend-help, .pet-bottom .talk-error { margin: 0; }
+.pet-bottom .talk-open { background: rgba(255, 255, 255, .9); }
+.friend-help--support { background: #eef6ea; color: var(--deep-green); }
+
+/* Fan menu: a ring around the friend; every item sweeps out from the top one after another. */
+.pet-menu-backdrop { position: absolute; inset: 0; z-index: 7; padding: 0; border: 0; background: rgba(40, 48, 40, .22); cursor: default; animation: pet-fade .2s ease both; }
+@keyframes pet-fade { from { opacity: 0; } }
+.pet-scene--menu .hero-plant { z-index: 8; }
+.pet-menu { position: absolute; z-index: 9; left: 50%; bottom: calc(42px + var(--pet) * .5); width: 0; height: 0; --r: min(calc(var(--pet) * .5), 150px); }
+.pet-menu__item { position: absolute; left: 0; top: 0; width: 64px; display: grid; justify-items: center; gap: 3px; padding: 0; color: var(--deep-green);
+  transform: translate(-50%, -50%) rotate(var(--a)) translateY(calc(var(--r) * -1)) rotate(calc(var(--a) * -1)) scale(1);
+  animation: pet-fan .46s cubic-bezier(.2, .9, .3, 1.15) both; animation-delay: calc(var(--i) * 30ms); }
+@keyframes pet-fan { from { transform: translate(-50%, -50%) rotate(0deg) translateY(calc(var(--r) * -.4)) rotate(0deg) scale(.3); opacity: 0; } }
+.pet-menu__icon { position: relative; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .96); box-shadow: 0 6px 16px rgba(52, 56, 50, .2); transition: transform .12s; }
+.pet-menu__label { padding: 1px 7px; border-radius: 8px; background: rgba(255, 255, 255, .9); color: var(--text); font-size: 11px; font-weight: 600; white-space: nowrap; }
+.pet-menu__item--locked .pet-menu__icon { background: rgba(234, 236, 230, .96); color: #7d837a; }
+.pet-menu__item--locked .pet-menu__label { color: #5f655d; }
+.pet-menu__lock { position: absolute; right: -3px; bottom: -3px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: #5f655d; box-shadow: 0 1px 4px rgba(0, 0, 0, .16); }
+.pet-menu__item:active .pet-menu__icon { transform: scale(.92); }
+.pet-menu__item:focus-visible { outline: none; }
+.pet-menu__item:focus-visible .pet-menu__icon { outline: 3px solid var(--deep-green); outline-offset: 2px; }
+
+/* 도움말 풍선 sheet */
+.help-sheet { position: absolute; z-index: 30; left: 0; right: 0; bottom: 0; max-height: 84%; overflow-y: auto; overscroll-behavior: contain; border-radius: 26px 26px 0 0;
+  background: #fbfaf5; box-shadow: 0 -12px 40px rgba(52, 56, 50, .18); animation: sheet-up .28s cubic-bezier(.2, .9, .3, 1) both; }
+.help-sheet .chat-head { position: sticky; top: 0; z-index: 1; background: #fbfaf5; }
+.help-body { padding: 0 18px max(22px, env(safe-area-inset-bottom)); }
+.help-body h3 { margin: 18px 0 8px; color: var(--deep-green); font-size: 15px; font-weight: 600; }
+.help-meters, .help-gestures, .help-unlocks { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.help-meters li { display: grid; gap: 7px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
+.help-meters li div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.help-meters strong { color: var(--deep-green); font-size: 15px; }
+.help-meters span { color: var(--secondary); font-size: 12px; text-align: right; }
+.help-meters i { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--primary) var(--fill), #e3e8dc var(--fill)); }
+.help-gestures li { display: flex; align-items: flex-start; gap: 12px; }
+.help-gestures li > span { flex: none; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; background: #eef3e8; color: var(--deep-green); }
+.help-gestures strong { font-size: 14px; font-weight: 600; }
+.help-gestures p { margin: 2px 0 0; color: var(--secondary); font-size: 13px; line-height: 1.5; }
+.help-unlocks { grid-template-columns: 1fr 1fr; }
+.help-unlocks li { display: grid; grid-template-columns: 30px 1fr; column-gap: 8px; align-items: center; padding: 10px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.help-unlocks li > span { grid-row: span 2; width: 30px; height: 30px; display: grid; place-items: center; border-radius: 10px; background: #eef3e8; color: var(--deep-green); }
+.help-unlocks strong { font-size: 13px; font-weight: 600; }
+.help-unlocks small { color: var(--secondary); font-size: 11px; }
+.help-unlocks .help-locked { background: #f4f4ee; }
+.help-unlocks .help-locked > span { background: #e6e6de; color: #6b7069; }
+.help-note { margin: 12px 0 0; color: var(--secondary); font-size: 13px; line-height: 1.65; }
+.help-note a { color: var(--deep-green); font-weight: 600; }
+
+/* 오늘 tab */
+.today-date { margin: -8px 20px 2px; color: var(--secondary); font-size: 13px; text-align: center; }
+.today-screen .support-link { display: block; min-height: 44px; margin: 14px 20px 0; padding: 12px 0; }
+.consent-policy { display: inline-block; min-height: 44px; padding: 12px 0; }
+
+/* 꾸미기 tab: 집 꾸미기 · 옷 입히기 · 아이템 창 */
+.style-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin: 0 13px; padding: 4px; border-radius: 16px; background: #eceee6; }
+.style-tabs button { min-height: 44px; border-radius: 12px; color: var(--secondary); font-size: 14px; }
+.style-tabs button[aria-current="page"] { background: #fff; color: var(--deep-green); font-weight: 700; box-shadow: 0 2px 8px rgba(63, 74, 63, .1); }
+.style-tabs button:focus-visible { outline: 2px solid var(--deep-green); outline-offset: 2px; }
+.style-screen .garden-tools { margin: 10px 13px 0; }
+
+.dress, .items { padding: 8px 13px 0; }
+.dress-stage { position: relative; height: 250px; margin: 4px 0 8px; overflow: hidden; border-radius: 24px; background: linear-gradient(180deg, #ddecf2 0%, #e5f0df 66%, #cbd8bb 66%); }
+.dress-stage .dress-art { position: absolute; left: 50%; bottom: 4px; width: 236px; transform: translateX(-50%); }
+.dress-friends, .dress-slots { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.dress-friends button, .dress-slots button { min-height: 44px; padding: 0 18px; border: 1px solid var(--line); border-radius: 999px; background: #fff; color: var(--deep-green); font-size: 14px; }
+.dress-friends button[aria-pressed="true"], .dress-slots button[aria-pressed="true"] { border-color: var(--deep-green); background: var(--deep-green); color: #fff; }
+.dress-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0; padding: 0; list-style: none; }
+.dress-item { width: 100%; min-height: 116px; display: grid; justify-items: center; align-content: start; gap: 4px; padding: 10px 6px; border: 1.5px solid var(--line); border-radius: 18px; background: #fff; }
+.dress-item .item-art { width: 58px; height: 58px; object-fit: contain; }
+.dress-item strong { font-size: 13px; font-weight: 500; }
+.dress-item small { color: var(--secondary); font-size: 11px; }
+.dress-item[aria-pressed="true"] { border-color: var(--primary); background: #f1f7ee; box-shadow: 0 0 0 2px rgba(111, 143, 114, .25); }
+.dress-item--missing .item-art { filter: grayscale(1) opacity(.45); }
+.dress-none { width: 58px; height: 58px; border: 2px dashed #c3cabe; border-radius: 50%; }
+.dress-item:focus-visible, .items-slot:focus-visible, .dress-slots button:focus-visible, .dress-friends button:focus-visible { outline: 2px solid var(--deep-green); outline-offset: 2px; }
+
+.items-count { margin: 6px 0 10px; color: var(--secondary); font-size: 14px; }
+.items-count strong { color: var(--deep-green); font-size: 22px; }
+.items-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0; padding: 0; list-style: none; }
+.items-slot { width: 100%; min-height: 104px; display: grid; justify-items: center; align-content: center; gap: 3px; padding: 8px 4px; border: 1px solid var(--line); border-radius: 16px; background: linear-gradient(180deg, #fff, #f6f7f1); }
+.items-slot .item-art, .items-slot .garden-scene.item-swatch { width: 48px; height: 48px; object-fit: contain; border-radius: 12px; }
+.items-slot strong { font-size: 11px; font-weight: 500; line-height: 1.3; text-align: center; }
+.items-slot small { color: var(--secondary); font-size: 10px; }
+.items-slot--missing { border-style: dashed; background: #f0f1ec; }
+.items-slot--missing .item-art { filter: brightness(0) opacity(.18); }
+.items-slot--missing .garden-scene.item-swatch { filter: grayscale(1) opacity(.4); }
+.items-slot--missing strong { color: #6b7069; }
+
+@media (prefers-reduced-motion: reduce) { .pet-menu__item, .pet-menu-backdrop, .help-sheet { animation: none !important; } .pet-stage { transition: none; } }

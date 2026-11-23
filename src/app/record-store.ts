@@ -1,13 +1,15 @@
-import { appStorage, photoDatabaseName, beginStorageOperation } from './app-storage';
+import { appStorage, photoDatabaseName, beginStorageOperation, isDemo } from './app-storage';
 import { nextSunshine, validSunshine, type SunshineReason } from './sunshine';
 import { DAILY_KEY, localDay, parseDaily, type DailyCheckin } from './daily-checkin';
 import { parseCareHistory } from './daily-cares';
 import { normalizeAnswers } from './questions';
 import { isCareId } from './cares';
+import { isRecoveryId } from './mission-policy';
 
 export const RECORDS_KEY = 'little-garden.records.v1';
 export const PHOTO_TRASH_KEY = 'little-garden.photo-deletions.v1';
 const OWNER_KEY = 'little-garden.local-owner.v1';
+const demoPhotos = new Map<string, Blob>();
 // randomUUID is restricted to secure contexts; getRandomValues also supports
 // local HTTP testing. These IDs are namespaces, never authentication tokens.
 export function newLocalId() {
@@ -40,6 +42,8 @@ function validRecord(value: unknown, owner: string): value is DailyCheckin {
     (r.userId === undefined || (typeof r.userId === 'string' && r.userId.length > 0)) &&
     Array.isArray(r.answers) && r.answers.length === 4 && normalizeAnswers(r.answers).every((v, i) => !!v || r.answers[i] === '') &&
     typeof r.note === 'string' && r.note.length <= 300 &&
+    (r.outing === undefined || r.outing === 'inside' || r.outing === 'outside') &&
+    (r.completedMissionIds === undefined || (Array.isArray(r.completedMissionIds) && r.completedMissionIds.length <= 10 && r.completedMissionIds.every(isRecoveryId))) &&
     (r.photoComment === undefined || (typeof r.photoComment === 'string' && r.photoComment.length <= 100)) &&
     (r.photoId === undefined || (typeof r.photoId === 'string' && r.photoId.startsWith(id + ':') && r.photoId.length <= 200)) &&
     (r.createdAt === undefined || (typeof r.createdAt === 'string' && Number.isFinite(Date.parse(r.createdAt)))) &&
@@ -90,6 +94,9 @@ export function saveRecord(record: DailyCheckin, reward?: SunshineReason) {
   const now = new Date().toISOString();
   const previous = snapshot.records.find(r => r.date === record.date);
   const next = { ...record, completedCareIds: Array.from(new Set([...(previous?.completedCareIds ?? []), ...record.completedCareIds])), userId: owner, createdAt: previous?.createdAt ?? now, updatedAt: now };
+  if (previous?.completedMissionIds || record.completedMissionIds) {
+    next.completedMissionIds = Array.from(new Set([...(previous?.completedMissionIds ?? []), ...(record.completedMissionIds ?? [])]));
+  }
   next.sunshine = nextSunshine(previous, next, reward, localDay(), now);
   // Preserve other local namespaces. Never rewrite damaged data as an empty array.
   const others = snapshot.entries.filter(r => r.userId !== owner);
@@ -128,6 +135,12 @@ async function photoDb() {
 export async function photoOperation(id: string, operation: 'read' | 'write' | 'delete', blob?: Blob): Promise<Blob | undefined> {
   if (typeof id !== 'string' || !id.startsWith(localOwner() + ':')) throw new Error('사진 기록의 기기 식별자를 확인해 주세요.');
   if (operation === 'write' && (!(blob instanceof Blob) || blob.size > 3 * 1024 * 1024)) throw new Error('사진 크기를 확인해 주세요.');
+  if (isDemo()) {
+    if (operation === 'read') return demoPhotos.get(id);
+    if (operation === 'delete') demoPhotos.delete(id);
+    else if (blob) demoPhotos.set(id, blob);
+    return;
+  }
   const release = beginStorageOperation();
   try {
   const db = await photoDb();
@@ -198,7 +211,6 @@ export function schedulePhotoDeletion(id: string) {
   if (!id.startsWith(localOwner() + ':')) throw new Error('사진 기록의 기기 식별자를 확인해 주세요.');
   appStorage.setItem(PHOTO_TRASH_KEY, JSON.stringify(Array.from(new Set([...deletionQueue(), id]))));
 }
-export async function deleteStoredPhoto(id: string) { schedulePhotoDeletion(id); await cleanupPhotos(); }
 async function cleanupPhotosForScope() {
   const queue = deletionQueue();
   const snapshot = readSnapshot();

@@ -27,5 +27,5 @@ export function accountShopView(data: AccountGarden) {
     rewards: data.growthGrants.map(g => ({ id: g.milestone_days === 50 ? 'days-50' : 'days-100',
       grantedAt: g.granted_at, activeDays: g.active_days, seenAt: g.seen_at ?? undefined })),
   };
-  return { state, balance: data.garden.sunshine_balance, activeDays: data.garden.active_days };
+  return { state, balance: data.garden.sunshine_balance, activeDays: data.garden.active_days, unlimited: false };
 }

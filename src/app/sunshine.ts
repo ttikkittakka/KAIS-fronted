@@ -27,11 +27,12 @@ export function nextSunshine(previous: DailyCheckin | undefined, next: DailyChec
   const id = next.date + ':' + reason;
   if (ledger.transactions.some(item => item.id === id)) return ledger;
   const answered = next.answers.length === 4 && next.answers.every(Boolean);
+  const firstMission = !previous?.completedMissionIds?.length && !!next.completedMissionIds?.length;
   const eligible = reason === 'reflection'
     ? answered && !(previous?.answers.length === 4 && previous.answers.every(Boolean))
     : reason === 'participation'
       ? answered && previous?.stage === 'growth' && next.stage === 'care'
-      : answered && previous?.stage === 'care' && previous.completedCareIds.length === 0 && next.completedCareIds.some(id => previous.careRecommendations?.find(entry => entry.date === today)?.ids.some(careId => careId === id));
+      : firstMission || (answered && previous?.stage === 'care' && previous.completedCareIds.length === 0 && next.completedCareIds.some(id => previous.careRecommendations?.find(entry => entry.date === today)?.ids.some(careId => careId === id)));
   if (!eligible) return ledger;
   return { ...ledger, transactions: [...ledger.transactions, { id, date: next.date, reason, delta: SUNSHINE_REWARDS[reason], createdAt: now }] };
 }

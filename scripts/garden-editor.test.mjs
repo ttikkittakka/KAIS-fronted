@@ -11,10 +11,10 @@ const compiled=ts.transpileModule(readFileSync(new URL('../src/app/components/Ga
 function mount(){
  const data=new Map();globalThis.localStorage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v)};const owner=store.localOwner();
  data.set(store.RECORDS_KEY,JSON.stringify(Array.from({length:20},(_,i)=>{const date='2026-09-'+String(i+1).padStart(2,'0');return {...store.emptyRecord(),date,userId:owner,sunshine:{policyVersion:1,startedAt:date+'T00:00:00Z',transactions:[{id:date+':reflection',date,reason:'reflection',delta:10,createdAt:date+'T01:00:00Z'}]}};})));shop.buyItem('momo');
- const slots=[];let cursor=0,first=true,closed=0,home=0;const props={snapshot:shop.shopSnapshot(),itemId:'momo',plantState:'low',onChange:value=>props.snapshot=value,onClose:()=>closed++,onHome:()=>home++};
+ const slots=[];let cursor=0,first=true,closed=0,home=0;const props={snapshot:shop.shopSnapshot(),itemId:'momo',gardenPreview:{type:'tree',props:{id:'oak',stage:3,low:true}},onChange:value=>props.snapshot=value,onClose:()=>closed++,onHome:()=>home++};
  const react={useState(initial){const i=cursor++;if(first)slots[i]=typeof initial==='function'?initial():initial;return[slots[i],value=>slots[i]=value];},useRef(initial){const i=cursor++;if(first)slots[i]={current:initial};return slots[i];}};
  const jsx=(type,props)=>({type,props});const exports={};
- runInNewContext(compiled,{exports,Error,require:name=>name==='react'?react:name==='react/jsx-runtime'?{jsx,jsxs:jsx}:name==='./RivePlant'?{default:props=>jsx('sprout',props)}:name==='./GardenPlacement'?{default:props=>jsx('placements',props)}:loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
+ runInNewContext(compiled,{exports,Error,require:name=>name==='react'?react:name==='react/jsx-runtime'?{jsx,jsxs:jsx}:name==='./GardenPlacement'?{default:props=>jsx('placements',props)}:loadTs(new URL('../src/app/'+name.replace('../','')+'.ts',import.meta.url))});
  function expand(n){if(!n||typeof n!=='object')return n;if(Array.isArray(n))return n.map(expand);if(typeof n.type==='function')return expand(n.type(n.props));return {...n,props:{...n.props,children:expand(n.props?.children)}};}
  function render(){cursor=0;const tree=exports.default(props);first=false;return expand(tree);}
  function text(n){if(n==null||typeof n==='boolean')return '';if(Array.isArray(n))return n.map(text).join('');return typeof n==='object'?text(n.props?.children):String(n);}
@@ -24,7 +24,8 @@ function mount(){
 }
 test('select -> preview -> save is explicit; returning home receives committed layout',()=>{
  const app=mount();const original=app.data.get(shop.SHOP_KEY);assert.equal(app.button('미리보기 확인').props.disabled,true);
- assert.equal(app.find('sprout')[0].props.state,'low');app.click('좌측 친구');assert.equal(app.find('placements')[0].props.layout['friend-left'],'momo');assert.equal(app.data.get(shop.SHOP_KEY),original);
+ const tree=app.find('tree')[0];assert.equal(tree.props.id,'oak');assert.equal(tree.props.stage,3);assert.equal(tree.props.low,true);
+ app.click('좌측 친구');assert.equal(app.find('placements')[0].props.layout['friend-left'],'momo');assert.equal(app.data.get(shop.SHOP_KEY),original);
  app.click('미리보기 확인');assert.match(app.text(),/좌측 친구: 빈자리 → 모모/);assert.equal(app.data.get(shop.SHOP_KEY),original);
  const save=app.button('배치 저장');save.props.onClick();save.props.onClick();assert.equal(shop.readShop().layout['friend-left'],'momo');assert.match(app.text(),/배치 저장 완료/);assert.doesNotMatch(app.text(),/정원 정보가 바뀌었어요/);assert.equal(shop.shopSnapshot().balance,50);app.click('정원으로 돌아가기');assert.equal(app.home(),1);
 });

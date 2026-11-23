@@ -11,6 +11,10 @@ export const GARDEN_SLOTS = [
   { id: 'path', label: '조약돌 길자리', kind: 'path', x: 50, y: 84, width: 16, height: 4 },
   { id: 'bench-left', label: '왼쪽 벤치자리', kind: 'bench', x: 12, y: 94, width: 14, height: 8 },
   { id: 'bench-right', label: '오른쪽 벤치자리', kind: 'bench', x: 88, y: 94, width: 14, height: 8 },
+  { id: 'prop-left', label: '왼쪽 소품자리', kind: 'prop', x: 26, y: 76, width: 10, height: 10 },
+  { id: 'prop-right', label: '오른쪽 소품자리', kind: 'prop', x: 74, y: 76, width: 10, height: 10 },
+  { id: 'sky-left', label: '왼쪽 하늘자리', kind: 'sky', x: 14, y: 34, width: 18, height: 14 },
+  { id: 'sky-right', label: '오른쪽 하늘자리', kind: 'sky', x: 86, y: 40, width: 18, height: 14 },
   { id: 'background', label: '정원 배경', kind: 'background', x: 0, y: 0, width: 100, height: 100 },
 ] as const;
 export type GardenSlotId = typeof GARDEN_SLOTS[number]['id'];
@@ -20,7 +24,7 @@ export function compatibleSlot(itemId: string, slotId: string) {
   const item = shopItem(itemId);
   const slot = GARDEN_SLOTS.find(entry => entry.id === slotId);
   if (!item || !slot) return false;
-  const kind = item.category === 'decoration' ? { 'yellow-flower': 'flower', 'anniversary-flower': 'flower', 'pebble-path': 'path', 'small-bench': 'bench' }[item.id] : item.category;
+  const kind = item.category === 'decoration' ? item.slot : item.category;
   return kind === slot.kind;
 }
 export function validateGardenLayout(value: unknown, quantities: Readonly<Record<string, number>>): asserts value is GardenLayout {

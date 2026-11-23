@@ -215,7 +215,8 @@ test('account navigation reuses full screens, starts only on explicit entry and 
   if (name === './OneStepScreens') return Object.fromEntries(['HomeScreen','CheckinScreen','CareScreen','TopBar','BottomNav'].map(n => [n,n]));
   if (name === './RecordScreens') return { RecordsCalendar: 'calendar', ReflectionExtras: 'extras' };
   if (name === './GardenShop') return { default: 'shop' };
-  if (name === './DeveloperSettings') return { SettingsScreen: 'settings' };
+  if (name === './Companions') return { CompanionArt: 'tree' };
+  if (name === './DeveloperSettings') return { AccountSettingsScreen: 'settings' };
   if (name === './GrowthRewards') return { GrowthRewardsScreen: 'rewards', OptionalCareScreen: 'optional' };
   if (name === './GardenLoading') return { default: 'GardenLoading' };
   if (name === './RecordSunshine') return { default: 'RecordSunshine' };

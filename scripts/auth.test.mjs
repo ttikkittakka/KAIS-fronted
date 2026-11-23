@@ -102,9 +102,9 @@ test('failed logout retains session and reports failure; missing config fails cl
 
 const source = readFileSync(new URL('../src/app/components/AuthBoundary.tsx', import.meta.url), 'utf8');
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
-function boundary(environment = 'development') {
+function boundary(environment = 'development', serverAccount = true) {
   let snapshot = { phase: 'loading', user: null, busy: false, message: '', error: false, epoch: 0 };
-  const slots = []; let cursor = 0; const exports = {}; let unlocks = 0;
+  const slots = []; let cursor = 0; const exports = {}; let unlocks = 0; const scopes = [];
   const submissions = [];
   const store = { getSnapshot: () => snapshot, subscribe() {}, submit(...args) { submissions.push(args); return Promise.resolve(false); } };
   const jsx = (type, props) => ({ type, props });
@@ -119,8 +119,12 @@ function boundary(environment = 'development') {
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
       if (name.includes('auth-store')) return { createAuthStore: () => store, INITIAL_AUTH: snapshot };
       if (name.includes('auth-client')) return { getAuthClient() {} };
+      if (name.includes('app-storage')) return { async setDeveloperMode() { unlocks++; }, setAccountScope(id) { scopes.push(id); }, developerToolsAvailable: () => environment === 'development' };
+      if (name.endsWith('/safety')) return loadTs(new URL('../src/app/safety.ts', import.meta.url));
+      if (name === '../install-phone') return loadTs(new URL('../src/app/install-phone.ts', import.meta.url));
+      if (name === '../install-intent') return { saveInstallIntent() {}, async sendInstallIntent() { return null; } };
+      if (name === './Companions') return { CompanionArt: props => jsx('tree-mark', props) };
       if (name === './AccountGarden') return { default: 'account-garden' };
-      if (name.includes('app-storage')) return { async setDeveloperMode() { unlocks++; } };
       if (name === './GardenLoading') return { default: 'GardenLoading' };
       throw Error(name);
     },
@@ -128,8 +132,9 @@ function boundary(environment = 'development') {
   const child = { legacyPrivateRecords: 'SENTINEL_NEVER_SHOW' };
   return {
     update(value) { snapshot = { ...snapshot, ...value }; },
-    render() { cursor = 0; return exports.default({ children: child }); },
+    render() { cursor = 0; return exports.default({ children: child, serverAccount }); },
     unlocks: () => unlocks,
+    scope: () => scopes.at(-1),
     submissions,
   };
 }
@@ -139,6 +144,20 @@ function find(node, predicate) {
   for (const child of [node.props?.children].flat()) { const result = find(child, predicate); if (result) return result; }
   return null;
 }
+
+const A = '00000000-0000-4000-8000-00000000000a', B = '00000000-0000-4000-8000-00000000000b';
+test('user version: a signed-in account opens its own account-scoped garden; it stays during a logout attempt and closes after', () => {
+  const app = boundary('production', false);
+  app.update({ phase: 'signed-in', user: { id: A, email: 'A@example.test' } });
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.equal(app.scope(), A);
+  app.update({ busy: true });
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/, 'no flash to the login screen while logging out; a failure is reported in Settings');
+  assert.equal(app.scope(), A);
+  app.update({ busy: false, error: false, message: '', phase: 'signed-out', user: null });
+  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.equal(app.scope(), null);
+});
 
 test('connected screen mounts only the keyed account garden and preserves logout errors', () => {
   const app = boundary('production');
@@ -166,12 +185,18 @@ test('same-user token refresh retains the account subtree identity; switching us
   assert.equal(app.render().props.userId, 'B');
 });
 test('actual auth boundary hides local readers during loading, logout, recovery, A/B and production', async () => {
-  const app = boundary();
-  for (const phase of ['loading', 'signed-out', 'unavailable', 'recovery', 'signed-in']) {
-    for (const id of ['A', 'B']) {
-      app.update({ phase, user: phase === 'signed-in' || phase === 'recovery' ? { id, email: `${id}@example.test` } : null });
+  const app = boundary('development', false);
+  for (const phase of ['loading', 'signed-out', 'unavailable', 'recovery']) {
+    for (const id of [A, B]) {
+      app.update({ phase, user: phase === 'recovery' ? { id, email: `${id}@example.test` } : null });
       assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+      assert.equal(app.scope(), null);
     }
+  }
+  for (const id of [A, B]) {
+    app.update({ phase: 'signed-in', user: { id, email: `${id}@example.test` } });
+    assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+    assert.equal(app.scope(), id, 'each account reads only its own scope');
   }
   app.update({ phase: 'signed-out', user: null, epoch: 5 });
   find(app.render(), n => n.type === 'button' && n.props.children === '개발용 정원 테스트').props.onClick();
@@ -182,8 +207,9 @@ test('actual auth boundary hides local readers during loading, logout, recovery,
   app.update({ busy: true });
   assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   app.update({ busy: false });
-  app.update({ phase: 'signed-in', user: { id: 'B', email: 'B@example.test' }, epoch: 6 });
-  assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  app.update({ phase: 'signed-in', user: { id: B, email: 'B@example.test' }, epoch: 6 });
+  assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
+  assert.equal(app.scope(), B);
   app.update({ phase: 'signed-out', user: null, epoch: 7 });
   assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   const prod = boundary('production'); prod.update({ phase: 'signed-out' });
@@ -196,9 +222,9 @@ test('auth modules never import garden stores or manually persist credentials; l
     assert.doesNotMatch(text, /localStorage\.|indexedDB\.|record-store|shop-store|console\./);
   }
   const layout = readFileSync(new URL('../src/app/layout.tsx', import.meta.url), 'utf8');
-  assert.match(layout, /<AppSessionBoundary>/);
+  assert.match(layout, /<AppSessionBoundary\b/);
   const wrapper = readFileSync(new URL('../src/app/components/AppSessionBoundary.tsx', import.meta.url), 'utf8');
-  assert.match(wrapper, /<AuthBoundary><RecordSessionBoundary>/);
+  assert.match(wrapper, /<AuthBoundary[^>]*><RecordSessionBoundary>/);
   assert.match(wrapper, /process\.env\.NODE_ENV === 'development' && \['\/dev\/care-completion', '\/dev\/ai-mind'\]\.includes\(pathname\)/);
 });
 

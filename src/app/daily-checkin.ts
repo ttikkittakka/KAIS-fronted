@@ -2,8 +2,10 @@ import { developerToolsAvailable } from './app-storage';
 import type { SunshineLedger } from './sunshine';
 import { isCareId } from './cares';
 import { parseCareHistory, type DailyCareRecommendation } from './daily-cares';
+import type { Outing } from './wellbeing';
+import type { RecoveryId } from './mission-policy';
 
-export type GardenView = 'onboarding' | 'home' | 'checkin' | 'care' | 'garden' | 'photo' | 'growth' | 'shop' | 'decorate' | 'rewards' | 'extra-care' | 'settings' | 'developer';
+export type GardenView = 'onboarding' | 'home' | 'today' | 'checkin' | 'care' | 'garden' | 'photo' | 'growth' | 'shop' | 'decorate' | 'dress' | 'items' | 'rewards' | 'extra-care' | 'settings' | 'developer' | 'safety' | 'companion' | 'companions' | 'support' | 'privacy' | 'map' | 'connections' | 'guardian';
 export type DailyCheckin = {
   version: 1;
   sunshine?: SunshineLedger;
@@ -16,8 +18,10 @@ export type DailyCheckin = {
   date: string;
   answers: string[];
   note: string;
+  outing?: Outing;
   plantState: 'low' | 'normal';
   completedCareIds: string[];
+  completedMissionIds?: RecoveryId[];
   careRecommendations?: DailyCareRecommendation[];
 };
 
@@ -45,5 +49,5 @@ export function resolveView(view: string, daily: DailyCheckin | null): GardenVie
   if (view === 'developer') return developerToolsAvailable() ? 'developer' : 'settings';
   if (['care', 'photo', 'growth'].includes(view) && (!daily || daily.date !== localDay() || !daily.answers.every(Boolean) || daily.answers.length !== 4)) return 'checkin';
   if (view === 'care' && daily?.stage && daily.stage !== 'care') return daily.stage;
-  return ['onboarding', 'home', 'checkin', 'care', 'garden', 'photo', 'growth', 'shop', 'decorate', 'rewards', 'extra-care', 'settings'].includes(view) ? view as GardenView : 'home';
+  return ['onboarding', 'home', 'today', 'checkin', 'care', 'garden', 'photo', 'growth', 'shop', 'decorate', 'dress', 'items', 'rewards', 'extra-care', 'settings', 'safety', 'companion', 'companions', 'support', 'privacy', 'map', 'connections', 'guardian'].includes(view) ? view as GardenView : 'home';
 }

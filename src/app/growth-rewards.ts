@@ -3,7 +3,7 @@ import { normalizeAnswers } from './questions';
 import { isCareId } from './cares';
 
 export const GROWTH_MILESTONES = [
-  { id: 'days-50', days: 50, itemIds: ['anniversary-friend'], title: '정원에 새로운 친구가 찾아왔어요!', description: '쉬어 간 날도 괜찮아요. 나를 돌본 50일을 기억하며, 별빛 친구 누리가 곁에 머물러요.' },
+  { id: 'days-50', days: 50, itemIds: ['anniversary-friend'], title: '정원에 새로운 친구가 찾아왔어요!', description: '나를 돌본 50일을 기념하는 메타세쿼이아 화분 누리를 정원에 놓아 보세요.' },
   { id: 'days-100', days: 100, itemIds: ['anniversary-sky', 'anniversary-flower'], title: '함께한 시간만큼 정원에도 새로운 모습이 생겼어요.', description: '차곡차곡 쌓인 100일에 고마움을 담았어요. 새 배경과 기념 꽃으로 정원을 꾸며 보세요. 더 많은 돌봄을 하지 않아도 괜찮아요.' },
 ] as const;
 export type GrowthRewardId = typeof GROWTH_MILESTONES[number]['id'];

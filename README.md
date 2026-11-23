@@ -31,9 +31,50 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+저장소 루트의 `vercel.json`에 Next.js `app`과 Hono `backend`를 정의합니다. 공개 경로는 Next.js가 처리하고, Next.js Route Handler가 Hono를 내부 바인딩으로 호출합니다. [배포 설정](SUPABASE.md#vercel-배포)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 빠른 실행 (개발 확인용)
+
+```sh
+npm install                 # 처음 한 번
+npm run dev                 # http://localhost:3000
+```
+
+1. 로그인 화면 맨 아래 **개발용 정원 테스트** → PIN 입력 → **테스트 정원 열기**. PIN은 `.env.local`의 `ADMIN_TEST_PASSWORD`(4자리)이며 개발 서버에서만 동작합니다.
+2. 휴대폰 화면 크기로 보려면 브라우저 개발자 도구(F12) → 기기 모드(Ctrl+Shift+M).
+3. 카메라는 HTTPS 또는 localhost에서만 열립니다. 휴대폰에서 `http://<PC IP>:3000`으로 접속하면 앱 내 카메라 대신 기기 기본 촬영/선택 창으로 자동 전환됩니다.
+
+프로덕션 확인: `npm run build` 후 `npm run start`. 테스트: `node --test scripts/*.test.mjs`.
+
+AI 돌봄 설명과 공공서비스 조회를 사용하려면 별도 터미널에서 `cd backend` 후 `npm install`, `npm run dev`를 실행합니다. API 키 설정은 [백엔드 실행 안내](backend/README.md)를 참고하세요.
+
+### 유저 버전 · 개발자 버전
+
+| 버전 | 여는 방법 | 데이터 |
+| --- | --- | --- |
+| 유저 버전 | 이메일로 로그인 → 정원 | 계정마다 따로 (`little-garden.account.<사용자 ID>.*`), 로그인 전 기기 기록과 섞이지 않음 |
+| 개발자 버전 | 로그인 화면의 **개발용 정원 테스트**(PIN), 또는 로그인 후 **설정 → 개발자 코드 입력** | 따로 보관되는 테스트 정원. 기본으로 무제한 모드(햇살 무제한·모든 상호작용 열림·친구 바로 데려오기) |
+
+- 개발자 코드 = `.env.local`의 `ADMIN_TEST_PASSWORD`(4자리). `npm run dev`에서 동작합니다.
+- 배포용 빌드는 `npm run build`가 유저 버전입니다. 개발자 코드 메뉴까지 넣은 개발자 버전 빌드가 필요하면 `NEXT_PUBLIC_DEVELOPER_TOOLS=on npm run build`(서버에도 `ADMIN_TEST_PASSWORD` 필요). 개발자 버전은 기기 안의 테스트 정원만 열며 서버 권한은 주지 않습니다.
+- 설정의 개발자 버전 스위치를 끄면 원래 유저 버전 정원으로 돌아갑니다. 무제한 모드를 끄면 실제처럼 잔액 부족·잠긴 상호작용을 확인할 수 있습니다.
+
+### 홈 · 탭 구성
+
+- 하단의 **홈 · 일기 · 지도 · 꾸미기 · 설정**으로 이동합니다. 홈의 일기 아이콘에 빨간 점이 표시됩니다. 펫을 누르면 동작 네 개가 펼쳐지고 가운데 점 세 개로 다음 동작을 봅니다.
+- **일기**에서 오늘의 체크인, 회복 미션과 지난 기록을 함께 봅니다. 상단 달력에서 날짜를 고르고, 기간 카드에서 올해의 기록으로 가로 이동할 수 있습니다. 기존 `#today`와 `#diary` 링크도 같은 화면을 엽니다.
+- **나무 친구**는 분재·소나무·참나무·메타세쿼이아 중 하나를 고릅니다. 입양한 날부터 잔잔하거나 좋은 기분을 기록했거나 미션·돌봄·일기를 남긴 날을 하루씩 셉니다. 누적 0·3·7·14일에 어린나무·새 가지·풍성한 나무·성목으로 자랍니다.
+- **지도**에서 서울 산책지 사진을 넘겨 보고 갈 곳과 다녀온 곳을 저장합니다. HTTPS에서 위치 확인을 선택하면 현재 화면에서 가까운 순서로 정렬합니다. [사진 출처](public/places/CREDITS.md)
+- **설정**에서 보호자 공유, 연락 기록, 안부 제안과 AI 맞춤 추천을 선택할 수 있습니다.
+- 꾸미기 탭: 집 꾸미기(정원 배치) · 옷 입히기(머리·얼굴·목) · 아이템 창(모은 옷·배경·소품). 옷 그림은 `public/wardrobe`, 착용 위치는 `src/app/wardrobe.ts`의 `FIT`(`design-output/wardrobe`에서 맞춤).
+- 지원 제도 신청 도우미(`#support`): 펫에게 "지원 제도 도와줘"라고 말하거나 메뉴의 **도움 찾기**. 운영 절차와 동의·보관 정책은 `design-output/support/SERVICE.md`, DB는 `supabase/migrations/202611190001_support_applications.sql`.
+
+### 체험, 전시 및 실제 서비스 연결
+
+- `/demo`는 로그인 없이 열리는 예시 정원입니다. `/guardian#demo`에서 보호자 열람 화면을 볼 수 있습니다. 체험 화면의 기록은 현재 문서의 메모리에서만 사용합니다.
+- [Expo Go 실행과 빌드](mobile/README.md)에서 카메라·주소록 연동과 QR 출력 방법을 확인합니다.
+- [전시 판넬](design-output/exhibition/README.md)에 120 × 130 cm 인쇄용 시안 1과 시안 3 PDF를 제공합니다.
+- Vercel에서 `ttikkittakka/KAIS-fronted`의 `onestepui` 브랜치를 Services 프로젝트로 가져옵니다. Root Directory는 저장소 루트(`.`)입니다. [배포 브랜치와 Supabase 설정](SUPABASE.md#vercel-배포)
 
 ## 오늘의 나 기록하기
 
@@ -43,7 +84,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 날짜별 기록은 localStorage, 사진은 IndexedDB에 보관합니다. 기존 v1 기록은 읽을 때 이관되며, 완료 내역은 사진·글 수정 시 유지됩니다. 사진은 JPEG로 재인코딩하여 원본 EXIF/GPS를 보관하지 않습니다. 사진 삭제 실패 시 재시도 큐가 다음 실행에서도 정리를 이어갑니다.
 
-현재 저장소에는 인증·사용자 DB·연령별 동의 시스템이 없습니다. 기기 식별자는 인증된 사용자 ID가 아니며, 같은 브라우저를 사용하는 사람 사이의 계정 접근 제어를 제공하지 않습니다. 서버 업로드나 AI 분석은 하지 않습니다. 브라우저 데이터 삭제 시 기록이 사라지며 기기 간 동기화는 지원하지 않습니다. 계정별 비공개 저장에는 인증 세션·DB 소유자 정책·비공개 사진 저장소 연동이 필요합니다.
+Supabase Auth로 로그인하면 브라우저의 기록과 사진을 계정별로 보관합니다. 기기 간 일기 동기화는 아직 제공하지 않습니다. 보호자 공유에 동의하면 상태 선택값이 Supabase의 공유 API에 저장됩니다.
 
 검증 명령: node --test scripts/record-screens.test.mjs scripts/checkin-flow.test.mjs scripts/record-store.test.mjs scripts/daily-checkin.test.mjs scripts/daily-cares.test.mjs scripts/recommend-cares.test.mjs scripts/rive-plant.test.mjs
 

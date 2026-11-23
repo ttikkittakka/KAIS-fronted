@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "오늘의 정원",
+    "slug": "onestep-garden",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "onestepgarden",
+    "userInterfaceStyle": "light",
+    "ios": { "bundleIdentifier": "com.onestep.garden", "supportsTablet": true },
+    "android": { "package": "com.onestep.garden" },
+    "web": { "bundler": "metro" },
+    "plugins": [
+      ["expo-image-picker", { "cameraPermission": "오늘의 정원에서 선택한 사진과 미션을 촬영할 때 카메라를 사용해요.", "photosPermission": "오늘의 정원에 남길 사진을 직접 고를 수 있어요.", "microphonePermission": false }],
+      ["expo-contacts", { "contactsPermission": "오늘의 정원에서 연락하고 싶은 사람을 선택할 수 있어요." }]
+    ]
+  }
+}
