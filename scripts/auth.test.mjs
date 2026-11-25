@@ -126,6 +126,8 @@ function boundary(environment = 'development', serverAccount = true) {
       if (name === './Companions') return { CompanionArt: props => jsx('tree-mark', props) };
       if (name === './AccountGarden') return { default: 'account-garden' };
       if (name === './GardenLoading') return { default: 'GardenLoading' };
+      if (name === './GardenProfile') return { FirstGardenSetup: 'first-garden-setup' };
+      if (name === './PersonalGarden') return { PersonalGardenProvider: 'personal-garden' };
       throw Error(name);
     },
   });
@@ -162,7 +164,10 @@ test('user version: a signed-in account opens its own account-scoped garden; it 
 test('connected screen mounts only the keyed account garden and preserves logout errors', () => {
   const app = boundary('production');
   app.update({ phase: 'signed-in', user: { id: 'A', email: 'A@example.test' } });
-  const screen = app.render();
+  const wrapper = app.render();
+  assert.equal(wrapper.type, 'personal-garden');
+  assert.equal(wrapper.props.userId, 'A');
+  const screen = find(wrapper, node => node.type === 'account-garden');
   assert.equal(screen.type, 'account-garden');
   assert.equal(screen.props.userId, 'A');
   assert.doesNotMatch(JSON.stringify(screen), /SENTINEL_NEVER_SHOW|나의 정원으로 가기/);
@@ -232,18 +237,19 @@ test('로그인한 개발자도 PIN 확인 후에만 로컬 앱을 열며 계정
   const app = boundary();
   app.update({ phase: 'signed-in', user: { id: 'fixture-user' }, epoch: 1 });
   assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
-  app.render().props.onDeveloper();
-  const form = app.render().props.developerEntry;
+  find(app.render(), node => node.type === 'account-garden').props.onDeveloper();
+  const form = find(app.render(), node => node.type === 'account-garden').props.developerEntry;
   assert.equal(form.type, 'form');
   await form.props.onSubmit({ preventDefault() {}, currentTarget: { reset() {} } });
   assert.equal(app.unlocks(), 1);
   assert.match(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   assert.deepEqual(app.submissions, []);
   app.update({ user: { id: 'different-fixture-user' }, epoch: 2 });
-  assert.equal(app.render().type, 'account-garden');
+  assert.ok(find(app.render(), node => node.type === 'account-garden'));
   assert.doesNotMatch(JSON.stringify(app.render()), /SENTINEL_NEVER_SHOW/);
   const prod = boundary('production');
   prod.update({ phase: 'signed-in', user: { id: 'fixture-user' } });
-  assert.equal(prod.render().props.onDeveloper, undefined);
-  assert.equal(prod.render().props.developerEntry, undefined);
+  const prodGarden = find(prod.render(), node => node.type === 'account-garden');
+  assert.equal(prodGarden.props.onDeveloper, undefined);
+  assert.equal(prodGarden.props.developerEntry, undefined);
 });

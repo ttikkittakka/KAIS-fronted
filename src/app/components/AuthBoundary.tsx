@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { getAuthClient } from '../../lib/supabase/auth-client';
 import { createAuthStore, INITIAL_AUTH, type AuthAction } from '../../lib/supabase/auth-store';
 import { developerToolsAvailable, setAccountScope, setDeveloperMode } from '../app-storage';
@@ -10,6 +10,8 @@ import { saveInstallIntent, sendInstallIntent } from '../install-intent';
 import { CompanionArt } from './Companions';
 import AccountGarden from './AccountGarden';
 import GardenLoading from './GardenLoading';
+import { FirstGardenSetup } from './GardenProfile';
+import { PersonalGardenProvider } from './PersonalGarden';
 
 function clearAuthRedirect() {
   const url = new URL(window.location.href);
@@ -29,6 +31,9 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
   const [smsConsent, setSmsConsent] = useState(false);
   const [smsError, setSmsError] = useState('');
   const [smsStatus, setSmsStatus] = useState('');
+  const [authFormError, setAuthFormError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const emailField = useRef<HTMLInputElement>(null);
   const pinLock = useRef(false);
   const panel = useRef<HTMLDivElement>(null);
   // Unsaved drafts and caches live in memory; after a sign-out or a switch to another person a reload drops them.
@@ -96,7 +101,12 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
     const action: AuthAction = state.phase === 'recovery' ? 'update' : mode;
     const password = String(values.get('password') ?? '');
     const email = String(values.get('email') ?? '');
+    setAuthFormError('');
     setSmsError('');
+    if ((action === 'signup' || action === 'update') && password !== values.get('passwordAgain')) {
+      setAuthFormError('비밀번호 확인이 일치하지 않아요.');
+      return;
+    }
     if (action === 'signup') {
       const phone = values.has('smsConsent') ? koreanMobile(String(values.get('installPhone') ?? '')) : null;
       if (values.has('smsConsent') && !phone) { setSmsError('010으로 시작하는 휴대폰 번호를 입력해 주세요.'); return; }
@@ -106,6 +116,8 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
     // Credentials only live in the input/request; the application never persists them.
     const input = form.elements.namedItem('password');
     if (input instanceof HTMLInputElement) input.value = '';
+    const confirmation = form.elements.namedItem('passwordAgain');
+    if (confirmation instanceof HTMLInputElement) confirmation.value = '';
     void store.submit(action, email, password, window.location.origin).then(ok => {
       if (ok && action !== 'reset') clearAuthRedirect();
       if (!ok && action === 'signup') { try { saveInstallIntent(email, null); } catch {} }
@@ -158,10 +170,11 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
     <button className="primary-button" disabled={pinBusy || state.busy}>{pinBusy ? '확인 중…' : '개발자 모드 열기'}</button>
   </form> : undefined;
   const installNotice = smsStatus && <div className="install-toast" role="status"><span>{smsStatus}</span><a href="/install">설치 안내</a><button type="button" aria-label="안내 닫기" onClick={() => setSmsStatus('')}>×</button></div>;
-  if (account && !serverAccount) return <Fragment key={account.id}>{installNotice}{children}</Fragment>;
-  if (account && !state.busy && !state.error) {
-    const garden = <AccountGarden key={account.id} userId={account.id} onLogout={logout} onDeveloper={developer ? () => { if (!pinLock.current) { setPinError(''); setPinOpen(!pinOpen); } } : undefined} developerEntry={developerEntry}/>;
-    return installNotice ? <>{installNotice}{garden}</> : garden;
+  if (account && (!serverAccount || (!state.busy && !state.error))) {
+    const garden = serverAccount ? <AccountGarden key={account.id} userId={account.id} onLogout={logout} onDeveloper={developer ? () => { if (!pinLock.current) { setPinError(''); setPinOpen(!pinOpen); } } : undefined} developerEntry={developerEntry}/> : children;
+    return <PersonalGardenProvider key={account.id} userId={account.id}><FirstGardenSetup onLogout={logout}>
+      {installNotice}{garden}
+    </FirstGardenSetup></PersonalGardenProvider>;
   }
   if (loading) return <main className="app-shell" ref={panel}><div className="phone-frame"><GardenLoading/></div></main>;
   return <main className="app-shell" ref={panel}>
@@ -187,20 +200,29 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
         {(mode !== 'login' || recovery) && <h2>{recovery ? '새 비밀번호 설정' : mode === 'signup' ? '작은 정원 시작하기' : '비밀번호 재설정'}</h2>}
         {mode === 'reset' && !recovery && <p className="auth-help">이메일로 재설정 링크를 보내드려요.</p>}
         <form key={`${state.phase}-${mode}-${state.user?.id ?? ''}`} onSubmit={submit} className="auth-form">
-          {!recovery && <label>이메일<input name="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} required maxLength={254} disabled={state.busy || pinBusy} placeholder="garden@example.com" /></label>}
-          {(mode !== 'reset' || recovery) && <label>{recovery ? '새 비밀번호' : '비밀번호'}<input name="password" type="password" autoComplete={mode === 'signup' || recovery ? 'new-password' : 'current-password'} required minLength={mode === 'signup' || recovery ? 8 : 1} maxLength={128} disabled={state.busy || pinBusy} aria-describedby={mode === 'signup' || recovery ? 'auth-password-help' : undefined}/></label>}
+          {!recovery && <label>이메일<input ref={emailField} name="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} required maxLength={254} disabled={state.busy || pinBusy} placeholder="garden@example.com" /></label>}
+          {(mode !== 'reset' || recovery) && <>
+            <label>{recovery ? '새 비밀번호' : '비밀번호'}<input name="password" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'signup' || recovery ? 'new-password' : 'current-password'} required minLength={mode === 'signup' || recovery ? 8 : 1} maxLength={128} disabled={state.busy || pinBusy} aria-describedby={mode === 'signup' || recovery ? 'auth-password-help' : undefined}/></label>
+            {(mode === 'signup' || recovery) && <label>비밀번호 확인<input name="passwordAgain" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} disabled={state.busy || pinBusy}/></label>}
+            <label className="quiet-check"><input type="checkbox" checked={showPassword} onChange={event => setShowPassword(event.target.checked)}/>비밀번호 표시</label>
+          </>}
           {(mode === 'signup' || recovery) && <p className="auth-help" id="auth-password-help">비밀번호는 8자 이상으로 입력해 주세요.</p>}
           {mode === 'signup' && !recovery && <div className="signup-install">
             <label className="quiet-check"><input type="checkbox" name="smsConsent" disabled={state.busy} checked={smsConsent} onChange={event => setSmsConsent(event.target.checked)}/><span>설치 링크를 문자로 받는 데 동의해요. (선택)</span></label>
             {smsConsent && <><label>내 휴대폰 번호<input name="installPhone" type="tel" autoComplete="tel" maxLength={18} placeholder="010-0000-0000" disabled={state.busy} required/></label><p className="auth-help">같은 브라우저에서 이메일 인증을 마치면 입력한 번호로 설치 안내를 한 번 보내요.</p></>}
             {smsError && <p role="alert" className="auth-error">{smsError}</p>}
           </div>}
+          {authFormError && <p role="alert" className="auth-error">{authFormError}</p>}
           <button className="primary-button" type="submit" disabled={state.busy || pinBusy}>{state.busy ? '잠시만 기다려 주세요…' : recovery ? '새 비밀번호 저장' : mode === 'signup' ? '회원가입' : mode === 'reset' ? '재설정 이메일 보내기' : '로그인'}</button>
+          {mode === 'signup' && !recovery && <button className="text-button" type="button" disabled={state.busy || pinBusy} onClick={() => {
+            const field = emailField.current;
+            if (field?.reportValidity()) { setAuthFormError(''); void store.submit('resend', field.value, '', window.location.origin); }
+          }}>인증 메일 다시 보내기</button>}
         </form>
         <div className="auth-links">
           {recovery ? <button disabled={state.busy} onClick={logout}>취소하고 로그아웃</button> : <>
-            <button disabled={state.busy || pinBusy} onClick={() => setMode(mode === 'signup' ? 'login' : 'signup')}>{mode === 'signup' ? '로그인으로 돌아가기' : '회원가입'}</button>
-            <button disabled={state.busy || pinBusy} onClick={() => setMode(mode === 'reset' ? 'login' : 'reset')}>{mode === 'reset' ? '로그인으로 돌아가기' : '비밀번호를 잊으셨나요?'}</button>
+            <button disabled={state.busy || pinBusy} onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setShowPassword(false); setAuthFormError(''); }}>{mode === 'signup' ? '로그인으로 돌아가기' : '회원가입'}</button>
+            <button disabled={state.busy || pinBusy} onClick={() => { setMode(mode === 'reset' ? 'login' : 'reset'); setShowPassword(false); setAuthFormError(''); }}>{mode === 'reset' ? '로그인으로 돌아가기' : '비밀번호를 잊으셨나요?'}</button>
           </>}
         </div>
       </>}

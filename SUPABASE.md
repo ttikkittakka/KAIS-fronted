@@ -158,9 +158,9 @@ Supabase SDK의 프로젝트별 저장소 키와 해당 PKCE 보조 키에 인�
 ## Vercel 배포
 
 1. Vercel의 **Add New → Project**에서 GitHub 저장소 `ttikkittakka/KAIS-fronted`를 Import합니다. Root Directory는 **저장소 루트**(`.`)를 선택합니다. 루트 `vercel.json`의 Services에서 Next.js `app`과 Hono `backend`를 빌드합니다.
-2. **Settings → Environments → Production → Branch Tracking**에서 `onestepui`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터, 전시 판넬과 `mobile/`의 Expo 앱이 있습니다.
-3. Vercel 환경 변수에 위의 프로젝트 URL과 같은 프로젝트의 공개 키를 등록하고 다시 배포합니다. 배포 도메인이 정해지면 Supabase Auth의 Site URL과 인증·재설정 Redirect URLs를 그 HTTPS 주소로 등록합니다.
-4. 휴대폰에서 `https://<배포 주소>/demo`를 열어 체험합니다. Expo 앱을 배포 웹앱에 연결하려면 `mobile/.env`의 `EXPO_PUBLIC_GARDEN_WEB_URL`에 같은 주소를 넣습니다. [Expo 실행 안내](mobile/README.md)
+2. **Settings → Environments → Production → Branch Tracking**에서 `onestepui`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터와 전시 판넬이 있습니다.
+3. Vercel **Settings → Environment Variables**의 **Production**에 같은 Supabase 프로젝트의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 등록하고 다시 배포합니다. 미리보기에서 로그인하려면 **Preview**에도 설정합니다. Next.js 빌드 시 두 값이 브라우저 코드에 들어가야 회원가입 폼이 열립니다. Supabase Auth의 Site URL과 이메일 인증·재설정 허용 주소에 실제 배포 HTTPS 도메인을 등록합니다.
+4. 휴대폰 브라우저에서 `https://<배포 주소>/demo`를 열어 체험합니다. `/install`에서 웹앱을 바로 열거나 홈 화면에 추가할 수 있습니다.
 
 2026-11-23에 프로젝트 `yhzgucbiwvizjxpzwpqg`의 기존 정원 스키마를 확인한 뒤, 미적용 카탈로그·지원 신청·옷장·보호자 마이그레이션 네 개를 적용했습니다. 초기 정원 스키마는 이미 설치되어 있습니다. 마이그레이션 이력이 없는 초기 SQL을 적용할 때는 기존 스키마와 이력을 먼저 대조하세요.
 
@@ -178,6 +178,16 @@ Vercel에 배포할 때 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PU
 2. AI 후보 조정에는 선택적으로 서버의 `ANTHROPIC_API_KEY`와 `ANTHROPIC_MODEL`을 설정합니다. 로그인한 사용자가 설정에서 동의했을 때만 모델에 답변 범주와 미션 후보 또는 연락 횟수를 보냅니다. 서비스 키가 없거나 응답이 늦으면 정해진 기준으로 고릅니다.
 3. 설치 문자를 켜려면 `GARDEN_PUBLIC_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`, 32자 이상의 임의 `INSTALL_SMS_PEPPER`를 서버에 설정합니다. Twilio 발신 서비스는 운영할 국가의 발송 요건을 충족해야 합니다. 가입자가 선택 동의 후 같은 브라우저에서 이메일 인증을 완료하면 처음 입력한 번호에 배포 도메인의 `/install` 링크를 한 번 요청합니다.
 4. 프로덕션에는 예시 데이터와 실사용자를 분리합니다. 스테이징에서 실제 가입, SMS 수신, 보호자 링크 교차 기기 열람, 철회 후 접근 차단을 확인한 뒤 운영 환경에 연결합니다.
+
+사진 미션의 AI 확인을 사용하려면 서버 환경 변수 `OPENAI_API_KEY`를 설정합니다. 로그인한 사용자가 확인할 사진마다 동의하면 크기를 줄인 JPEG를 Responses API로 전송하고 앱에는 판별 결과만 남깁니다. 약 포장 글자는 브라우저에서 읽습니다. 기기 판별과 직접 기록은 AI 환경 변수 없이도 이용할 수 있습니다.
+
+## 계정 설문과 복약 관리
+
+마이그레이션 `202611250001_personal_garden.sql`은 계정의 설문, 복약 목록과 알림 시간, 화분 이름 테이블을 만듭니다. 로그인한 사용자만 자기 행을 읽고 쓸 수 있습니다. 최초 로그인 후 설문을 한 번 저장하고, 설정에서 수정할 수 있습니다.
+
+식약처 검색에는 공공데이터포털 e약은요 서비스 키를 Vercel 서버 환경 변수 `MFDS_EDRUG_SERVICE_KEY`로 설정합니다. 공개 일반의약품 정보의 제품 사진, 효능과 제공 복용법을 보여줍니다. 실제 내 복용 시간대와 안내는 사용자가 약봉투를 보고 등록합니다. 검색 키가 준비되기 전에도 약 이름과 시간대를 직접 등록할 수 있습니다. [공공데이터포털 e약은요](https://www.data.go.kr/data/15075057/openapi.do)
+
+웹앱이 열려 있는 동안 현재 기기 시각으로 시간대별 알림을 확인합니다. 닫힌 동안에는 내보낸 `.ics` 파일을 휴대폰 캘린더에 가져와 반복 알림을 받을 수 있습니다. 가져온 일정의 변경과 삭제는 캘린더에서 관리합니다.
 
 키와 실제 번호는 저장소에 추가하지 않습니다. 주소록과 개별 연락 기록은 기기에 남고, 실계정 공유에는 사용자가 동의한 상태 선택값만 전송됩니다.
 

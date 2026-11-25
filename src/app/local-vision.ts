@@ -1,4 +1,5 @@
-import type { VisionKind } from './mission-policy';
+import type { VisionKind } from './mission-photo';
+import { loadPhotoFrame } from './photo-frame';
 
 const VISION_WASM = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm';
 const POSE = 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task';
@@ -13,36 +14,28 @@ export function armsRaised(points: Landmark[] | undefined) {
     points[w].y < points[s].y - 0.025 && points[e].y < points[s].y + 0.12);
 }
 
-async function loadFrame(file: File) {
-  if (!file.type.startsWith('image/') || file.size > 15_000_000) throw new Error('15MB보다 작은 사진을 골라 주세요.');
-  const url = URL.createObjectURL(file);
-  try {
-    const image = new window.Image();
-    image.src = url;
-    await image.decode();
-    if (!image.naturalWidth || !image.naturalHeight) throw new Error('사진을 열지 못했어요.');
-    const scale = Math.min(1, 768 / Math.max(image.naturalWidth, image.naturalHeight));
-    const frame = document.createElement('canvas');
-    frame.width = Math.round(image.naturalWidth * scale);
-    frame.height = Math.round(image.naturalHeight * scale);
-    const ctx = frame.getContext('2d');
-    if (!ctx) throw new Error('카메라 장면을 준비하지 못했어요.');
-    ctx.drawImage(image, 0, 0, frame.width, frame.height);
-    return frame;
-  } finally { URL.revokeObjectURL(url); }
-}
+const objectCategories = {
+  cup: ['cup'],
+  book: ['book'],
+  meal: ['sandwich', 'hot dog', 'pizza', 'donut', 'cake'],
+};
 
-export async function checkMissionPhoto(file: File, kind: VisionKind) {
-  const frame = await loadFrame(file);
+export async function checkMissionPhoto(file: File, kind: Exclude<VisionKind, 'music'>) {
+  const frame = await loadPhotoFrame(file, 768);
   try {
     const { FilesetResolver, ObjectDetector, PoseLandmarker } = await import('@mediapipe/tasks-vision');
     const wasm = await FilesetResolver.forVisionTasks(VISION_WASM);
-    if (kind === 'cup') {
+    if (kind !== 'arms') {
       const model = await ObjectDetector.createFromOptions(wasm, {
         baseOptions: { modelAssetPath: OBJECT, delegate: 'CPU' }, runningMode: 'IMAGE',
-        maxResults: 3, categoryAllowlist: ['cup'], scoreThreshold: 0.55,
+        maxResults: 3, categoryAllowlist: objectCategories[kind], scoreThreshold: 0.7,
       });
-      try { return model.detect(frame).detections.some(item => item.categories.some(value => value.categoryName === 'cup')); }
+      try {
+        return model.detect(frame).detections.some(item => {
+          const box = item.boundingBox;
+          return !!box && box.width * box.height >= frame.width * frame.height * 0.12;
+        });
+      }
       finally { model.close(); }
     }
     const model = await PoseLandmarker.createFromOptions(wasm, {

@@ -214,6 +214,10 @@ test('account navigation reuses full screens, starts only on explicit entry and 
   if (name === '../sunshine-notifications') return loadTs(new URL('../src/app/sunshine-notifications.ts', import.meta.url));
   if (name === './OneStepScreens') return Object.fromEntries(['HomeScreen','CheckinScreen','CareScreen','TopBar','BottomNav'].map(n => [n,n]));
   if (name === './RecordScreens') return { RecordsCalendar: 'calendar', ReflectionExtras: 'extras' };
+  if (name === './RecoveryMissions') return { default: 'photo-missions' };
+  if (name === './MedicationManagement') return { default: 'medication-management' };
+  if (name === './GardenProfile') return { GardenProfileForm: 'garden-profile', PotNameForm: 'pot-name' };
+  if (name === './PersonalGarden') return { usePersonalGarden: () => null };
   if (name === './GardenShop') return { default: 'shop' };
   if (name === './Companions') return { CompanionArt: 'tree' };
   if (name === './DeveloperSettings') return { AccountSettingsScreen: 'settings' };

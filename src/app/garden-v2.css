@@ -113,7 +113,43 @@ body[data-astryx-theme="matcha"] {
 .diary-details.record-details { margin: 0; padding: 0; }
 .diary-details .record-detail-head { margin: 3px 0 7px; align-items: center; }
 .diary-details .record-detail-head h2 { font-size: 16px; font-weight: 750; }
-.diary-details .diary-write { margin: 0 0 6px; min-height: 43px; border-radius: 12px; padding: 0 13px; color: white; background: var(--garden-pine); }
+.diary-details .diary-write { min-height: 34px; width: auto; border-radius: 10px; padding: 0 9px; font-size: 12px; color: white; background: var(--garden-pine); }
+.diary-detail-actions { margin-left: auto; justify-content: flex-end; gap: 4px; flex-wrap: nowrap; }
+.journal-shortcuts { padding: 4px 0; }
+.garden-history-screen > .journal-shortcuts { margin: 7px 16px; }
+.personal-area { display: flex; flex-direction: column; gap: 12px; }
+.personal-area > * { flex-shrink: 0; }
+.personal-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.personal-toolbar button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; min-height: 38px; padding-inline: 9px; }
+.personal-form { display: grid; gap: 10px; }
+.personal-form-heading { display: flex; align-items: flex-start; gap: 10px; }
+.personal-form-heading h1 { font-size: 21px; line-height: 1.3; margin: 0 0 5px; }
+.personal-form label { display: grid; gap: 4px; font-size: 13px; }
+.personal-form :is(input:not([type='checkbox']), select, textarea) { width: 100%; min-height: 40px; font: inherit; font-size: 16px; color: inherit; background: #fff; border: 1px solid #a8bcad; border-radius: 8px; padding: 7px 9px; }
+.personal-form input[type='checkbox'] { accent-color: #2b5346; }
+.personal-form fieldset { min-width: 0; padding: 4px 0 0; margin: 0; border: 0; }
+.personal-form legend { font-size: 13px; }
+.personal-form :is(h2, h3, p) { margin: 0; }
+.personal-form :is(h2, h3) { display: flex; align-items: center; gap: 5px; font-size: 16px; }
+.personal-form summary, .drug-details summary { cursor: pointer; }
+.personal-form details[open] > summary { margin-bottom: 8px; }
+.period-choices { display: flex; flex-wrap: wrap; gap: 7px; }
+.personal-form .period-choices label { display: inline-flex; align-items: center; gap: 4px; padding: 6px; border-radius: 8px; background: #eef4ee; }
+.reminder-row { display: grid; grid-template-columns: 1fr minmax(96px, 45%); align-items: center; gap: 8px; }
+.personal-form .reminder-row label { display: flex; align-items: center; gap: 6px; }
+.medication-period h2 { display: flex; align-items: center; gap: 6px; }
+.drug-list, .drug-results { list-style: none; padding: 0; margin: 0; }
+.drug-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 11px 0; border-top: 1px solid #dce7df; }
+.drug-result { display: flex; text-align: left; align-items: center; width: 100%; gap: 8px; padding-block: 7px; border-top: 1px solid #dce7df; }
+.drug-result span, .drug-details { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.drug-photo { width: 44px; height: 44px; flex-shrink: 0; border-radius: 9px; display: grid; place-items: center; background: #e9f2ea; color: #2b5346; overflow: hidden; }
+.drug-photo img { width: 100%; height: 100%; object-fit: contain; background: white; }
+.drug-details h3, .drug-details p { margin: 0; }
+.drug-details p { white-space: pre-line; }
+.drug-details small { opacity: .8; }
+.drug-effect { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.drug-actions { display: flex; gap: 2px; }
+.drug-actions button { width: 30px; min-width: 30px; height: 34px; }
 .diary-entry { display: grid; gap: 9px; }
 .diary-entry > * + * { margin-top: 0; }
 .diary-entry .saved-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--garden-ink); }
@@ -128,6 +164,20 @@ body[data-astryx-theme="matcha"] {
 .outing-field { border: 0; padding: 0; min-width: 0; }
 .outing-field legend { font-size: 12px; padding-bottom: 5px; font-weight: 650; }
 .recovery-missions { display: grid; gap: 7px; }
+.checkin-screen .question-panel h2, .care-screen .care-intro h2, .care-screen .care-copy h3,
+.care-detail-content h2, .recovery-missions h2, .recovery-missions .mission-row h3 { color: #164836; font-weight: 650; }
+.checkin-screen .question-helper, .checkin-screen .optional-hint, .care-screen .care-intro p,
+.care-screen .care-copy p, .care-screen .care-summary, .care-detail-content p,
+.recovery-missions .mission-card > p, .recovery-missions .quiet-note { color: #345c49; }
+.checkin-screen .question-kicker, .care-screen .care-copy span, .care-screen .care-meta,
+.care-screen .care-progress, .care-detail-meta, .recovery-missions .mission-row small { color: #345c49; }
+.care-action, .checkin-screen .step-actions > .primary-button { display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px; }
+.care-action { white-space: nowrap; }
+.care-action svg { flex-shrink: 0; }
+.care-screen .care-card:has(> button, > [role='img']) > .care-copy { grid-column: 2; }
+.care-screen .care-card > button, .care-screen .care-card > [role='img'] { grid-column: 3; grid-row: 1; align-self: center; white-space: nowrap; }
+.care-detail-actions > .care-action { width: 100%; }
+.care-screen .care-more { display: inline-flex; gap: 6px; align-items: center; justify-content: center; min-height: 40px; color: #164836; font-weight: 600; }
 .recovery-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .mission-card { padding: 10px 10px 9px; border-radius: 13px; }
 .mission-card p { margin: 4px 1px 0; font-size: 12px; }
@@ -138,6 +188,19 @@ body[data-astryx-theme="matcha"] {
 .mission-completed { background: #eaf1e8; }
 .mission-card > .quiet-actions { margin-top: 4px; }
 .mission-vision { padding: 9px; margin-top: 7px; background: #eef3ed; border-radius: 10px; display: grid; gap: 5px; }
+.account-photo-missions { padding: 0 16px 18px; }
+.photo-consent, .photo-label-form, .medicine-form, .medicine-compare { display: grid; gap: 8px; margin-block: 6px; }
+.photo-consent label, .medicine-consent { display: flex; align-items: flex-start; gap: 7px; font-size: 13px; line-height: 1.45; }
+.photo-consent input, .medicine-consent input { flex: 0 0 auto; accent-color: #2b5346; }
+.mission-proof-image { width: 100%; height: 136px; max-width: 280px; object-fit: contain; border-radius: 8px; background: #fff; }
+.photo-label-form label, .medicine-form label:not(.medicine-consent) { display: grid; gap: 4px; font-size: 13px; }
+.photo-label-form input, .medicine-form input:not([type='checkbox']) { background: #fff; border: 1px solid #a8bcad; border-radius: 8px; min-height: 40px; width: 100%; padding: 7px 9px; font-size: 16px; color: inherit; }
+.medicine-mission { padding: 12px; margin-block: 7px; }
+.medicine-mission summary { cursor: pointer; font-weight: 700; padding-block: 6px; }
+.medicine-entries { display: flex; flex-wrap: wrap; gap: 5px; list-style: none; padding: 0; margin: 4px 0; }
+.medicine-entries li { display: flex; align-items: center; gap: 2px; max-width: 100%; }
+.medicine-compare dt { font-size: 12px; color: #405b51; }
+.medicine-compare dd { margin: 0 0 5px; overflow-wrap: anywhere; }
 
 .places-area { gap: 11px; }
 .places-heading { display: flex; justify-content: space-between; align-items: center; }
@@ -184,6 +247,8 @@ body[data-astryx-theme="matcha"] {
 .auth-demo-link { color: #285142; margin-top: 5px; }
 .install-toast { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; padding: 5px 8px; color: #203f36; background: #e3eddf; }
 .install-toast a { text-decoration: underline; }
+.medication-toast { position: fixed; z-index: 100; left: 50%; top: auto; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(92vw, 420px); min-height: 43px; border: 1px solid #cedfce; border-radius: 12px; box-shadow: 0 4px 16px #193b2e22; }
+.medication-toast button { min-width: 36px; min-height: 36px; }
 .demo-note { display: flex; justify-content: center; gap: 11px; font-size: 11px; padding: 3px 8px; color: #36564a; background: #e4eee1; }
 .demo-note a { text-decoration: underline; }
 .demo-note + .app-shell { min-height: calc(100dvh - 23px); }

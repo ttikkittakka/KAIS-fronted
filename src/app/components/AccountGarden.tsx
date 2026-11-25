@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { getAuthClient } from '../../lib/supabase/auth-client';
@@ -16,6 +16,10 @@ import { createAccountRecordsStore } from '../../lib/account-records/store';
 import { createAccountMonthStore } from '../../lib/account-records/month';
 import { createAccountWritingStore } from '../../lib/account-writing/store';
 import { AccountSettingsScreen } from './DeveloperSettings';
+import RecoveryMissions from './RecoveryMissions';
+import MedicationManagement from './MedicationManagement';
+import { GardenProfileForm, PotNameForm } from './GardenProfile';
+import { usePersonalGarden } from './PersonalGarden';
 import { CompanionArt } from './Companions';
 import { SUNSHINE_NOTICE_MS } from '../sunshine-notifications';
 import { uploadAccountPhoto, saveAccountPhotoComment } from '../../lib/account-photos/client';
@@ -39,6 +43,7 @@ const REFLECTION_COMMIT_UI_ENABLED = false;
 const noSave = () => false;
 /** Reuses the real screens, with server-owned read models and no local store mount. */
 export default function AccountGarden({ userId, onLogout, onDeveloper, developerEntry }: { userId: string; onLogout: () => void; onDeveloper?: () => void; developerEntry?: ReactNode }) {
+  const personal = usePersonalGarden();
   const [store] = useState(() => createAccountGardenStore(userId, async () => {
     const client = getAuthClient();
     if (!client) return null;
@@ -77,6 +82,12 @@ export default function AccountGarden({ userId, onLogout, onDeveloper, developer
   const activityEnabled = ACTIVITY_UI_ENABLED || (activityDate !== null && activityDate === todayState.data?.today);
   const commitEnabled = REFLECTION_COMMIT_UI_ENABLED || (commitDate !== null && commitDate === todayState.data?.today);
   const [view, setView] = useState<GardenView>('home');
+  useEffect(() => {
+    const openReminder = () => { if (window.location.hash === '#medications') setView('medications'); };
+    openReminder();
+    window.addEventListener('hashchange', openReminder);
+    return () => window.removeEventListener('hashchange', openReminder);
+  }, []);
   const [selectedDate, setSelectedDate] = useState<string>();
   const [reviewAnswersOnly, setReviewAnswersOnly] = useState(false);
   const [continuedDay, setContinuedDay] = useState<AccountRecords | null>(null);
@@ -158,6 +169,8 @@ export default function AccountGarden({ userId, onLogout, onDeveloper, developer
   const failed = dateMismatch || state.phase === 'error' || todayState.phase === 'error' || invalid;
   const go = (next: GardenView) => {
     const visit = ++navigation.current;
+    if (next !== 'medications' && typeof window !== 'undefined' && window.location.hash === '#medications')
+      window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
     if (next === 'garden') { setSelectedDate(undefined); void records.load(); if (todayState.data) void months.load(todayState.data.today.slice(0, 7)); }
     if (next === 'checkin') {
       setReviewAnswersOnly(false);
@@ -239,7 +252,7 @@ export default function AccountGarden({ userId, onLogout, onDeveloper, developer
   const outsideRange = !!(selectedDate && data && !allowedDate(selectedDate, data.today));
   return <main className="app-shell" data-account-view={view} data-record-date={continuedDay?.date ?? reflectionState.date ?? undefined}><div className="phone-frame" ref={frame} aria-busy={refreshing || (!ready && !failed)} inert={refreshing || undefined}>
     {!ready ? failed ? <section className="screen"><TopBar title="오늘의 정원"/><div className="step-actions"><p role="alert">계정 정보를 불러오지 못했어요. 빈 기록으로 대체하지 않았어요.</p><button className="primary-button" onClick={reload}>다시 시도</button></div><button className="auth-secondary" onClick={logout}>로그아웃</button></section> : <GardenLoading/> : <>
-      {view === 'home' && <HomeScreen today={todayState.data!.today} growthSnapshot={commerce} shop={commerce.state} balance={todayState.data!.sunshineBalance} state={daily?.plantState ?? 'normal'} go={enterFromHome} recorded={!!recommendation} completedCount={daily?.completedCareIds.length ?? 0} resume={daily?.stage}/>}
+      {view === 'home' && <HomeScreen today={todayState.data!.today} potName={personal?.names.bonsai} growthSnapshot={commerce} shop={commerce.state} balance={todayState.data!.sunshineBalance} state={daily?.plantState ?? 'normal'} go={enterFromHome} recorded={!!recommendation} completedCount={daily?.completedCareIds.length ?? 0} resume={daily?.stage}/>}
       {view === 'checkin' && <AccountReflection commitEnabled={commitEnabled} reviewOnly={reviewAnswersOnly} store={reflection} commitStore={commitStore} onResume={() => continueReflection()} onFinish={() => continueReflection()} onBack={() => {
         home();
         // Refresh the home read model after acknowledged drafts, without replacing pending input.
@@ -250,13 +263,27 @@ export default function AccountGarden({ userId, onLogout, onDeveloper, developer
         if (activityEnabled) { void completeActivity(view === 'photo' ? 'photo_done' : 'growth_done'); return; }
         rememberAccountView(continuedDay ?? todayState.data!, next); go(next);
       }}/>} 
-      {view === 'care' && (journey && journeyRecommendation ? <CareScreen readOnly={!activityEnabled || activityPending || activityVerificationFailed || journey.stage !== 'care' || (continuedDay ?? todayState.data)?.date !== todayState.data?.today || ['loading', 'saving', 'recover', 'conflict'].includes(activityState.phase)} state={journey.plantState} recommendation={displayCareRecommendation(journeyRecommendation)} completed={completedCare} completedIds={journey.completedCareIds} onComplete={id => { void completeActivity('care_done', id); }} onShowList={() => setCompletedCare(null)} goHome={home}/> : <section className="screen"><TopBar title="오늘의 작은 돌봄" onBack={home}/><p className="privacy-note">아직 서버에 확정된 추천이 없어요.</p><button className="secondary-button" onClick={() => go('checkin')}>돌아보기 질문 보기</button></section>)}
+      {view === 'care' && (journey && journeyRecommendation ? <CareScreen readOnly={!activityEnabled || activityPending || activityVerificationFailed || journey.stage !== 'care' || (continuedDay ?? todayState.data)?.date !== todayState.data?.today || ['loading', 'saving', 'recover', 'conflict'].includes(activityState.phase)} state={journey.plantState} recommendation={displayCareRecommendation(journeyRecommendation)} completed={completedCare} completedIds={journey.completedCareIds} onComplete={id => { void completeActivity('care_done', id); }} onShowList={() => setCompletedCare(null)} goHome={home} onMore={() => go('missions')}/> : <section className="screen"><TopBar title="오늘의 작은 돌봄" onBack={home}/><p className="privacy-note">아직 서버에 확정된 추천이 없어요.</p><button className="secondary-button" onClick={() => go('checkin')}>돌아보기 질문 보기</button></section>)}
       {activityEnabled && (activityVerificationFailed || ['recover', 'conflict'].includes(activityState.phase)) && <p role="alert" className="privacy-note">{'\uC800\uC7A5 \uACB0\uACFC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC5B4\uC694.'}<button className="text-button" onClick={async () => { setCompletedCare(null); await activity.recover(); const recovered = activity.getSnapshot(); if (recovered.phase === 'ready' && recovered.day?.userId === userId) { setContinuedDay(recovered.day); setActivityVerificationFailed(false); if (recovered.day.record) go(recovered.day.record.stage); reload(); } }}>{'\uC11C\uBC84 \uAE30\uB85D \uD655\uC778'}</button></p>}
-      {view === 'garden' && <section className="screen garden-history-screen"><TopBar title="나의 기록"/><RecordsCalendar rewardSummary={history.phase === 'ready' && history.data?.record ? <RecordSunshine day={history.data}/> : undefined} readOnly accountPhotos initialDate={selectedDate} today={data!.today} records={historical ? [historical] : []} recordedDates={monthState.data?.dates ?? []} onSave={noSave} onDate={date => { setSelectedDate(date); if (monthState.data?.month !== date.slice(0, 7)) void months.load(date.slice(0, 7)); if (allowedDate(date, data!.today)) void records.load(date); }} status={outsideRange ? <p role="status">오늘부터 지난 365일의 기록만 조회할 수 있어요.</p> : history.phase === 'error' || monthState.phase === 'error' ? <div role="alert">기록을 불러오지 못했어요.<button onClick={() => { void records.load(selectedDate); void months.load((selectedDate ?? data!.today).slice(0, 7)); }}>다시 시도</button></div> : history.phase !== 'ready' ? <GardenLoading compact/> : undefined}/></section>}
+      {view === 'garden' && <section className="screen garden-history-screen"><TopBar title="나의 기록"/><RecordsCalendar rewardSummary={history.phase === 'ready' && history.data?.record ? <RecordSunshine day={history.data}/> : undefined} readOnly accountPhotos initialDate={selectedDate} today={data!.today} records={historical ? [historical] : []} recordedDates={monthState.data?.dates ?? []} onSave={noSave}
+        onToday={() => enterFromHome('checkin')} onMissions={() => daily?.stage === 'care' && recommendation ? enterFromHome('care') : go('missions')} onMedications={() => go('medications')}
+        onDate={date => { setSelectedDate(date); if (monthState.data?.month !== date.slice(0, 7)) void months.load(date.slice(0, 7)); if (allowedDate(date, data!.today)) void records.load(date); }} status={outsideRange ? <p role="status">오늘부터 지난 365일의 기록만 조회할 수 있어요.</p> : history.phase === 'error' || monthState.phase === 'error' ? <div role="alert">기록을 불러오지 못했어요.<button onClick={() => { void records.load(selectedDate); void months.load((selectedDate ?? data!.today).slice(0, 7)); }}>다시 시도</button></div> : history.phase !== 'ready' ? <GardenLoading compact/> : undefined}/>
+      </section>}
+      {view === 'missions' && <section className="screen work-screen"><TopBar title="오늘의 돌봄" onBack={() => go(daily?.stage === 'care' && recommendation ? 'care' : 'garden')}/>
+        <div className="work-area personal-area"><RecoveryMissions deviceOnly key={data!.today}/></div></section>}
+      {view === 'medications' && <section className="screen work-screen"><TopBar title="복약 관리" onBack={() => go('garden')}/>
+        <div className="work-area personal-area"><MedicationManagement/></div></section>}
+      {view === 'profile' && <section className="screen work-screen"><TopBar title="내 프로필" onBack={() => go('settings')}/>
+        <div className="work-area personal-area"><GardenProfileForm onDone={() => go('settings')}/></div></section>}
+      {view === 'pot-name' && <section className="screen work-screen"><TopBar title="화분 이름 바꾸기" onBack={() => go('settings')}/>
+        <div className="work-area personal-area"><PotNameForm plant="bonsai" onDone={home}/></div></section>}
       {(view === 'shop' || view === 'decorate') && <section className="screen shop-screen"><TopBar title={view === 'shop' ? '작은 정원 상점' : '정원 꾸미기'} onBack={home}/><GardenShop key={view} gardenPreview={<CompanionArt id="bonsai" low={daily?.plantState === 'low'} className="plant-art" interactive={false}/> } readOnly={!commerceData?.enabled || !!commerceError} accountOwned={shopData!.inventory.map(i => i.item_id)} accountPrices={commerceData ? Object.fromEntries(commerceData.catalog.map(i => [i.id, i.price])) : undefined} accountActions={{ purchase: item => saveCommerce({action:'purchase',item,price:commerceData?.catalog.find(entry => entry.id === item)?.price ?? -1,balance:commerce!.balance,revision:commerce!.state.revision}), saveLayout: (layout, revision) => saveCommerce({action:'layout',layout,revision,balance:commerce!.balance}), reload: loadCommerce }} inventory={view === 'decorate'} snapshot={commerce} storageError={commerceError} onChange={() => {}} onRetry={() => { void loadCommerce().catch(() => {}); }} onHome={home} onSwitch={() => go(view === 'shop' ? 'decorate' : 'shop')}/></section>}
       {view === 'rewards' && <section className="screen"><TopBar title="함께한 날의 선물" onBack={home}/><GrowthRewardsScreen readOnly snapshot={commerce} error="" onRetry={reload} onChange={() => {}} onPlace={() => go('decorate')} onExtra={() => go('extra-care')}/></section>}
       {view === 'extra-care' && <section className="screen"><TopBar title="선택형 돌봄" onBack={() => go('rewards')}/><OptionalCareScreen snapshot={commerce} onHome={home}/></section>}
-      {view === 'settings' && <section className="screen"><TopBar title="설정" onBack={home}/><AccountSettingsScreen account onRefresh={reload} onLogout={logout} onDeveloper={onDeveloper} developerEntry={developerEntry}/></section>}
+      {view === 'settings' && <section className="screen"><TopBar title="설정" onBack={home}/>
+        <div className="personal-toolbar journal-shortcuts"><button className="secondary-button" type="button" onClick={() => go('profile')}>내 프로필</button>
+          <button className="secondary-button" type="button" onClick={() => go('pot-name')}>화분 이름 바꾸기</button></div>
+        <AccountSettingsScreen account onRefresh={reload} onLogout={logout} onDeveloper={onDeveloper} developerEntry={developerEntry}/></section>}
       {['home', 'garden', 'shop', 'decorate', 'rewards', 'extra-care'].includes(view) && <BottomNav active={view === 'garden' ? 'garden' : 'home'} go={go}/>}
     </>}
     <div className="sunshine-notifications" role="status" aria-live="polite" aria-atomic="true">{sunshine && <div key={sunshine.id} className={'sunshine-feedback ' + sunshineStyles.notice}><span className="sunshine-feedback-icon" aria-hidden="true">☀️</span><strong>햇살 +{sunshine.amount}</strong><span className={sunshineStyles.message}>오늘도 나를 돌봐 주었어요.</span></div>}</div>

@@ -25,6 +25,10 @@ function normalized(node){
  if(node==null||node===false||typeof node==='function')return undefined;
  if(Array.isArray(node))return node.flatMap(n=>{const value=normalized(n);return value===undefined?[]:n?.type==='div'&&['home-scroll-content','home-progress-actions'].includes(n.props?.className)?value:[value];});
  if(typeof node!=='object')return node;
+ // The question illustration is a background asset now. Compare the surrounding layout and copy.
+ if(node.type==='div' && node.props?.className?.startsWith('question-mark')){
+  return {type:node.type,props:{className:node.props.className}};
+ }
  if(node.type==='GardenTools' && node.props?.account===true){
   const {account, ...props}=node.props;
   return normalized({...node,props});

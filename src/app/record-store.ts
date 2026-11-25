@@ -4,7 +4,7 @@ import { DAILY_KEY, localDay, parseDaily, type DailyCheckin } from './daily-chec
 import { parseCareHistory } from './daily-cares';
 import { normalizeAnswers } from './questions';
 import { isCareId } from './cares';
-import { isRecoveryId } from './mission-policy';
+import { RECOVERY_MISSIONS, isRecoveryId } from './mission-policy';
 
 export const RECORDS_KEY = 'little-garden.records.v1';
 export const PHOTO_TRASH_KEY = 'little-garden.photo-deletions.v1';
@@ -43,7 +43,7 @@ function validRecord(value: unknown, owner: string): value is DailyCheckin {
     Array.isArray(r.answers) && r.answers.length === 4 && normalizeAnswers(r.answers).every((v, i) => !!v || r.answers[i] === '') &&
     typeof r.note === 'string' && r.note.length <= 300 &&
     (r.outing === undefined || r.outing === 'inside' || r.outing === 'outside') &&
-    (r.completedMissionIds === undefined || (Array.isArray(r.completedMissionIds) && r.completedMissionIds.length <= 10 && r.completedMissionIds.every(isRecoveryId))) &&
+    (r.completedMissionIds === undefined || (Array.isArray(r.completedMissionIds) && r.completedMissionIds.length <= RECOVERY_MISSIONS.length && r.completedMissionIds.every(isRecoveryId))) &&
     (r.photoComment === undefined || (typeof r.photoComment === 'string' && r.photoComment.length <= 100)) &&
     (r.photoId === undefined || (typeof r.photoId === 'string' && r.photoId.startsWith(id + ':') && r.photoId.length <= 200)) &&
     (r.createdAt === undefined || (typeof r.createdAt === 'string' && Number.isFinite(Date.parse(r.createdAt)))) &&

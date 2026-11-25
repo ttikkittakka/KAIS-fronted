@@ -1,5 +1,7 @@
 'use client';
 
+import { usePersonalGarden } from './PersonalGarden';
+
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import Image from 'next/image';
 import { BOND_LEVELS, COMPANIONS, bond, bondName, bondRule, canAdopt, companion, type BondLevel, type CompanionId, type CompanionState } from '../companions';
@@ -171,6 +173,7 @@ export function CompanionPicker({ state, onAdopt }: { state: CompanionState | nu
 }
 
 export function CompanionCollection({ state, records, onChoose, onAdopt }: { state: CompanionState | null; records: DailyCheckin[]; onChoose: (id: CompanionId) => void; onAdopt: () => void }) {
+  const names = usePersonalGarden()?.names;
   const bonding = !canAdopt(state, records);
   const missions = readMissionLog().done;
   return <div className="settings-content">
@@ -182,7 +185,7 @@ export function CompanionCollection({ state, records, onChoose, onAdopt }: { sta
       const growth = treeGrowth(records, adoption.adoptedOn, undefined, missions);
       const active = state!.active === c.id;
       return <article key={c.id} className={'companion-card' + (active ? ' companion-card--selected' : '')}>
-        <CompanionArt id={c.id} stage={growth.stage.level} interactive={false}/><strong>{c.name}</strong>
+        <CompanionArt id={c.id} stage={growth.stage.level} interactive={false}/><strong>{names?.[c.id] ?? c.name}</strong>
         <span>{growth.stage.name} · 함께 자란 날 {growth.days}일</span>
         <span><span className="companion-hearts" aria-hidden="true">{hearts(level)}</span> {bondName(level)} · {Number(adoption.adoptedOn.slice(5, 7))}월 {Number(adoption.adoptedOn.slice(8))}일부터</span>
         {active ? <span className="companion-badge">정원 대표</span> : <button type="button" className="shop-secondary" onClick={() => onChoose(c.id)}>정원 대표로</button>}
@@ -203,10 +206,11 @@ function bondProgress(state: CompanionState, records: DailyCheckin[]) {
 
 /** Home card shown only when the bond just deepened; the everyday status is the level pill and the help balloon. */
 export function CompanionStatus({ state, records, onSeen, onOpen }: { state: CompanionState; records: DailyCheckin[]; onSeen: (level: BondLevel) => void; onOpen: (view: 'companion' | 'companions' | 'decorate') => void }) {
+  const names = usePersonalGarden()?.names;
   const { adoption, info, level } = bondProgress(state, records);
   if (level <= adoption.seenLevel) return null;
   return <section className="companion-status companion-status--news" aria-live="polite">
-    <p className="eyebrow">더 가까워졌어요</p><h2><span className="companion-hearts" aria-hidden="true">{hearts(level)}</span> {wa(info.name)} {ga(bondName(level))} 되었어요</h2>
+    <p className="eyebrow">더 가까워졌어요</p><h2><span className="companion-hearts" aria-hidden="true">{hearts(level)}</span> {wa(names?.[info.id] ?? info.name)} {ga(bondName(level))} 되었어요</h2>
     {level === 3 ? <><p>다음엔 어떻게 할까요? 무엇을 골라도 괜찮아요.</p><div className="companion-actions">
       {state.adopted.length < COMPANIONS.length && <button type="button" onClick={() => { onSeen(level); onOpen('companion'); }}>새 친구 데려오기</button>}
       <button type="button" onClick={() => onSeen(level)}>이대로 함께 지내기</button>

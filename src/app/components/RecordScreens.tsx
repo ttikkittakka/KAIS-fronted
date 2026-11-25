@@ -7,7 +7,7 @@ import { localDay, type DailyCheckin } from '../daily-checkin';
 import { QUESTIONS, normalizeAnswers } from '../questions';
 import { Button } from '@astryxdesign/core/Button';
 import { diaryTags, MOOD_LABELS, OUTING_LABELS, OUTINGS } from '../wellbeing';
-import { CARES } from '../cares';
+import { CARES, presentTodayCare } from '../cares';
 import { RECOVERY_MISSIONS } from '../mission-policy';
 import { cleanupPhotos, localOwner, newLocalId, photoOperation, preparePhoto, schedulePhotoDeletion } from '../record-store';
 import { needsSafetyRoute } from '../safety';
@@ -19,10 +19,6 @@ import { displayCareRecommendation } from '../daily-cares';
 import { photoSession, readAccountPhoto } from '../../lib/account-photos/client';
 import commentStyles from './PhotoComment.module.css';
 import photoStyles from './PhotoDetails.module.css';
-
-function PhotoRecordIcon() {
-  return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true" className={photoStyles.icon}><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 5-5 4 4 4-6 5 7"/></svg>;
-}
 
 export function SavedMood({ answers }: { answers: DailyCheckin['answers'] }) {
   const label = QUESTIONS[3].options.find(option => option.value === normalizeAnswers(answers)[3])?.label;
@@ -152,7 +148,7 @@ export function PhotoEditor({ record, onSave, onPending }: { record: DailyChecki
   return <div className="photo-editor">
     <input ref={input} type="file" accept="image/*" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
     <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
-    {pending ? preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <p role="status">미리보기를 준비하고 있어요.</p> : record.photoId ? <PhotoPreview key={record.photoId} id={record.photoId}/> : <div className="photo-empty"><span aria-hidden="true">▧</span><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
+    {pending ? preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <p role="status">미리보기를 준비하고 있어요.</p> : record.photoId ? <PhotoPreview key={record.photoId} id={record.photoId}/> : <div className="photo-empty"><Icon name="camera" size={34}/><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
     <div className="editor-actions"><button className="secondary-button" disabled={busy || commentFailed} onClick={() => input.current?.click()}>{record.photoId || pending ? '사진 변경' : '사진 선택'}</button><button className="secondary-button camera-button" disabled={busy || commentFailed} onClick={() => void capture()}><Icon name="camera" size={18}/> 사진 촬영</button></div>
     {shooting && <CameraCapture onShot={file => void select(file)} onClose={() => setShooting(false)}/>}
     {pending && <div className="editor-actions"><button className="primary-button" disabled={busy} onClick={() => void store()}>{busy ? '저장하고 있어요…' : '이 사진 저장하기'}</button><button className="text-button" disabled={busy} onClick={() => { changePhotoDraft(key, null); onPending?.(false); }}>선택 취소</button></div>}
@@ -193,11 +189,11 @@ export function ReflectionExtras(props: { kind: 'photo' | 'growth'; record: Dail
 function ReadOnlyExtras({ kind, record, onBack, onNext, progression, writing, onPhotoSave, photoComment }: { kind: 'photo' | 'growth'; record: DailyCheckin; onBack: () => void; onNext: () => void; photoComment?: AccountPhotoComment; onPhotoSave?: (blob: Blob, requestId: string, signal: AbortSignal, comment: string) => Promise<boolean>; writing?: AccountWritingField; progression?: { enabled: boolean; blocked: boolean } }) {
  const photo = kind === 'photo';
  const [pending, setPending] = useState(false);
- return <section className="screen checkin-screen"><header className="top-bar"><button className="icon-button" aria-label="뒤로 가기" onClick={onBack}><RecordBackIcon/></button><h1>오늘의 나</h1></header><StepHeader step={photo ? 2 : 3}/><div className="question-panel note-panel"><div className="question-mark">{photo ? <PhotoRecordIcon/> : '✎'}</div><h2>{photo ? '오늘의 순간을 남겨볼까요?' : '오늘의 나에게 한마디'}</h2>
+ return <section className="screen checkin-screen"><header className="top-bar"><button className="icon-button" aria-label="뒤로 가기" onClick={onBack}><RecordBackIcon/></button><h1>오늘의 나</h1></header><StepHeader step={photo ? 2 : 3}/><div className="question-panel note-panel"><div className="question-mark" aria-hidden="true"/><h2>{photo ? '오늘의 순간을 남겨볼까요?' : '오늘의 나에게 한마디'}</h2>
    <p className="question-helper">{photo ? <>특별한 순간이 아니어도 괜찮아요.<br/>오늘 기억하고 싶은 장면을 남겨보세요.</> : '오늘 하루를 보낸 나에게 어떤 말을 해주고 싶나요?'}</p>
    {photo && <><SavedMood answers={record.answers}/><AccountPhotoPreview key={draftKey(record)} owner={record.userId} date={record.date} comment={photoComment} onSave={onPhotoSave} onPending={setPending}/>{!photoComment && record.photoComment && <p className="saved-text">{record.photoComment}</p>}</>}
    {!photo && <><label className="field-label" htmlFor="account-saved-text">오늘의 나에게 남기는 말</label><textarea id="account-saved-text" className="record-input" maxLength={300} placeholder="오늘의 나에게 하고 싶은 말을 적어보세요." readOnly={!writing || writing.disabled} value={writing?.text ?? record.note} onChange={e => writing?.onEdit(e.target.value)}/><span className="text-count">{(writing?.text ?? record.note).length} / 300</span>{writing && <><p className="suggestion-label">말이 떠오르지 않을 때, 이렇게 시작해도 좋아요.</p><div className="note-suggestions">{SUGGESTIONS.map(text => <button key={text} disabled={writing.disabled} onClick={() => writing.onEdit(text)}>{text}</button>)}</div>{writing.pending && <p role="status">글을 저장하고 있어요.</p>}{writing.onUseSaved && <div className="editor-actions"><button className="text-button" onClick={writing.onUseSaved}>저장된 글 사용</button><button className="text-button" onClick={writing.onKeepDraft}>내 글로 저장</button></div>}{writing.error && <p role="alert" className="record-error">글을 저장했는지 확인하지 못했어요. 작성한 내용은 그대로 남아 있어요.<button className="text-button" onClick={writing.onRecover}>저장된 내용 확인</button></p>}</>}</>}
-   <div className="step-actions"><button className="primary-button" disabled={pending || progression?.blocked || writing?.pending || writing?.error} onClick={onNext}>{photo ? '성장하기로 이어가기' : '오늘의 추천 행동 만나보기'}</button><p className="optional-hint">{pending ? '사진 또는 코멘트의 저장이 아직 확인되지 않았어요.' : progression?.enabled ? (photo ? '사진 없이도 이어갈 수 있어요.' : '글 없이도 이어갈 수 있어요.') : '지금은 저장된 기록을 둘러볼 수 있어요.'}</p></div></div></section>;
+   <div className="step-actions"><button className="primary-button" disabled={pending || progression?.blocked || writing?.pending || writing?.error} onClick={onNext}>{photo ? '성장하기로 이어가기' : '오늘의 돌봄으로 가기'}</button><p className="optional-hint">{pending ? '사진 또는 코멘트의 저장이 아직 확인되지 않았어요.' : progression?.enabled ? (photo ? '사진 없이도 이어갈 수 있어요.' : '글 없이도 이어갈 수 있어요.') : '지금은 저장된 기록을 둘러볼 수 있어요.'}</p></div></div></section>;
 }
 /** Account photo editor; selected content is saved only by an explicit user action. */
 export type AccountPhotoComment = { text: string; saved: string; onEdit: (text: string) => void; onSave: (text: string, signal: AbortSignal) => Promise<boolean> };
@@ -273,8 +269,8 @@ export function AccountPhotoPreview({ onPending, owner, date, onSave, comment }:
   return <div className="photo-editor">
     <input ref={input} type="file" accept="image/*" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
     <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
-    {saved && owner && date ? <AccountSavedPhoto owner={owner} date={date}/> : preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <div className="photo-empty"><span aria-hidden="true">▧</span><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
-    <div className="editor-actions"><button className="secondary-button" disabled={busy || saved} onClick={() => input.current?.click()}>{preview ? '사진 변경' : '사진 선택'}</button><button className="secondary-button camera-button" disabled={busy || saved} onClick={() => camera.current?.click()}>사진 촬영</button></div>
+    {saved && owner && date ? <AccountSavedPhoto owner={owner} date={date}/> : preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <div className="photo-empty"><Icon name="camera" size={34}/><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
+    <div className="editor-actions"><button className="secondary-button" disabled={busy || saved} onClick={() => input.current?.click()}>{preview ? '사진 변경' : '사진 선택'}</button><button className="secondary-button camera-button" disabled={busy || saved} onClick={() => camera.current?.click()}><Icon name="camera" size={18}/> 사진 촬영</button></div>
     {(preview || saved) && comment && <div className={commentStyles.editor}>
       <label className="field-label" htmlFor="photo-comment">사진에 남기는 짧은 말</label>
       <textarea id="photo-comment" className={`comment-input ${commentStyles.input}`} rows={3} maxLength={100} placeholder="이 순간을 한마디로 남긴다면?" disabled={busy} value={comment.text} aria-describedby="photo-comment-count" onChange={e => { setCommentStatus('idle'); comment.onEdit(e.target.value.slice(0, 100)); }}/>
@@ -309,7 +305,7 @@ function LocalReflectionExtras({ kind, record, onSave, onBack, onNext }: { kind:
   const photo = kind === 'photo';
   const cachedPhoto = useSyncExternalStore(subscribeDrafts, () => photo && photoDrafts.has(draftKey(record)), () => false);
   const [pendingPhoto, setPendingPhoto] = useState(() => failedTextDrafts.has(draftKey(record) + (photo ? ':comment' : ':note')));
-  return <section className="screen checkin-screen"><header className="top-bar"><button className="icon-button" aria-label="뒤로 가기" disabled={pendingPhoto && !cachedPhoto} onClick={onBack}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 18-6-6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button><h1>오늘의 나</h1><HelpLink/></header><StepHeader step={photo ? 2 : 3}/><div className="question-panel note-panel"><div className="question-mark">{photo ? '▧' : '✎'}</div><h2>{photo ? '오늘의 순간을 남겨볼까요?' : '오늘의 나에게 한마디'}</h2><p className="question-helper">{photo ? <>특별한 순간이 아니어도 괜찮아요.<br/>오늘 기억하고 싶은 장면을 남겨보세요.</> : '오늘 하루를 보낸 나에게 어떤 말을 해주고 싶나요?'}</p>{photo ? <><p className="mood-chip">♡ {QUESTIONS[3].options.find(o => o.value === normalizeAnswers(record.answers)[3])?.label}</p><PhotoEditor record={record} onSave={onSave} onPending={setPendingPhoto}/></> : <NoteEditor record={record} onSave={onSave} onPending={setPendingPhoto}/>}<div className="step-actions"><button className="primary-button" disabled={pendingPhoto || cachedPhoto} onClick={onNext}>{photo ? '성장하기로 이어가기' : '일기 닫기'}</button>{!photo && !!record.note && <button className="text-button" onClick={() => { if (onSave({ ...record, note: '' })) onNext(); }}>글 없이 넘어가기</button>}<p className="optional-hint">{photo ? pendingPhoto || cachedPhoto ? '사진을 저장하거나 선택을 취소하면 이어갈 수 있어요.' : '사진 없이도 이어갈 수 있어요.' : pendingPhoto ? '작성한 글을 다시 저장하면 이어갈 수 있어요.' : '글 없이도 이어갈 수 있어요.'}</p></div></div></section>;
+  return <section className="screen checkin-screen"><header className="top-bar"><button className="icon-button" aria-label="뒤로 가기" disabled={pendingPhoto && !cachedPhoto} onClick={onBack}><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m15 18-6-6 6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button><h1>오늘의 나</h1><HelpLink/></header><StepHeader step={photo ? 2 : 3}/><div className="question-panel note-panel"><div className="question-mark" aria-hidden="true"/><h2>{photo ? '오늘의 순간을 남겨볼까요?' : '오늘의 나에게 한마디'}</h2><p className="question-helper">{photo ? <>특별한 순간이 아니어도 괜찮아요.<br/>오늘 기억하고 싶은 장면을 남겨보세요.</> : '오늘 하루를 보낸 나에게 어떤 말을 해주고 싶나요?'}</p>{photo ? <><p className="mood-chip">♡ {QUESTIONS[3].options.find(o => o.value === normalizeAnswers(record.answers)[3])?.label}</p><PhotoEditor record={record} onSave={onSave} onPending={setPendingPhoto}/></> : <NoteEditor record={record} onSave={onSave} onPending={setPendingPhoto}/>}<div className="step-actions"><button className="primary-button" disabled={pendingPhoto || cachedPhoto} onClick={onNext}>{photo ? '성장하기로 이어가기' : '오늘의 돌봄으로 가기'}</button>{!photo && !!record.note && <button className="text-button" onClick={() => { if (onSave({ ...record, note: '' })) onNext(); }}>글 없이 넘어가기</button>}<p className="optional-hint">{photo ? pendingPhoto || cachedPhoto ? '사진을 저장하거나 선택을 취소하면 이어갈 수 있어요.' : '사진 없이도 이어갈 수 있어요.' : pendingPhoto ? '작성한 글을 다시 저장하면 이어갈 수 있어요.' : '글 없이도 이어갈 수 있어요.'}</p></div></div></section>;
 }
 const MONTH_LABEL = (year: number, month: number) => `${year}년 ${month + 1}월`;
 const DAY_LABEL = (date: string) => `${Number(date.slice(5, 7))}월 ${Number(date.slice(8, 10))}일`;
@@ -352,8 +348,9 @@ function DiaryPeriods({ records, month, onMonth }: { records: DailyCheckin[]; mo
   </section>;
 }
 
-export function RecordsCalendar({ records, onSave, onToday, readOnly = false, today = localDay(), initialDate, onDate, status, recordedDates = [], accountPhotos = false, rewardSummary }: {
+export function RecordsCalendar({ records, onSave, onToday, onMissions, onMedications, readOnly = false, today = localDay(), initialDate, onDate, status, recordedDates = [], accountPhotos = false, rewardSummary }: {
   records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean; onToday?: () => void; readOnly?: boolean;
+  onMissions?: () => void; onMedications?: () => void;
   today?: string; initialDate?: string; onDate?: (date: string) => void; status?: React.ReactNode;
   recordedDates?: string[]; accountPhotos?: boolean; rewardSummary?: React.ReactNode;
 }) {
@@ -370,7 +367,10 @@ export function RecordsCalendar({ records, onSave, onToday, readOnly = false, to
   const tags = diaryTags(record?.note, record?.photoComment);
   const activities = [
     ...(record?.completedMissionIds ?? []).map(id => RECOVERY_MISSIONS.find(mission => mission.id === id)?.title),
-    ...(record?.completedCareIds ?? []).map(id => CARES.find(care => care.id === id)?.title),
+    ...(record?.completedCareIds ?? []).map(id => {
+      const care = CARES.find(item => item.id === id);
+      return care && (selected === today ? presentTodayCare(care) : care).title;
+    }),
   ].filter((title): title is string => !!title);
   const dateLabel = MONTH_LABEL(month.getFullYear(), month.getMonth());
   const pick = (day: string) => { setSelected(day); setEditing(false); onDate?.(day); };
@@ -379,6 +379,7 @@ export function RecordsCalendar({ records, onSave, onToday, readOnly = false, to
     setMonth(next); pick(localDay(next));
   }
   return <>
+    {!readOnly && <DiaryPeriods records={records} month={month} onMonth={index => move(index - month.getMonth())}/>}
     <section className="calendar-card garden-calendar" aria-label="일기 캘린더">
       <div className="calendar-head"><div><h2>{dateLabel}</h2><p>{new Date(today + 'T12:00:00').toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}</p></div>
         <div className="calendar-controls"><Button label="이전 달" isIconOnly icon={<Icon name="back" size={19}/>} onClick={() => move(-1)}/>
@@ -395,11 +396,17 @@ export function RecordsCalendar({ records, onSave, onToday, readOnly = false, to
           <span>{day}</span>{recorded && <i data-mood={mood ?? 'draft'}/>}</button>;
       })}</div>
     </section>
-    {!readOnly && <DiaryPeriods records={records} month={month} onMonth={index => move(index - month.getMonth())}/>}
+    {(onMissions || onMedications) && <nav className="personal-toolbar journal-shortcuts" aria-label="일기에서 열기">
+      {onMissions && <Button label="오늘의 돌봄" icon={<Icon name="leaf" size={18}/>} onClick={onMissions}/>}
+      {onMedications && <Button label="복약 관리" icon={<Icon name="pill" size={18}/>} onClick={onMedications}/>}
+    </nav>}
     <section className="record-details diary-details">
       <div className="record-detail-head"><h2>{DAY_LABEL(selected)}{selected === today ? ' 오늘의 나' : '의 나'}</h2>
-        {record && !readOnly && <Button label={editing ? '수정 닫기' : '일기 수정'} isIconOnly icon={<Icon name={editing ? 'check' : 'edit'} size={19}/>} onClick={() => setEditing(!editing)}/>}</div>
-      {onToday && !readOnly && selected === today && (!answers.every(Boolean) || record?.stage === 'photo' || record?.stage === 'growth') && <Button className="diary-write" label={record?.answers.some(Boolean) ? '일기 이어 쓰기' : '오늘 일기 쓰기'} variant="primary" icon={<Icon name="edit" size={18}/>} onClick={onToday}/>}
+        <div className="quiet-actions diary-detail-actions">
+          {record && !readOnly && <Button label={editing ? '수정 닫기' : '일기 수정'} isIconOnly icon={<Icon name={editing ? 'check' : 'edit'} size={19}/>} onClick={() => setEditing(!editing)}/>}
+          {onToday && selected === today && (!answers.every(Boolean) || record?.stage === 'photo' || record?.stage === 'growth') && <Button className="diary-write" label={record?.answers.some(Boolean) ? '일기 이어 쓰기' : '오늘 일기 쓰기'} variant="primary" icon={<Icon name="edit" size={15}/>} onClick={onToday}/>}
+
+        </div></div>
       {status ?? (record ? <article className="quiet-card diary-entry">
         {!!answers.filter(Boolean).length && <dl className="diary-answers">{QUESTIONS.map((question, index) => answers[index] && <div key={question.id}>
           <dt>{['수면','에너지','식사','마음'][index]}</dt><dd>{question.options.find(option => option.value === answers[index])?.label}</dd>
@@ -423,7 +430,7 @@ export function RecordsCalendar({ records, onSave, onToday, readOnly = false, to
       </article> : <p className="quiet-note">{selected === today ? '마음과 컨디션을 짧게 남겨요.' : '이날에 남긴 일기가 없어요.'}</p>)}
       {!status && rewardSummary}
       {!status && recommendation && <article className="quiet-card"><h3>추천 행동</h3><ul className="record-care-list">
-        {displayCareRecommendation(recommendation).cares.map(care => <li key={care.id}><span>{care.title}</span><strong>{record?.completedCareIds.includes(care.id) ? '✓ 완료했어요' : '남겨둔 돌봄'}</strong></li>)}
+        {displayCareRecommendation(recommendation).cares.map(care => <li key={care.id}><span>{(selected === today ? presentTodayCare(care) : care).title}</span><strong>{record?.completedCareIds.includes(care.id) ? '✓ 완료했어요' : '남겨둔 돌봄'}</strong></li>)}
       </ul></article>}
     </section>
   </>;

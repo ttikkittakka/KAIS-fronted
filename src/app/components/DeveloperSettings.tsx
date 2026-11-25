@@ -45,15 +45,17 @@ export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { 
     return () => window.removeEventListener('little-garden:logout-failed', failed);
   }, []);
   return <div className="settings-content"><section className="settings-card"><h2>나의 정원 설정</h2>
-      <p>{scope === 'account' ? '로그인한 계정의 정원이에요. 기록과 사진은 이 기기 브라우저에 계정별로 보관돼요.' : scope === 'test' ? '개발자 버전 · 테스트 정원을 보고 있어요.' : '기록과 사진은 이 브라우저에 보관돼요.'}</p>
+      <p>{scope === 'account' ? '일기와 사진은 기기에, 프로필·화분 이름·복약 설정은 내 계정에 보관돼요.' : scope === 'test' ? '개발자 버전 · 테스트 정원을 보고 있어요.' : '기록과 사진은 이 브라우저에 보관돼요.'}</p>
       {scope === 'account' && <button type="button" className="shop-secondary" onClick={() => window.dispatchEvent(new Event('little-garden:logout'))}>로그아웃</button>}</section>
+    <a className="settings-menu" href="#profile"><strong>내 프로필</strong><span>이름 · 성향 · 돌봄 선호 <span aria-hidden="true">→</span></span></a>
+    <a className="settings-menu" href="#pot-name"><strong>화분 이름 바꾸기</strong><span>대표 화분의 별명 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#companions"><strong>함께하는 친구들</strong><span>대표 친구 바꾸기 · 새 친구 데려오기 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#guardian"><strong>보호자 공유</strong><span>공유 링크 · 상태 갱신 · 공유 중단 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#connections"><strong>연락처와 안부 제안</strong><span>연락 기록 보기 · 알림 설정 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#support"><strong>지원 제도 신청 도우미</strong><span>찾기 · 신청서 작성 · 내 신청 현황 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#safety"><strong>도움 받을 수 있는 곳</strong><span>109 · 112 · 119 연락처 <span aria-hidden="true">→</span></span></a>
     <a className="settings-menu" href="#privacy"><strong>개인정보 처리방침</strong><span>모으는 정보 · 보관 기간 · 내 권리 <span aria-hidden="true">→</span></span></a>
-    <section className="settings-card"><h2>미션 설정</h2>
+    <section className="settings-card"><h2>돌봄 설정</h2>
       <label>선호하는 장소<select value={preferences.pace} onChange={event => updatePreferences({ pace: MISSION_PACES.find(pace => pace === event.target.value) ?? 'any' })}>
         <option value="any">어디든 편해요</option><option value="inside">실내가 좋아요</option><option value="outside">바깥이 좋아요</option>
       </select></label>

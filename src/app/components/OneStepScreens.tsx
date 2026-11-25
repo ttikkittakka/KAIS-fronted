@@ -3,6 +3,7 @@ import './HomeLayout.css';
 import './CareLayout.css';
 import './CareCompletion.css';
 import CareTimer from './CareTimer';
+import { presentTodayCare } from '../cares';
 import timerStyles from './CareTimer.module.css';
 import { useEffect, useRef, useState } from 'react';
 import RivePlant, { type RivePlantState } from './RivePlant';
@@ -55,10 +56,10 @@ export function Onboarding({ start }: { start: () => void }) {
   </section>;
 }
 
-export function HomeScreen({ state, go, recorded, completedCount, resume, balance, shop, growthSnapshot, today }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number; shop: ShopState | null; growthSnapshot: ReturnType<typeof shopSnapshot> | null; today?: string }) {
+export function HomeScreen({ state, go, recorded, completedCount, resume, balance, shop, growthSnapshot, today, potName }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number; shop: ShopState | null; growthSnapshot: ReturnType<typeof shopSnapshot> | null; today?: string; potName?: string }) {
   return <section className="screen home-screen">
     <div className="home-scroll-content">
-    <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정" onClick={() => go('settings')}><span aria-hidden="true">⚙</span></button>}/>
+    <TopBar title={potName ?? '오늘의 정원'} action={<button className="icon-button" aria-label="설정" onClick={() => go('settings')}><span aria-hidden="true">⚙</span></button>}/>
     <div className={"garden-scene garden-scene--" + (shop?.layout.background ?? "default-sky")}><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{(today ? new Date(today + 'T12:00:00+09:00') : new Date()).toLocaleDateString('ko-KR', { ...(today ? { timeZone: 'Asia/Seoul' } : {}), month: 'long', day: 'numeric', weekday: 'long' })}</span><SunshineBalance balance={balance}/><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></div>
     <GardenTools onOpen={go} account/>
     <GrowthProgress snapshot={growthSnapshot} onOpen={() => go('rewards')}/>
@@ -105,7 +106,7 @@ export function CheckinScreen({ onBack, onDone, onDraft, initialRecord, readOnly
     <TopBar title="오늘의 나" onBack={back}/><StepHeader step={1}/>
     <div className="progress-head"><span>{step + 1} / 4</span><div className="progress-track"><i style={{ width: ((step + 1) / 4) * 100 + '%' }}/></div><small>질문 진행</small></div>
     {readOnly && <div className="step-actions"><p role="status">답변 저장은 아직 준비 중이에요. 질문과 저장된 답변만 확인할 수 있어요.</p><button className="secondary-button" onClick={() => setStep((step + 1) % QUESTIONS.length)}>다음 질문 보기</button></div>}<div className="question-panel" key={step}>
-      <div className={'question-mark' + (step === 0 ? ' question-mark--sleep' : '')}>{['☾','◐','○','♡'][step]}</div><p className={'question-kicker' + (step === 0 ? ' question-kicker--sleep' : '')}>오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map(line => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
+      <div className={'question-mark' + (step === 0 ? ' question-mark--sleep' : '')} aria-hidden="true"/><p className={'question-kicker' + (step === 0 ? ' question-kicker--sleep' : '')}>오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map(line => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
       <div className="choice-list">{question.options.map((option, index) => <button key={option.value} className={answers[step] === option.value ? 'selected' : ''} disabled={readOnly || (account ? account.state.phase !== 'ready' : !!initialRecord?.answers.every(Boolean) && initialRecord?.stage !== 'checkin')} onClick={() => choose(option.value)}><span className="choice-dot">{index + 1}</span><strong>{option.label}</strong>{answers[step] === option.value && <Icon name="check" size={18}/>}</button>)}</div>
       {reviewing && account?.reviewAnswers !== false && <div className="step-actions"><p className="privacy-note">저장된 답변을 확인하고 있어요.</p><button className="secondary-button" onClick={() => setStep((step + 1) % QUESTIONS.length)}>{step === 3 ? '첫 질문 다시 보기' : '다음 질문 보기'}</button></div>}
       {account?.controls}
@@ -114,7 +115,7 @@ export function CheckinScreen({ onBack, onDone, onDraft, initialRecord, readOnly
   </section>;
 }
 
-export function CareScreen({ state, recommendation, completed, completedIds, onComplete, onShowList, goHome, readOnly = false }: { state: PlantState; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; onShowList: () => void; goHome: () => void; readOnly?: boolean }) {
+export function CareScreen({ state, recommendation, completed, completedIds, onComplete, onShowList, goHome, onMore, readOnly = false }: { state: PlantState; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; onShowList: () => void; goHome: () => void; onMore?: () => void; readOnly?: boolean }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [started, setStarted] = useState<string[]>([]);
   const completedCount = recommendation.cares.filter(care => completedIds.includes(care.id)).length;
@@ -128,25 +129,27 @@ export function CareScreen({ state, recommendation, completed, completedIds, onC
     <div className="completion-actions"><button className="primary-button" onClick={allCaredFor ? goHome : returnToList}>{allCaredFor ? '정원에서 변화 보기' : '다른 돌봄 해보기'}</button><button className="secondary-button" onClick={allCaredFor ? returnToList : goHome}>{allCaredFor ? '오늘의 돌봄 다시보기' : '정원에서 변화 보기'}</button></div>
   </section>;
   return <section className="screen care-screen">
-    <TopBar title="오늘의 작은 돌봄" onBack={goHome}/>
+    <TopBar title="오늘의 돌봄" onBack={goHome}/>
     <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{recommendation.title.split('\n').map((line, index) => <span key={line}>{index > 0 && <br/>}{line}</span>)}</h2><p>이 중 하나만 해도 괜찮아요.</p><span className="care-progress">오늘의 작은 돌봄 {completedCount}/{recommendation.cares.length} 완료</span></div>
-    <div className="care-list">{recommendation.cares.map((care) => {
+    <div className="care-list">{recommendation.cares.map(presentTodayCare).map((care) => {
       const done = completedIds.includes(care.id), expanded = selected === care.id && !done;
       return <article className={`care-card${done ? ' care-card-done' : ''}${expanded ? ' ' + timerStyles.active : ''}`} key={care.id}>
         <div className={`care-icon ${care.tone}`}><Icon name={care.icon}/></div>
         <div className="care-copy"><h3>{care.title}</h3></div>
         <p className="care-summary">{care.copy}</p>
         <span className="care-meta">{done ? '✓ 완료했어요' : care.meta}</span>
-        {done ? <span className={timerStyles.done} role="img" aria-label="완료한 돌봄"><Icon name="check" size={18}/></span> : !expanded && <button onClick={() => setSelected(care.id)} aria-expanded={false}>{started.includes(care.id) ? '이어보기' : '선택하기'}</button>}
+        {done ? <span className={timerStyles.done} role="img" aria-label="완료한 돌봄"><Icon name="check" size={18}/></span> : !expanded && <button className="care-action" type="button" onClick={() => setSelected(care.id)} aria-expanded={false}>{started.includes(care.id) ? '이어보기' : '선택하기'}</button>}
         {!done && <div className={`${timerStyles.expansion}${expanded ? ' ' + timerStyles.open : ''}`} data-care-expansion data-open={expanded} aria-hidden={!expanded} inert={!expanded}>
           <div className={timerStyles.clip}><div className={timerStyles.details}>
             <div className={timerStyles.detailHeader}><span>실천 안내</span><button className={timerStyles.collapse} title={started.includes(care.id) ? '접어도 타이머 상태는 유지돼요' : undefined} onClick={() => setSelected(null)}>접기</button></div>
             {care.instruction && care.instruction !== care.copy && <p>{care.instruction}</p>}{care.example && <p>예: {care.example}</p>}{care.helper && care.helper !== care.copy && care.helper !== care.instruction && <p>{care.helper}</p>}
-            {started.includes(care.id) ? <CareTimer key={care.id} minutes={care.minutes} disabled={readOnly} onComplete={() => onComplete(care.id)}/> : <button className="primary-button" disabled={readOnly} onClick={() => setStarted(ids => [...ids, care.id])}>{readOnly ? '지금은 완료할 수 없어요' : '해볼게요'}</button>}
+            {started.includes(care.id) ? <CareTimer key={care.id} minutes={care.minutes} disabled={readOnly} onComplete={() => onComplete(care.id)}/>
+              : <button className="primary-button care-action" type="button" onClick={() => setStarted(ids => [...ids, care.id])}><Icon name="arrow" size={16}/>시작하기</button>}
           </div></div>
         </div>}
       </article>;
     })}</div>
+    {onMore && <button type="button" className="text-button care-more" onClick={onMore}>다른 돌봄 보기 <Icon name="arrow" size={16}/></button>}
     <button className="rest-choice" onClick={goHome}>오늘은 아무것도 하지 않아도 괜찮아요.</button><div className="care-plant"><Plant state={state} className="plant-art"/></div>
   </section>;
 }

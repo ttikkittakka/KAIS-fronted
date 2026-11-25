@@ -36,6 +36,8 @@ export function fixture(initialStage = 'checkin', initialPhoto = false, owner = 
   const route=async(url,method,request)=>{
     const p=url.pathname;
     if(method==='GET'){
+      if (p === '/rest/v1/onestep_user_profiles') return json([{ survey: { displayName: '테스트 정원', temperament: 'balanced', support: 'either', pace: 'any' } }]);
+      if (p === '/rest/v1/onestep_user_medications' || p === '/rest/v1/onestep_pot_names') return json([]);
       if(p==='/api/account/commerce')return json(commerce());
       if(p==='/api/account/garden'){garden.garden.sunshine_balance=day.sunshineBalance;return json(garden);}
       if(p==='/api/account/records')return json(url.searchParams.has('month')?{userId:owner,today:date,month:url.searchParams.get('month'),dates:[date]}:day);

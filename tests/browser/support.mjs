@@ -45,7 +45,10 @@ export async function guard(context, fixture) {
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url()), method = request.method();
     if (url.origin === baseURL && url.pathname === '/__nextjs_original-stack-frames') { audit.blockedDiagnostics++; return route.abort('blockedbyclient'); }
-    if (fixture && url.origin === baseURL && url.pathname.startsWith('/api/account/')) {
+    const accountApi = url.origin === baseURL && url.pathname.startsWith('/api/account/');
+    const personalGardenRead = method === 'GET' && url.protocol === 'https:' && url.hostname.endsWith('.supabase.co') &&
+      /^\/rest\/v1\/onestep_(user_profiles|user_medications|pot_names)$/.test(url.pathname);
+    if (fixture && (accountApi || personalGardenRead)) {
       const reply = await fixture(url, method, request);
       if (reply) { if (!['GET','HEAD','OPTIONS'].includes(method)) audit.fixtureWrites.push(url.pathname); return route.fulfill(reply); }
     }

@@ -155,7 +155,7 @@ test('calendar connects all four answers, note, photo, comment and finished acti
 });
 test('optional photo and growth screens offer the existing next action without mandatory input',()=>{
   for(const kind of ['photo','growth']) {let next=0;const app=mount('LocalReflectionExtras',{kind,record:store.emptyRecord(),onSave:()=>true,onBack(){},onNext:()=>next++});
-    const primary=app.button(kind==='photo' ? '성장하기로 이어가기' : '일기 닫기');assert.equal(primary.props.disabled,false);primary.props.onClick();assert.equal(next,1);
+    const primary=app.button(kind==='photo' ? '성장하기로 이어가기' : '오늘의 돌봄으로 가기');assert.equal(primary.props.disabled,false);primary.props.onClick();assert.equal(next,1);
     assert.match(text(app.tree()),kind==='photo' ? /사진 없이도/ : /글 없이도/);
   }
 });
