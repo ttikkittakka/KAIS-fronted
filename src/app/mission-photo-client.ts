@@ -1,6 +1,6 @@
 import { getAuthClient } from '../lib/supabase/auth-client';
 import { appStorage } from './app-storage';
-import { PHOTO_RECOVERY_IDS, type RecoveryId } from './mission-policy';
+import { ADDITIONAL_CARE_IDS, type RecoveryId } from './mission-policy';
 import { MAX_MISSION_PHOTO_BASE64, PHOTO_EVIDENCE, photoVerdict, type PhotoEvidence, type PhotoKind } from './mission-photo';
 import { loadPhotoFrame } from './photo-frame';
 
@@ -42,15 +42,15 @@ export function savePhotoLabel(kind: PhotoKind, day: string, label: string) {
 
 // The server-account garden keeps device photo checks separate from the server care ledger.
 const COMPLETION_KEY = 'little-garden.device-photo-completion.v1';
-export function readDevicePhotoCompletions(day: string): RecoveryId[] {
+export function readDeviceCareCompletions(day: string): RecoveryId[] {
   try {
     const saved = JSON.parse(appStorage.getItem(COMPLETION_KEY) ?? 'null');
-    return saved?.date === day && Array.isArray(saved.ids) ? PHOTO_RECOVERY_IDS.filter(id => saved.ids.includes(id)) : [];
+    return saved?.date === day && Array.isArray(saved.ids) ? ADDITIONAL_CARE_IDS.filter(id => saved.ids.includes(id)) : [];
   } catch { return []; }
 }
 
-export function saveDevicePhotoCompletion(day: string, id: RecoveryId) {
-  const ids = [...new Set([...readDevicePhotoCompletions(day), id])];
+export function saveDeviceCareCompletion(day: string, id: RecoveryId) {
+  const ids = [...new Set([...readDeviceCareCompletions(day), id])];
   appStorage.setItem(COMPLETION_KEY, JSON.stringify({ date: day, ids }));
   return ids;
 }

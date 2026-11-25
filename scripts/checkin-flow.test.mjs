@@ -7,6 +7,7 @@ import ts from 'typescript';
 import { loadTs } from './helpers/load-ts.mjs';
 const daily = loadTs(new URL('../src/app/daily-checkin.ts', import.meta.url));
 const { recommendCares } = loadTs(new URL('../src/app/recommend-cares.ts', import.meta.url));
+const { presentTodayCare } = loadTs(new URL('../src/app/cares.ts', import.meta.url));
 
 const compilerOptions = { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX };
 const compiled = ts.transpileModule(readFileSync(new URL('../src/app/page.tsx', import.meta.url), 'utf8'), { compilerOptions }).outputText +
@@ -43,7 +44,7 @@ function mount(raw = null, hash = '', component = 'default', props = {}, legacyC
     require(name) {
       if (name === 'react') return react;
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'fragment' };
-      if (name === './CareTimer') return { default: function CareTimer() {} };
+      if (name === './CareTimer' || name === './components/CareTimer') return { default: function CareTimer() {} };
       if (name.endsWith('.css')) return { default: { active: 'timer-active' } };
       if (account && name.startsWith('./')) name = './components/' + name.slice(2);
       if (account && name.startsWith('../')) return loadTs(new URL(`../src/app/components/${name}.ts`, import.meta.url));
@@ -140,11 +141,11 @@ test('care cards open details before the two-step completion action', () => {
     const completed = [];
     const recommendation = recommendCares(answers, { date: '2026-10-08' });
     const app = mount(null, '', 'AccountCareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
-    assert.deepEqual(nodes(app.tree(), node => node.type === 'h3').map(textContent), recommendation.cares.map(care => care.title));
+    assert.deepEqual(nodes(app.tree(), node => node.type === 'h3').map(textContent), recommendation.cares.map(care => presentTodayCare(care).title));
     const cardButton = nodes(app.tree(), node => node.type === 'article')[0].props.children.find(child => child?.type === 'button');
     cardButton.props.onClick();
-    assert.match(textContent(app.tree()), /해볼게요/);
-    const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
+    assert.match(textContent(app.tree()), /시작하기/);
+    const action = () => nodes(app.tree(), node => node.type === 'button' && textContent(node) === '시작하기')[0];
     action().props.onClick(); assert.equal(completed.length, 0);
     const timer = nodes(app.tree(), node => node.type?.name === 'CareTimer')[0];
     assert.equal(timer.props.minutes, recommendation.cares[0].minutes);
@@ -189,6 +190,8 @@ test('today links open the journal; a saved diary opens care and journal links o
   assert.ok(app.screen('MedicationManagement'));
   app.screen('TopBar').props.onBack();
   app.screen('RecordsCalendar').props.onMissions();
+  assert.equal(app.hash(), '#care');
+  app.screen('CareScreen').props.onMore();
   assert.equal(app.hash(), '#missions');
   assert.equal(app.screen('RecoveryMissions').props.record.note, '오늘의 일기');
   assert.equal(app.screen('RecoveryMissions').props.onComplete('water-sip'), true);
@@ -352,9 +355,27 @@ test('all 30 active mission details render instructions, optional examples and h
     const app = mount(null, '', 'AccountCareScreen', { state: 'normal', recommendation, completed: null, completedIds: [], onComplete: id => completed.push(id), onShowList() {}, goHome() {} });
     nodes(app.tree(), node => node.type === 'article')[0].props.children.find(child => child?.type === 'button').props.onClick();
     const content = textContent(app.tree());
-    for (const value of [care.title, care.instruction, care.helper, care.meta, ...(care.example ? [care.example] : [])]) assert.ok(content.includes(value), care.id + ': ' + value);
-    const action = () => nodes(app.tree(), node => node.type === 'button' && ['해볼게요', '완료했어요'].includes(textContent(node)))[0];
+    const display = presentTodayCare(care);
+    for (const value of [display.title, display.instruction, display.helper, display.meta, ...(display.example ? [display.example] : [])]) assert.ok(content.includes(value), care.id + ': ' + value);
+    const action = () => nodes(app.tree(), node => node.type === 'button' && textContent(node) === '시작하기')[0];
     action().props.onClick(); assert.equal(completed.length, 0); nodes(app.tree(), node => node.type?.name === 'CareTimer')[0].props.onComplete(); assert.deepEqual(completed, [care.id]);
+  }
+});
+
+test('today care copy updates an existing recommendation and preserves activity IDs', () => {
+  const { ACTIVE_CARES } = loadTs(new URL('../src/app/cares.ts', import.meta.url));
+  const examples = [
+    ['water', '물 몇 모금 마시기', 1],
+    ['pause', '2분 명상하기', 2],
+    ['ask-help', '긍정적인 단어 생각하기', 2],
+  ];
+  for (const [id, title, minutes] of examples) {
+    const original = ACTIVE_CARES.find(care => care.id === id);
+    const visible = presentTodayCare(original);
+    assert.equal(visible.id, id);
+    assert.equal(visible.title, title);
+    assert.equal(visible.minutes, minutes);
+    assert.notEqual(original.title, visible.title);
   }
 });
 

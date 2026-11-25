@@ -8,6 +8,8 @@ import SafetyCenter, { HelpLink } from './components/SafetyCenter';
 import CareReason from './components/CareReason';
 import CompanionMissions from './components/Missions';
 import RecoveryMissions from './components/RecoveryMissions';
+import CareTimer from './components/CareTimer';
+import { presentTodayCare } from './cares';
 import MedicationManagement from './components/MedicationManagement';
 import { GardenProfileForm, PotNameForm } from './components/GardenProfile';
 import { usePersonalGarden } from './components/PersonalGarden';
@@ -169,19 +171,20 @@ function CheckinScreen({ onBack, onDone, onDraft, initialRecord }: { onBack: () 
     <TopBar title="오늘의 나" onBack={back}/><StepHeader step={1}/>
     <div className="progress-head"><span>{step + 1} / 4</span><div className="progress-track"><i style={{ width: ((step + 1) / 4) * 100 + '%' }}/></div><small>질문 진행</small></div>
     <div className="question-panel" key={step}>
-      <div className={'question-mark' + (step === 0 ? ' question-mark--sleep' : '')}>{['☾','◐','○','♡'][step]}</div><p className={'question-kicker' + (step === 0 ? ' question-kicker--sleep' : '')}>오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map(line => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
+      <div className={'question-mark' + (step === 0 ? ' question-mark--sleep' : '')} aria-hidden="true"/><p className={'question-kicker' + (step === 0 ? ' question-kicker--sleep' : '')}>오늘의 나를 가볍게 살펴봐요</p><h2>{question.title.split('\n').map(line => <span key={line}>{line}</span>)}</h2><p className="question-helper">{question.helper}</p>
       <div className="choice-list">{question.options.map((option, index) => <button key={option.value} className={answers[step] === option.value ? 'selected' : ''} disabled={!!initialRecord?.answers.every(Boolean) && initialRecord?.stage !== 'checkin'} onClick={() => choose(option.value)}><span className="choice-dot">{index + 1}</span><strong>{option.label}</strong>{answers[step] === option.value && <Icon name="check" size={18}/>}</button>)}</div>
       {initialRecord?.answers.every(Boolean) && initialRecord?.stage !== 'checkin' && <div className="step-actions"><p className="privacy-note">추천 행동과 연결된 돌아보기 응답은 그대로 보관해요.</p><button className="primary-button" onClick={() => onDone(plantStateForAnswers(initialRecord.answers), initialRecord.answers, initialRecord.note)}>기록 이어가기</button></div>}
     </div>
   </section>;
 }
 
-function CareScreen({ state, companion, answers, recommendation, completed, completedIds, onComplete, onShowList, goHome }: { state: PlantState; companion: ActiveCompanion; answers: string[]; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; onShowList: () => void; goHome: () => void }) {
+function CareScreen({ state, companion, answers, recommendation, completed, completedIds, onComplete, onShowList, goHome, onMore }: { state: PlantState; companion: ActiveCompanion; answers: string[]; recommendation: CareRecommendation; completed: string | null; completedIds: string[]; onComplete: (id: string) => void; onShowList: () => void; goHome: () => void; onMore?: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [started, setStarted] = useState<string | null>(null);
-  const completedCount = recommendation.cares.filter(care => completedIds.includes(care.id)).length;
-  const allCaredFor = completedCount === recommendation.cares.length;
-  const selectedCare = recommendation.cares.find(care => care.id === selected);
+  const cards = recommendation.cares.map(presentTodayCare);
+  const completedCount = cards.filter(care => completedIds.includes(care.id)).length;
+  const allCaredFor = completedCount === cards.length;
+  const selectedCare = cards.find(care => care.id === selected);
   const returnToList = () => { setSelected(null); setStarted(null); onShowList(); };
   if (completed) return <section className="screen completion-screen">
     <div className="completion-scene"><span className="droplet d1"/><span className="droplet d2"/><span className="spark s1">✦</span><span className="spark s2">✦</span><Plant state={state} celebrate className="plant-art lifted" active={companion}/></div>
@@ -191,20 +194,23 @@ function CareScreen({ state, companion, answers, recommendation, completed, comp
   if (selectedCare) {
     const alreadyCompleted = completedIds.includes(selectedCare.id);
     return <section className="screen care-screen care-detail-screen">
-      <TopBar title="오늘의 작은 돌봄" onBack={returnToList}/>
+      <TopBar title="오늘의 돌봄" onBack={returnToList}/>
       <div className="care-detail-content">
         <div className={`care-icon ${selectedCare.tone}`}><Icon name={selectedCare.icon} size={30}/></div>
         <span className="eyebrow">오늘 나를 위한 작은 시간</span>
         <h2>{selectedCare.title}</h2><p>{selectedCare.instruction ?? selectedCare.copy}</p>{selectedCare.example && <p>예: {selectedCare.example}</p>}{selectedCare.helper && <p>{selectedCare.helper}</p>}<span className="care-detail-meta">{selectedCare.meta}</span>
         {alreadyCompleted && <span className="care-detail-done"><Icon name="check" size={16}/> 완료했어요</span>}
       </div>
-      <div className="care-detail-actions">{alreadyCompleted ? <button className="primary-button" onClick={returnToList}>목록으로 돌아가기</button> : <button className="primary-button" onClick={() => started === selectedCare.id ? onComplete(selectedCare.id) : setStarted(selectedCare.id)}>{started === selectedCare.id ? '완료했어요' : '해볼게요'}</button>}</div>
+      <div className="care-detail-actions">{alreadyCompleted ? <button className="primary-button care-action" onClick={returnToList}>목록으로 돌아가기</button>
+        : started === selectedCare.id ? <CareTimer key={selectedCare.id} minutes={selectedCare.minutes} disabled={false} onComplete={() => onComplete(selectedCare.id)}/>
+        : <button className="primary-button care-action" onClick={() => setStarted(selectedCare.id)}><Icon name="arrow" size={16}/>시작하기</button>}</div>
     </section>;
   }
   return <section className="screen care-screen">
-    <TopBar title="오늘의 작은 돌봄" onBack={goHome}/>
+    <TopBar title="오늘의 돌봄" onBack={goHome}/>
     <div className="care-intro"><span className="eyebrow">오늘의 마음을 바라봤어요</span><h2>{recommendation.title.split('\n').map((line, index) => <span key={line}>{index > 0 && <br/>}{line}</span>)}</h2><p>이 중 하나만 해도 괜찮아요.</p><CareReason answers={answers} careIds={recommendation.cares.map(care => care.id)}/><span className="care-progress">오늘의 작은 돌봄 {completedCount}/3 완료</span></div>
-    <div className="care-list">{recommendation.cares.map((care) => { const done = completedIds.includes(care.id); return <article className={`care-card${done ? ' care-card-done' : ''}`} key={care.id}><div className={`care-icon ${care.tone}`}><Icon name={care.icon}/></div><div className="care-copy"><h3>{care.title}</h3><p>{care.copy}</p><span>{done ? '✓ 완료했어요' : care.meta}</span></div><button onClick={() => { setSelected(care.id); setStarted(null); }}>{done ? '다시 보기' : '선택하기'}</button></article>; })}</div>
+    <div className="care-list">{cards.map((care) => { const done = completedIds.includes(care.id); return <article className={`care-card${done ? ' care-card-done' : ''}`} key={care.id}><div className={`care-icon ${care.tone}`}><Icon name={care.icon}/></div><div className="care-copy"><h3>{care.title}</h3><p>{care.copy}</p><span>{done ? '✓ 완료했어요' : care.meta}</span></div><button type="button" className="care-action" onClick={() => { setSelected(care.id); setStarted(null); }}>{done ? '다시 보기' : '선택하기'}</button></article>; })}</div>
+    {onMore && <button type="button" className="text-button care-more" onClick={onMore}>다른 돌봄 보기 <Icon name="arrow" size={16}/></button>}
     <a className="text-button support-link" href="#support">받을 수 있는 지원 제도 살펴보기</a>
     <button className="rest-choice" onClick={goHome}>오늘은 아무것도 하지 않아도 괜찮아요.</button><div className="care-plant"><Plant state={state} className="plant-art" active={companion}/></div>
   </section>;
@@ -512,18 +518,18 @@ export default function HomePage() {
       {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} growth={growth} outfit={outfit} night={night} news={bondNews}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={() => go('garden')} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
-      {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
+      {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome} onMore={() => go('missions')}/>}
       {view === 'garden' && <section className="screen garden-history-screen work-screen"><TopBar title="일기"/>
         <div className="work-area journal-area"><RecordsCalendar records={records} onSave={save}
           onToday={() => go(daily?.stage === 'photo' || daily?.stage === 'growth' ? daily.stage : 'checkin')}
-          onCare={() => go('care')} onMissions={() => go('missions')} onMedications={() => go('medications')}/>
+          onMissions={() => go(daily?.stage === 'care' && todayCares ? 'care' : 'missions')} onMedications={() => go('medications')}/>
           {giftPending && <GrowthProgress snapshot={commerce} onOpen={() => go('rewards')}/>}
           {testEnabled && <details className="quiet-card"><summary>개발용 돌봄 확인</summary>
             {daily?.answers.every(Boolean) && <button className="text-button" type="button" onClick={() => go('care')}>기존 추천 행동 열기</button>}<CompanionMissions/>
           </details>}
         </div>
       </section>}
-      {view === 'missions' && <section className="screen work-screen"><TopBar title="미션" onBack={() => go('garden')}/>
+      {view === 'missions' && <section className="screen work-screen"><TopBar title="오늘의 돌봄" onBack={() => go(daily?.stage === 'care' && todayCares ? 'care' : 'garden')}/>
         <div className="work-area personal-area"><RecoveryMissions key={datasetEpoch + ':' + localDay()} record={daily} records={records} onComplete={completeMission}
           onMap={() => go('map')} onConnections={() => go('connections')}/></div></section>}
       {view === 'medications' && <section className="screen work-screen"><TopBar title="복약 관리" onBack={() => go('garden')}/>

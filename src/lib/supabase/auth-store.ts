@@ -18,6 +18,11 @@ export function authErrorMessage(error: unknown): string {
   switch (code) {
     case 'invalid_credentials': return '이메일 또는 비밀번호를 확인해 주세요.';
     case 'email_not_confirmed': return '이메일의 인증 링크를 먼저 확인해 주세요.';
+    case 'signup_disabled': return '현재 이 서비스의 새 계정 가입이 꺼져 있어요.';
+    case 'email_address_not_authorized': return '이 주소로 인증 메일을 보낼 수 없어요. 서비스의 인증 메일 발송 설정을 확인해 주세요.';
+    case 'email_address_invalid': return '입력한 이메일 주소를 확인해 주세요.';
+    case 'bad_code_verifier':
+    case 'pkce_code_verifier_not_found': return '가입을 시작한 브라우저에서 인증 링크를 열어 주세요. 필요하면 인증 메일을 다시 요청해 주세요.';
     case 'weak_password': return '더 안전한 비밀번호를 사용해 주세요. 8자 이상을 권장해요.';
     case 'same_password': return '기존 비밀번호와 다른 비밀번호를 입력해 주세요.';
     case 'over_request_rate_limit':
@@ -55,7 +60,7 @@ export function createAuthStore() {
       recovery = recoveryRequested;
       publish({ ...INITIAL_AUTH, epoch: state.epoch + 1 });
       if (!client) {
-        publish({ phase: 'unavailable', message: '로그인 연결을 준비하고 있어요. 잠시 후 다시 방문해 주세요.', error: true });
+        publish({ phase: 'unavailable', message: '현재 웹앱의 로그인 연결 설정을 확인해야 해요. 로그인 없이 체험할 수 있어요.', error: true });
         return () => { generation++; };
       }
       const activeClient = client;
@@ -76,7 +81,9 @@ export function createAuthStore() {
           const initialized = await activeClient.auth.initialize();
           if (run !== generation) return;
           if (initialized.error) {
-            publish({ phase: 'signed-out', user: null, error: true, message: '인증 링크를 확인하지 못했어요. 새 링크를 요청해 주세요.', epoch: state.epoch + 1 });
+            const missingBrowserProof = initialized.error.code === 'bad_code_verifier' || initialized.error.code === 'pkce_code_verifier_not_found';
+            publish({ phase: 'signed-out', user: null, error: true, message: missingBrowserProof
+              ? authErrorMessage(initialized.error) : '인증 링크를 확인하지 못했어요. 새 링크를 요청해 주세요.', epoch: state.epoch + 1 });
             return;
           }
           const { data, error } = await activeClient.auth.getSession();

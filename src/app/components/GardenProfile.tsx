@@ -73,7 +73,7 @@ export function GardenProfileForm({ first = false, onDone }: { first?: boolean; 
     <label>선호하는 응원<select value={draft.support} onChange={event => setDraft({ ...draft, support: event.target.value as Profile['support'] })} disabled={busy}>
       <option value="either">상관없어요</option><option value="quiet">차분하게 말해 주세요</option><option value="encouraging">힘차게 응원해 주세요</option>
     </select></label>
-    <label>미션을 하기 편한 곳<select value={draft.pace} onChange={event => setDraft({ ...draft, pace: event.target.value as Profile['pace'] })} disabled={busy}>
+    <label>돌봄을 하기 편한 곳<select value={draft.pace} onChange={event => setDraft({ ...draft, pace: event.target.value as Profile['pace'] })} disabled={busy}>
       <option value="any">오늘 상태에 맞춰서</option><option value="inside">실내</option><option value="outside">집 밖</option>
     </select></label>
     {first && <details className="personal-form">

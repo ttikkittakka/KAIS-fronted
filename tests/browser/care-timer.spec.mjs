@@ -29,7 +29,7 @@ for(const [width,height] of [[1280,900],[390,844],[320,568],[320,480]])test(`opt
     await card.getByRole('button',{name:'접기',exact:true}).click();
     await expect(card.locator('[data-care-expansion]')).toHaveAttribute('data-open','false');
     await card.locator(':scope > button').click();
-    await card.getByRole('button',{name:'해볼게요',exact:true}).click();
+    await card.getByRole('button',{name:'시작하기',exact:true}).click();
     await expect(page.locator('[data-care-timer]')).toBeVisible();
     await expect(card.locator(':scope > button')).toHaveCount(0);
   }

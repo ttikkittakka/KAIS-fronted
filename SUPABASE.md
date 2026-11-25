@@ -159,7 +159,7 @@ Supabase SDK의 프로젝트별 저장소 키와 해당 PKCE 보조 키에 인�
 
 1. Vercel의 **Add New → Project**에서 GitHub 저장소 `ttikkittakka/KAIS-fronted`를 Import합니다. Root Directory는 **저장소 루트**(`.`)를 선택합니다. 루트 `vercel.json`의 Services에서 Next.js `app`과 Hono `backend`를 빌드합니다.
 2. **Settings → Environments → Production → Branch Tracking**에서 `onestepui`를 선택합니다. 이 브랜치에는 통합 일기, 나무 캐릭터와 전시 판넬이 있습니다.
-3. Vercel 환경 변수에 위의 프로젝트 URL과 같은 프로젝트의 공개 키를 등록하고 다시 배포합니다. 배포 도메인이 정해지면 Supabase Auth의 Site URL과 인증·재설정 Redirect URLs를 그 HTTPS 주소로 등록합니다.
+3. Vercel **Settings → Environment Variables**의 **Production**에 같은 Supabase 프로젝트의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`를 등록하고 다시 배포합니다. 미리보기에서 로그인하려면 **Preview**에도 설정합니다. Next.js 빌드 시 두 값이 브라우저 코드에 들어가야 회원가입 폼이 열립니다. Supabase Auth의 Site URL과 이메일 인증·재설정 허용 주소에 실제 배포 HTTPS 도메인을 등록합니다.
 4. 휴대폰 브라우저에서 `https://<배포 주소>/demo`를 열어 체험합니다. `/install`에서 웹앱을 바로 열거나 홈 화면에 추가할 수 있습니다.
 
 2026-11-23에 프로젝트 `yhzgucbiwvizjxpzwpqg`의 기존 정원 스키마를 확인한 뒤, 미적용 카탈로그·지원 신청·옷장·보호자 마이그레이션 네 개를 적용했습니다. 초기 정원 스키마는 이미 설치되어 있습니다. 마이그레이션 이력이 없는 초기 SQL을 적용할 때는 기존 스키마와 이력을 먼저 대조하세요.

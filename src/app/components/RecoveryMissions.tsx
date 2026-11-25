@@ -3,34 +3,36 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { normalizeAnswers } from '../questions';
-import { PHOTO_RECOVERY_IDS, RECOVERY_MISSIONS, isRecoveryId, rankMissions, type MissionInput, type MissionResult, type RecoveryId } from '../mission-policy';
+import { ADDITIONAL_CARE_IDS, RECOVERY_MISSIONS, isRecoveryId, rankMissions, type MissionInput, type MissionResult, type RecoveryId } from '../mission-policy';
 import { diaryTags, trailingDays } from '../wellbeing';
 import { localDay, type DailyCheckin } from '../daily-checkin';
 import { readMissionLog } from '../missions';
 import { gardenPreferences, setGardenPreferences } from '../preferences';
 import { wellbeingResponse } from '../wellbeing-client';
-import { readDevicePhotoCompletions, saveDevicePhotoCompletion } from '../mission-photo-client';
+import { readDeviceCareCompletions, saveDeviceCareCompletion } from '../mission-photo-client';
+import CareTimer from './CareTimer';
 import MissionPhotoCheck from './MissionPhotoCheck';
 import { usePersonalGarden } from './PersonalGarden';
 import { Icon } from './PetIcon';
 
 const sourceLabel: Record<MissionResult['source'], string> = { ai: 'AI 맞춤', rules: '상태 맞춤', offline: '기기에서 추천' };
 
-type RecoveryProps = { record: DailyCheckin | null; records: DailyCheckin[]; onComplete: (id: RecoveryId) => boolean; onMap: () => void; onConnections: () => void; photoOnly?: false };
-type PhotoOnlyProps = { photoOnly: true; record?: never; records?: never; onComplete?: never; onMap?: never; onConnections?: never };
+type RecoveryProps = { record: DailyCheckin | null; records: DailyCheckin[]; onComplete: (id: RecoveryId) => boolean; onMap: () => void; onConnections: () => void; deviceOnly?: false };
+type DeviceOnlyProps = { deviceOnly: true; record?: never; records?: never; onComplete?: never; onMap?: never; onConnections?: never };
 
-export default function RecoveryMissions({ record, records = [], onComplete, onMap, onConnections, photoOnly = false }: RecoveryProps | PhotoOnlyProps) {
+export default function RecoveryMissions({ record, records = [], onComplete, onMap, onConnections, deviceOnly = false }: RecoveryProps | DeviceOnlyProps) {
   const today = localDay();
   const profile = usePersonalGarden()?.profile;
   const [log] = useState(readMissionLog);
   const [prefs, setPrefs] = useState(gardenPreferences);
   const [server, setServer] = useState<{ key: string; result: MissionResult }>();
   const [vision, setVision] = useState<RecoveryId | null>(null);
-  const [showPhotos, setShowPhotos] = useState(false);
-  const [deviceDone, setDeviceDone] = useState(() => photoOnly ? readDevicePhotoCompletions(today) : []);
+  const [started, setStarted] = useState<RecoveryId | null>(null);
+  const [showMore, setShowMore] = useState(false);
+  const [deviceDone, setDeviceDone] = useState(() => deviceOnly ? readDeviceCareCompletions(today) : []);
   const [error, setError] = useState('');
   const hour = new Date().getHours();
-  const done = photoOnly ? deviceDone : [...(record?.completedMissionIds ?? []), ...(log.done[today] ?? [])];
+  const done = deviceOnly ? deviceDone : [...(record?.completedMissionIds ?? []), ...(log.done[today] ?? [])];
   const recentDays = trailingDays(8, today).slice(0, -1);
   const input: MissionInput = {
     answers: normalizeAnswers(record?.answers).map(value => value ?? null),
@@ -48,10 +50,15 @@ export default function RecoveryMissions({ record, records = [], onComplete, onM
   const key = JSON.stringify(input);
   const ranked = rankMissions(input);
   const result = server?.key === key ? server.result : { ...ranked, ids: ranked.ids.slice(0, 3), source: 'offline' as const };
-  const availablePhotos = PHOTO_RECOVERY_IDS.filter(id => !input.skipped.includes(id) || photoOnly);
-  const visibleIds = photoOnly ? availablePhotos : showPhotos ? [...new Set([...result.ids, ...availablePhotos])] : result.ids;
+  const moreIds = ADDITIONAL_CARE_IDS.filter(id => deviceOnly || !input.skipped.includes(id));
+  const visibleIds = Array.from(new Set([
+    ...(deviceOnly ? moreIds : result.ids),
+    ...(showMore && !deviceOnly ? moreIds : []),
+    ...(started ? [started] : []),
+    ...(vision ? [vision] : []),
+  ]));
   useEffect(() => {
-    if (photoOnly) return;
+    if (deviceOnly) return;
     const controller = new AbortController();
     const request = JSON.parse(key) as MissionInput;
     void wellbeingResponse<MissionResult>({ kind: 'missions', ...request }, prefs.ai, controller.signal).then(response => {
@@ -60,36 +67,38 @@ export default function RecoveryMissions({ record, records = [], onComplete, onM
       setServer({ key, result: response });
     }, () => {});
     return () => controller.abort();
-  }, [key, prefs.ai, photoOnly]);
+  }, [key, prefs.ai, deviceOnly]);
 
   const complete = (id: RecoveryId) => {
     if (done.includes(id)) return true;
     try {
-      if (today !== localDay()) throw new Error('날짜가 바뀌었어요. 오늘 미션을 다시 열어 주세요.');
-      if (photoOnly) setDeviceDone(saveDevicePhotoCompletion(today, id));
-      else if (!onComplete?.(id)) throw new Error('미션을 저장하지 못했어요.');
-      setVision(null); setError('');
+      if (today !== localDay()) throw new Error('날짜가 바뀌었어요. 오늘의 돌봄을 다시 열어 주세요.');
+      if (deviceOnly) setDeviceDone(saveDeviceCareCompletion(today, id));
+      else if (!onComplete?.(id)) throw new Error('돌봄을 저장하지 못했어요.');
+      if (started === id) setStarted(null);
+      if (vision === id) setVision(null);
+      setError('');
       return true;
     } catch (error) {
-      setError(error instanceof Error ? error.message : '미션을 저장하지 못했어요.');
+      setError(error instanceof Error ? error.message : '돌봄을 저장하지 못했어요.');
       return false;
     }
   };
   const skip = (id: RecoveryId) => {
     try {
       setPrefs(setGardenPreferences({ skipped: { date: today, ids: [...new Set([...input.skipped, id])] } }));
-      setVision(null); setError('');
-    } catch { setError('미션을 바꾸지 못했어요.'); }
+      if (started === id) setStarted(null);
+      if (vision === id) setVision(null);
+      setError('');
+    } catch { setError('돌봄을 바꾸지 못했어요.'); }
   };
 
   return <section className="recovery-missions" aria-labelledby="recovery-title">
-    <div className="quiet-section-head"><h2 id="recovery-title">{photoOnly ? '사진 미션' : '오늘의 미션'}</h2>{!photoOnly && <span className="quiet-tag"><Icon name="sparkle" size={15}/>{sourceLabel[result.source]}</span>}</div>
-    <p className="quiet-note">{photoOnly ? '사진 미션 결과는 이 기기에 저장해요.' : profile?.support === 'quiet'
-      ? '편한 미션 하나만 골라도 괜찮아요.' : profile?.support === 'encouraging' ? '해볼 만한 미션 하나를 골라 시작해 봐요!' : result.reason}</p>
-    {!photoOnly && <div className="quiet-actions">
-      <Button icon={<Icon name="camera" size={17}/>} label={showPhotos ? '사진 미션 접기' : '사진 미션 보기'} onClick={() => {
-        setShowPhotos(!showPhotos); setVision(null);
-      }}/>
+    <div className="quiet-section-head"><h2 id="recovery-title">{deviceOnly ? '작은 돌봄' : '추천 돌봄'}</h2>{!deviceOnly && <span className="quiet-tag"><Icon name="sparkle" size={15}/>{sourceLabel[result.source]}</span>}</div>
+    <p className="quiet-note">{deviceOnly ? '완료한 돌봄은 이 기기에 저장해요.' : profile?.support === 'quiet'
+      ? '편한 돌봄 하나만 골라도 괜찮아요.' : profile?.support === 'encouraging' ? '해볼 만한 돌봄 하나를 골라 시작해 봐요!' : result.reason}</p>
+    {!deviceOnly && <div className="quiet-actions">
+      <Button className="care-action" icon={<Icon name="plus" size={17}/>} label={showMore ? '다른 돌봄 접기' : '돌봄 더 보기'} onClick={() => setShowMore(!showMore)}/>
     </div>}
     <ul className="recovery-list">{visibleIds.map(id => {
       const mission = RECOVERY_MISSIONS.find(item => item.id === id)!;
@@ -97,8 +106,8 @@ export default function RecoveryMissions({ record, records = [], onComplete, onM
       return <li className={'quiet-card mission-card' + (completed ? ' mission-completed' : '')} key={id}>
         <div className="mission-row"><span className="mission-symbol"><Icon name={mission.icon} size={23}/></span><div><h3>{mission.title}</h3><small>{completed ? '완료했어요' : mission.minutes + '분'}</small></div>
           {!completed && <div className="quiet-actions">
-            <Button icon={<Icon name="check" size={18}/>} label={mission.title + ' 완료'} isIconOnly variant="primary" onClick={() => complete(id)}/>
-            {!photoOnly && <Button icon={<Icon name="close" size={17}/>} label={mission.title + ' 대신 다른 미션'} isIconOnly onClick={() => skip(id)}/>}
+            {started !== id && <Button className="care-action" icon={<Icon name="arrow" size={16}/>} label="시작하기" variant="primary" onClick={() => setStarted(id)}/>}
+            {!deviceOnly && <Button icon={<Icon name="close" size={17}/>} label={mission.title + ' 대신 다른 돌봄'} isIconOnly onClick={() => skip(id)}/>}
           </div>}
         </div>
         {!completed && <><p>{mission.detail}</p><div className="quiet-actions">
@@ -106,6 +115,7 @@ export default function RecoveryMissions({ record, records = [], onComplete, onM
           {id === 'outdoor-visit' && <Button icon={<Icon name="map" size={17}/>} label="산책 장소 보기" isIconOnly onClick={onMap}/>}
           {id === 'send-hello' && <Button icon={<Icon name="phone" size={17}/>} label="연락처 보기" isIconOnly onClick={onConnections}/>}
         </div></>}
+        {started === id && !completed && <CareTimer key={id} minutes={mission.minutes} disabled={false} onComplete={() => complete(id)}/>}
         {vision === id && !completed && 'camera' in mission && <MissionPhotoCheck kind={mission.camera} day={today} onDone={() => complete(id)} onClose={() => setVision(null)}/>}
       </li>;
     })}</ul>

@@ -90,7 +90,7 @@ button { border: 0; background: none; color: inherit; cursor: pointer; }
 .progress-head > span { color: var(--deep-green); font-size: 12px; font-weight: 700; }.progress-head small { color: var(--secondary); font-size: 9px; text-align: right; }
 .progress-track { height: 5px; overflow: hidden; border-radius: 999px; background: #E5E7E0; }.progress-track i { display: block; height: 100%; border-radius: inherit; background: var(--primary); transition: width .3s ease; }
 .question-panel { padding: 40px 24px 28px; animation: question-in .3s ease both; }
-.question-mark { width: 52px; height: 52px; display: grid; place-items: center; margin-bottom: 25px; border-radius: 16px; background: var(--light-green); color: var(--deep-green); font: 24px Georgia, serif; }
+.question-mark { width: 52px; height: 52px; margin-bottom: 25px; border-radius: 16px; background: var(--light-green) url('/reflection-question.png') center / 40px 40px no-repeat; }
 .question-kicker { margin: 0 0 8px; color: var(--primary); font-size: 11px; font-weight: 600; }
 .question-panel h2 { margin: 0; font-size: 29px; font-weight: 600; line-height: 1.3; letter-spacing: -.055em; }.question-panel h2 span { display: block; }
 .question-helper { margin: 12px 0 28px; color: var(--secondary); font-size: 12px; line-height: 1.55; }
@@ -214,7 +214,7 @@ button { border: 0; background: none; color: inherit; cursor: pointer; }
 
 .bottom-nav { left: 9px; right: 9px; bottom: 7px; }
 .bottom-nav .nav-symbol { font-size: 24px; line-height: 1; }
-.question-mark--sleep, .note-panel .question-mark { background: #e6e1f7; color: #7b6b9a; }
+.question-mark--sleep, .note-panel .question-mark { background-color: #e6e1f7; }
 .question-kicker--sleep { color: #7b6b9a; }
 .question-panel h2 { font-weight: 400; }
 .choice-list button strong { font-weight: 400; }

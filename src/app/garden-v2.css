@@ -164,6 +164,20 @@ body[data-astryx-theme="matcha"] {
 .outing-field { border: 0; padding: 0; min-width: 0; }
 .outing-field legend { font-size: 12px; padding-bottom: 5px; font-weight: 650; }
 .recovery-missions { display: grid; gap: 7px; }
+.checkin-screen .question-panel h2, .care-screen .care-intro h2, .care-screen .care-copy h3,
+.care-detail-content h2, .recovery-missions h2, .recovery-missions .mission-row h3 { color: #164836; font-weight: 650; }
+.checkin-screen .question-helper, .checkin-screen .optional-hint, .care-screen .care-intro p,
+.care-screen .care-copy p, .care-screen .care-summary, .care-detail-content p,
+.recovery-missions .mission-card > p, .recovery-missions .quiet-note { color: #345c49; }
+.checkin-screen .question-kicker, .care-screen .care-copy span, .care-screen .care-meta,
+.care-screen .care-progress, .care-detail-meta, .recovery-missions .mission-row small { color: #345c49; }
+.care-action, .checkin-screen .step-actions > .primary-button { display: inline-flex; flex-direction: row; align-items: center; justify-content: center; gap: 7px; }
+.care-action { white-space: nowrap; }
+.care-action svg { flex-shrink: 0; }
+.care-screen .care-card:has(> button, > [role='img']) > .care-copy { grid-column: 2; }
+.care-screen .care-card > button, .care-screen .care-card > [role='img'] { grid-column: 3; grid-row: 1; align-self: center; white-space: nowrap; }
+.care-detail-actions > .care-action { width: 100%; }
+.care-screen .care-more { display: inline-flex; gap: 6px; align-items: center; justify-content: center; min-height: 40px; color: #164836; font-weight: 600; }
 .recovery-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
 .mission-card { padding: 10px 10px 9px; border-radius: 13px; }
 .mission-card p { margin: 4px 1px 0; font-size: 12px; }
