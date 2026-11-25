@@ -23,9 +23,24 @@ for(const [width,height] of [[1280,900],[390,844],[320,568]])test(`photo actions
   const page=await context.newPage();await page.goto(baseURL);await ready(page);await page.locator('.home-cta').click();
   const back=page.getByRole('button',{name:'뒤로 가기',exact:true});const box=await back.boundingBox();expect(box.width).toBeGreaterThanOrEqual(43.99);expect(box.height).toBeGreaterThanOrEqual(43.99);
   if(!before){const icon=await back.locator('svg').boundingBox();expect(icon.width).toBeCloseTo(20,2);}
-  await expect(page.locator('.question-mark svg')).toBeVisible();
-  const geometry=await page.locator('.question-mark').evaluate(el=>{const b=el.getBoundingClientRect(),s=el.querySelector('svg').getBoundingClientRect();return {width:s.width,height:s.height,dx:(s.left+s.width/2)-(b.left+b.width/2),dy:(s.top+s.height/2)-(b.top+b.height/2)};});
-  expect(geometry.width).toBeCloseTo(22,2);expect(geometry.height).toBeCloseTo(22,2);expect(Math.abs(geometry.dx)).toBeLessThan(.5);expect(Math.abs(geometry.dy)).toBeLessThan(.5);
+  const questionMark = page.locator('.question-mark');
+  await expect(questionMark).toBeVisible();
+  if (before) {
+   await expect(questionMark.locator('svg')).toBeVisible();
+  } else {
+   await expect(questionMark).toHaveCSS('background-image', /reflection-question\.png/);
+   expect((await page.request.get('/reflection-question.png')).ok()).toBe(true);
+   const camera = page.getByRole('button', {name: '사진 촬영', exact: true});
+   if (width < 521) {
+    await expect(camera).toBeVisible();
+    await expect(camera.locator('svg')).toBeVisible();
+    await expect(camera).toHaveCSS('display', /flex$/);
+    await expect(camera).toHaveCSS('flex-direction', 'row');
+    await expect(camera).toHaveCSS('align-items', 'center');
+   } else {
+    await expect(camera).toBeHidden();
+   }
+  }
   const mood=page.locator('.mood-chip');await expect(mood).toContainText('오늘의 마음 · '+(width===390?'가벼워요':'조금 무거워요'));
   expect(await mood.evaluate(el=>({tag:el.tagName,tab:el.tabIndex,role:el.getAttribute('role')}))).toEqual({tag:'P',tab:-1,role:null});
   await mood.click();expect(posts).toBe(0);expect(activities).toBe(0);await expect(page.locator('main')).toHaveAttribute('data-account-view','photo');
