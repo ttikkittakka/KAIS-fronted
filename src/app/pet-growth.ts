@@ -1,5 +1,6 @@
 import { bond, type CompanionState } from './companions';
 import { isDemo } from './app-storage';
+import { readDemoPlantSettings } from './demo-plant';
 import { localDay, type DailyCheckin } from './daily-checkin';
 import { validRecordDate } from './record-store';
 import { isCareId } from './cares';
@@ -27,9 +28,10 @@ export function treeGrowth(
   today = localDay(),
   legacyMissions: Record<string, readonly string[]> = {},
 ) {
-  if (isDemo()) {
-    const stage = TREE_STAGES.at(-1)!;
-    return { stage, days: stage.days, next: undefined };
+  const demo = readDemoPlantSettings();
+  if (demo) {
+    const stage = TREE_STAGES[demo.treeLevel - 1];
+    return { stage, days: stage.days, next: TREE_STAGES.at(demo.treeLevel)?.days };
   }
   const eligibleDate = (date: string) => date >= adoptedOn && date <= today && validRecordDate(date);
   const days = new Set(Object.entries(legacyMissions).filter(([date, done]) => eligibleDate(date) && done.length > 0).map(([date]) => date));

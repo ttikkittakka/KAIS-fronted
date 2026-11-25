@@ -37,7 +37,7 @@
   background: rgba(255, 255, 255, .9); color: var(--deep-green); font-size: 14px; font-weight: 600; box-shadow: 0 4px 14px rgba(52, 56, 50, .12); }
 .pet-level { min-height: 44px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px 16px; border-radius: 16px;
   background: rgba(255, 255, 255, .78); color: var(--deep-green); line-height: 1.15; box-shadow: 0 2px 8px rgba(52, 56, 50, .08); }
-.pet-level strong { font-size: 15px; font-weight: 700; }
+.pet-level strong { display: flex; align-items: center; gap: 4px; font-size: 15px; font-weight: 700; }
 .pet-level span { color: #c96a7d; font-size: 10px; letter-spacing: 1px; }
 .pet-diary-shortcut { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .9); color: var(--deep-green); box-shadow: 0 4px 14px rgba(52, 56, 50, .12); transition: background .2s; }
 .pet-diary-shortcut:hover { background: var(--light-green); }
@@ -63,6 +63,7 @@
 .pet-menu__icon { position: relative; width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .96); box-shadow: 0 6px 16px rgba(52, 56, 50, .2); transition: transform .12s; }
 .pet-menu__label { padding: 1px 7px; border-radius: 8px; background: rgba(255, 255, 255, .9); color: var(--text); font-size: 11px; font-weight: 600; white-space: nowrap; }
 .pet-menu__item--locked .pet-menu__icon { background: rgba(234, 236, 230, .96); color: #7d837a; }
+.pet-menu__item[aria-checked="true"] .pet-menu__icon { background: var(--deep-green); color: #fff; }
 .pet-menu__item--locked .pet-menu__label { color: #5f655d; }
 .pet-menu__lock { position: absolute; right: -3px; bottom: -3px; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; background: #fff; color: #5f655d; box-shadow: 0 1px 4px rgba(0, 0, 0, .16); }
 .pet-menu__item:active .pet-menu__icon { transform: scale(.92); }
@@ -75,6 +76,11 @@
 .help-sheet .chat-head { position: sticky; top: 0; z-index: 1; background: #fbfaf5; }
 .help-body { padding: 0 18px max(22px, env(safe-area-inset-bottom)); }
 .help-body h3 { margin: 18px 0 8px; color: var(--deep-green); font-size: 15px; font-weight: 600; }
+.demo-growth-controls { display: grid; gap: 8px; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--light-green); }
+.demo-growth-controls legend { padding: 0 4px; color: var(--deep-green); font-weight: 700; }
+.demo-growth-controls label { display: grid; gap: 5px; color: var(--deep-green); font-size: 13px; }
+.demo-growth-controls select { min-height: 44px; width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--text); font-size: 16px; }
+.demo-growth-controls select:focus-visible { outline: 2px solid var(--deep-green); outline-offset: 2px; }
 .help-meters, .help-gestures, .help-unlocks { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .help-meters li { display: grid; gap: 7px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 16px; background: #fff; }
 .help-meters li div { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }

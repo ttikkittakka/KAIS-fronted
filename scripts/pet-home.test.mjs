@@ -5,6 +5,7 @@ const storage = loadTs(new URL('../src/app/app-storage.ts', import.meta.url));
 const dev = loadTs(new URL('../src/app/developer-state.ts', import.meta.url));
 const shop = loadTs(new URL('../src/app/shop-store.ts', import.meta.url));
 const companions = loadTs(new URL('../src/app/companions.ts', import.meta.url));
+const demoPlant = loadTs(new URL('../src/app/demo-plant.ts', import.meta.url));
 const { mindGrowth, petGrowth, treeGrowth, unlocked, MIND_STEPS, TREE_STAGES } = loadTs(new URL('../src/app/pet-growth.ts', import.meta.url));
 const { RECOVERY_MISSIONS } = loadTs(new URL('../src/app/mission-policy.ts', import.meta.url));
 const { readOutfit, wear, FIT, WARDROBE_KEY } = loadTs(new URL('../src/app/wardrobe.ts', import.meta.url));
@@ -87,7 +88,7 @@ test('마음 성숙도 counts days with all four answers; 레벨 adds both meter
   assert.equal(unlocked({ ...growth, level: 4 }, rule('sing')), true);
 });
 
-test('demo starts at maximum growth and grants care milestones in demo storage', async () => {
+test('demo starts at maximum growth and keeps adjustments and rewards in demo storage', async () => {
   const data = fresh();
   globalThis.window = { location: { pathname: '/demo' } };
   try {
@@ -101,8 +102,20 @@ test('demo starts at maximum growth and grants care milestones in demo storage',
     assert.ok(companions.canAdopt(state, []));
     assert.equal(state.adopted[0].seenLevel, 3);
     assert.deepEqual(shop.syncGrowthRewards().state.rewards.map(reward => reward.id), ['days-50', 'days-100']);
+    demoPlant.updateDemoPlantSettings({ bondLevel: 1, treeLevel: 2 });
+    demoPlant.updateDemoPlantSettings({ mood: 'low' });
+    assert.deepEqual(demoPlant.readDemoPlantSettings(), { bondLevel: 1, treeLevel: 2, mood: 'low' });
+    const adjusted = petGrowth(state, []);
+    assert.equal(adjusted.bond.level, 1);
+    assert.equal(adjusted.tree.stage.name, '새 가지');
+    assert.equal(adjusted.tree.next, TREE_STAGES[2].days);
+    assert.equal(unlocked(adjusted, INTERACTIONS.find(action => action.id === 'walk').unlock), false);
+    window.location.pathname = '/';
+    assert.equal(demoPlant.readDemoPlantSettings(), null);
+    assert.equal(demoPlant.updateDemoPlantSettings({ treeLevel: 4 }), null);
     assert.equal(data.size, 0, 'demo purchases and progression use the in-memory scope');
   } finally {
+    window.location.pathname = '/demo';
     await storage.deleteAllLocalData();
     delete globalThis.window;
   }
