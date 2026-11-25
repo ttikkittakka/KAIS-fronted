@@ -7,8 +7,9 @@ import { compareMedicineLabels, MEDICINE_LIMIT, medicineLabelKey, parseMedicineL
 import { readMedicinePhoto } from '../medicine-ocr';
 import MissionPhotoInput from './MissionPhotoInput';
 import { Icon } from './PetIcon';
+import type { Medicine } from '../personal-garden';
 
-export default function MedicationMission({ day }: { day: string }) {
+export default function MedicationMission({ day, planned = [] }: { day: string; planned?: Medicine[] }) {
   const [entries, setEntries] = useState(() => readMedicineDay(day));
   const [selected, setSelected] = useState('');
   const [choices, setChoices] = useState<MedicineLabel[]>([]);
@@ -25,6 +26,10 @@ export default function MedicationMission({ day }: { day: string }) {
   const active = entries.find(entry => medicineLabelKey(entry) === selected) ?? entries.find(entry => !entry.checked) ?? entries[0];
   const outcome = active && comparison?.key === medicineLabelKey(active) ? compareMedicineLabels(active, comparison.read) : undefined;
   const checked = entries.filter(entry => entry.checked).length;
+  const remembered = planned.flatMap(medicine => {
+    const label = parseMedicineLabel(medicine.name, medicine.strength);
+    return label && !entries.some(entry => medicineLabelKey(entry) === medicineLabelKey(label)) ? [{ id: medicine.id, label }] : [];
+  });
 
   async function scan(photo: File, mode: 'source' | 'today') {
     controller.current?.abort();
@@ -86,6 +91,10 @@ export default function MedicationMission({ day }: { day: string }) {
     <p>사진은 이 기기에서 글자로 읽어요. 복용 여부는 처방 지시와 약사 안내로 확인해 주세요.</p>
     <details open={entries.length === 0 || undefined}>
       <summary>처방전·약봉투에서 오늘 확인할 약 등록</summary>
+      {remembered.length > 0 && <ul className="medicine-entries" aria-label="저장한 약에서 가져오기">{remembered.map(({ id, label }) =>
+        <li key={id}><Button label={label.name + ' ' + label.strength + ' 가져오기'} isDisabled={busy} onClick={() => {
+          setName(label.name); setStrength(label.strength); setReviewed(false); setChoices([]); setPhotoPreview(undefined);
+        }}/></li>)}</ul>}
       <p>제품명과 함량이 한 줄에 보이도록 찍어 주세요. 개인정보 부분은 가려도 돼요.</p>
       <MissionPhotoInput label="처방전·약봉투 사진" disabled={busy || entries.length >= MEDICINE_LIMIT} onPhoto={photo => void scan(photo, 'source')}/>
       {photoPreview?.mode === 'source' && <Image src={photoPreview.url} alt="등록에 사용할 약 라벨 사진" width={224} height={136}

@@ -11,7 +11,7 @@ import { gardenPreferences, setGardenPreferences } from '../preferences';
 import { wellbeingResponse } from '../wellbeing-client';
 import { readDevicePhotoCompletions, saveDevicePhotoCompletion } from '../mission-photo-client';
 import MissionPhotoCheck from './MissionPhotoCheck';
-import MedicationMission from './MedicationMission';
+import { usePersonalGarden } from './PersonalGarden';
 import { Icon } from './PetIcon';
 
 const sourceLabel: Record<MissionResult['source'], string> = { ai: 'AI 맞춤', rules: '상태 맞춤', offline: '기기에서 추천' };
@@ -21,12 +21,12 @@ type PhotoOnlyProps = { photoOnly: true; record?: never; records?: never; onComp
 
 export default function RecoveryMissions({ record, records = [], onComplete, onMap, onConnections, photoOnly = false }: RecoveryProps | PhotoOnlyProps) {
   const today = localDay();
+  const profile = usePersonalGarden()?.profile;
   const [log] = useState(readMissionLog);
   const [prefs, setPrefs] = useState(gardenPreferences);
   const [server, setServer] = useState<{ key: string; result: MissionResult }>();
   const [vision, setVision] = useState<RecoveryId | null>(null);
   const [showPhotos, setShowPhotos] = useState(false);
-  const [showMedicine, setShowMedicine] = useState(false);
   const [deviceDone, setDeviceDone] = useState(() => photoOnly ? readDevicePhotoCompletions(today) : []);
   const [error, setError] = useState('');
   const hour = new Date().getHours();
@@ -37,7 +37,8 @@ export default function RecoveryMissions({ record, records = [], onComplete, onM
     tags: diaryTags(record?.note, record?.photoComment),
     outing: record?.outing,
     part: hour < 11 ? 'morning' : hour < 19 ? 'afternoon' : 'evening',
-    pace: prefs.pace,
+    pace: profile ? profile.pace !== 'any' ? profile.pace : profile.temperament === 'calm' ? 'inside'
+      : profile.temperament === 'curious' ? 'outside' : 'any' : prefs.pace,
     recent: Array.from(new Set([
       ...recentDays.flatMap(day => log.done[day] ?? []),
       ...records.filter(row => recentDays.includes(row.date)).flatMap(row => row.completedMissionIds ?? []),
@@ -83,14 +84,13 @@ export default function RecoveryMissions({ record, records = [], onComplete, onM
 
   return <section className="recovery-missions" aria-labelledby="recovery-title">
     <div className="quiet-section-head"><h2 id="recovery-title">{photoOnly ? '사진 미션' : '오늘의 미션'}</h2>{!photoOnly && <span className="quiet-tag"><Icon name="sparkle" size={15}/>{sourceLabel[result.source]}</span>}</div>
-    <p className="quiet-note">{photoOnly ? '사진 미션 결과는 이 기기에 저장해요.' : result.reason}</p>
-    <div className="quiet-actions">
-      {!photoOnly && <Button icon={<Icon name="camera" size={17}/>} label={showPhotos ? '사진 미션 접기' : '사진 미션 보기'} onClick={() => {
+    <p className="quiet-note">{photoOnly ? '사진 미션 결과는 이 기기에 저장해요.' : profile?.support === 'quiet'
+      ? '편한 미션 하나만 골라도 괜찮아요.' : profile?.support === 'encouraging' ? '해볼 만한 미션 하나를 골라 시작해 봐요!' : result.reason}</p>
+    {!photoOnly && <div className="quiet-actions">
+      <Button icon={<Icon name="camera" size={17}/>} label={showPhotos ? '사진 미션 접기' : '사진 미션 보기'} onClick={() => {
         setShowPhotos(!showPhotos); setVision(null);
-      }}/>}
-      <Button icon={<Icon name="note" size={17}/>} label={showMedicine ? '약 포장 확인 접기' : '오늘 약 포장 확인'} onClick={() => setShowMedicine(!showMedicine)}/>
-    </div>
-    {showMedicine && <MedicationMission day={today} key={today}/>}
+      }}/>
+    </div>}
     <ul className="recovery-list">{visibleIds.map(id => {
       const mission = RECOVERY_MISSIONS.find(item => item.id === id)!;
       const completed = done.includes(id);

@@ -55,10 +55,10 @@ export function Onboarding({ start }: { start: () => void }) {
   </section>;
 }
 
-export function HomeScreen({ state, go, recorded, completedCount, resume, balance, shop, growthSnapshot, today }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number; shop: ShopState | null; growthSnapshot: ReturnType<typeof shopSnapshot> | null; today?: string }) {
+export function HomeScreen({ state, go, recorded, completedCount, resume, balance, shop, growthSnapshot, today, potName }: { state: PlantState; go: (v: View) => void; recorded: boolean; completedCount: number; resume?: View; balance: number; shop: ShopState | null; growthSnapshot: ReturnType<typeof shopSnapshot> | null; today?: string; potName?: string }) {
   return <section className="screen home-screen">
     <div className="home-scroll-content">
-    <TopBar title="오늘의 정원" action={<button className="icon-button" aria-label="설정" onClick={() => go('settings')}><span aria-hidden="true">⚙</span></button>}/>
+    <TopBar title={potName ?? '오늘의 정원'} action={<button className="icon-button" aria-label="설정" onClick={() => go('settings')}><span aria-hidden="true">⚙</span></button>}/>
     <div className={"garden-scene garden-scene--" + (shop?.layout.background ?? "default-sky")}><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{(today ? new Date(today + 'T12:00:00+09:00') : new Date()).toLocaleDateString('ko-KR', { ...(today ? { timeZone: 'Asia/Seoul' } : {}), month: 'long', day: 'numeric', weekday: 'long' })}</span><SunshineBalance balance={balance}/><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></div>
     <GardenTools onOpen={go} account/>
     <GrowthProgress snapshot={growthSnapshot} onOpen={() => go('rewards')}/>

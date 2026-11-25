@@ -51,6 +51,8 @@ function mount(raw = null, hash = '', component = 'default', props = {}, legacyC
       if (name === './components/GrowthRewards') return { GrowthProgress: function GrowthProgress() {}, GrowthRewardsScreen: function GrowthRewardsScreen() {}, OptionalCareScreen: function OptionalCareScreen() {} };
       if (name === './components/RecordScreens') return { hasUnsavedDrafts: () => false, ReflectionExtras: function ReflectionExtras() {}, RecordsCalendar: function RecordsCalendar() {}, StepHeader: function StepHeader() {} };
       if (name === './components/RecoveryMissions') return { default: function RecoveryMissions() {} };
+      if (name === './components/MedicationManagement') return { default: function MedicationManagement() {} };
+      if (name === './components/PersonalGarden') return { usePersonalGarden: () => null };
       if (name === './guardian-share') return { guardianAvailable: () => false, syncGuardianShare: async () => {} };
       if (name.startsWith('./components/')) return { default: () => null };
       const module = loadTs(new URL(`../src/app/${name}.ts`, import.meta.url));
@@ -169,7 +171,7 @@ test('completion offers the appropriate two choices and keeps the existing celeb
   }
 });
 
-test('today links open the journal, and completed check-in returns to its live missions', () => {
+test('today links open the journal; a saved diary opens care and journal links open dedicated pages', () => {
   const app = mount(null, '', 'default', {}, false);
   app.start();
   app.screen('HomeScreen').props.go('today');
@@ -178,8 +180,16 @@ test('today links open the journal, and completed check-in returns to its live m
   app.screen('CheckinScreen').props.onDone('normal', saved.answers, '오늘의 일기');
   app.next();
   app.next();
-  assert.equal(app.hash(), '#garden');
-  assert.equal(app.screen('CareScreen'), null);
+  assert.equal(app.hash(), '#care');
+  assert.ok(app.screen('CareScreen'));
+  app.screen('CareScreen').props.goHome();
+  app.screen('HomeScreen').props.go('garden');
+  app.screen('RecordsCalendar').props.onMedications();
+  assert.equal(app.hash(), '#medications');
+  assert.ok(app.screen('MedicationManagement'));
+  app.screen('TopBar').props.onBack();
+  app.screen('RecordsCalendar').props.onMissions();
+  assert.equal(app.hash(), '#missions');
   assert.equal(app.screen('RecoveryMissions').props.record.note, '오늘의 일기');
   assert.equal(app.screen('RecoveryMissions').props.onComplete('water-sip'), true);
   assert.deepEqual(JSON.parse(app.raw()).completedMissionIds, ['water-sip']);

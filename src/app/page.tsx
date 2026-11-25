@@ -8,6 +8,9 @@ import SafetyCenter, { HelpLink } from './components/SafetyCenter';
 import CareReason from './components/CareReason';
 import CompanionMissions from './components/Missions';
 import RecoveryMissions from './components/RecoveryMissions';
+import MedicationManagement from './components/MedicationManagement';
+import { GardenProfileForm, PotNameForm } from './components/GardenProfile';
+import { usePersonalGarden } from './components/PersonalGarden';
 import Places from './components/Places';
 import { ConnectionNudge, ConnectionsScreen } from './components/Connections';
 import { GuardianSettings } from './components/Guardian';
@@ -79,7 +82,7 @@ const STYLE_VIEWS: View[] = ['decorate', 'dress', 'items', 'shop', 'rewards', 'e
 // The tab a screen belongs to; null = a focused flow (check-in, completion, sub pages) without the bar.
 const tabOf = (view: View, caring: boolean): Tab | null => view === 'home' || view === 'map' || view === 'garden' || view === 'settings' ? view
   : view === 'care' ? (caring ? 'garden' : null) : STYLE_VIEWS.includes(view) ? 'decorate' : ['companions', 'guardian', 'connections'].includes(view) ? 'settings' : null;
-const journalView = (target: string) => target === 'today' || target === 'diary' || (target === 'care' && dataScope() !== 'test') ? 'garden' : target;
+const journalView = (target: string) => target === 'today' || target === 'diary' ? 'garden' : target;
 const SWIPE_MIN = 70; // px; shorter or mostly vertical drags stay scrolls
 const SWIPE_IGNORE = '.companion-art, .pet-menu, .pet-menu-backdrop, .insights-chart, .missions-carousel, .period-rail, .places-rail, .places-map, .garden-mood-strip, .camera-sheet, .chat-sheet, .help-sheet, input, textarea, select'; // these own their sideways gestures
 function BottomNav({ active, go }: { active: Tab; go: (v: View) => void }) {
@@ -116,13 +119,15 @@ function Onboarding({ start }: { start: (firstTime: boolean) => void }) {
 
 // The friend fills the screen. The help balloon, level and fan menu float on top; the talk bar sits above the tab bar.
 function HomeScreen({ state, go, shop, companion, growth, outfit, night, news }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; growth: Growth | null; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode }) {
+  const garden = usePersonalGarden();
   const background = shop?.layout.background ?? 'default-sky';
   const sceneClass = 'garden-scene pet-scene garden-scene--' + background + (night && background === 'default-sky' ? ' garden-scene--night' : '');
   const ground = <><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></>;
   return <section className="screen pet-home">
     <h1 className="sr-only">오늘의 정원</h1>
     <ConnectionNudge onOpen={() => go('connections')}/>
-    {companion && growth ? <TalkToFriend id={companion.id} name={companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass} intro={GREETING}
+    {companion && growth ? <TalkToFriend id={companion.id} name={garden?.names[companion.id] ?? companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass}
+      intro={garden?.profile ? garden.profile.displayName + '님, 오늘 하루는 어땠어요?' : GREETING}
       growth={growth} outfit={outfit} news={news} onOpen={go}>{ground}</TalkToFriend>
       : <div className={sceneClass}><div className="pet-ground" aria-hidden="true"/><div className="pet-stage">{ground}<div className="hero-plant"><Plant state={state} className="plant-art"/></div></div>
         <div className="pet-bottom"><button type="button" className="primary-button" onClick={() => go('companion')}>함께할 친구를 골라 보세요</button></div></div>}
@@ -510,14 +515,23 @@ export default function HomePage() {
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome}/>}
       {view === 'garden' && <section className="screen garden-history-screen work-screen"><TopBar title="일기"/>
         <div className="work-area journal-area"><RecordsCalendar records={records} onSave={save}
-          onToday={() => go(daily?.stage === 'photo' || daily?.stage === 'growth' ? daily.stage : 'checkin')}/>
+          onToday={() => go(daily?.stage === 'photo' || daily?.stage === 'growth' ? daily.stage : 'checkin')}
+          onCare={() => go('care')} onMissions={() => go('missions')} onMedications={() => go('medications')}/>
           {giftPending && <GrowthProgress snapshot={commerce} onOpen={() => go('rewards')}/>}
-          <RecoveryMissions key={datasetEpoch + ':' + localDay()} record={daily} records={records} onComplete={completeMission} onMap={() => go('map')} onConnections={() => go('connections')}/>
           {testEnabled && <details className="quiet-card"><summary>개발용 돌봄 확인</summary>
             {daily?.answers.every(Boolean) && <button className="text-button" type="button" onClick={() => go('care')}>기존 추천 행동 열기</button>}<CompanionMissions/>
           </details>}
         </div>
       </section>}
+      {view === 'missions' && <section className="screen work-screen"><TopBar title="미션" onBack={() => go('garden')}/>
+        <div className="work-area personal-area"><RecoveryMissions key={datasetEpoch + ':' + localDay()} record={daily} records={records} onComplete={completeMission}
+          onMap={() => go('map')} onConnections={() => go('connections')}/></div></section>}
+      {view === 'medications' && <section className="screen work-screen"><TopBar title="복약 관리" onBack={() => go('garden')}/>
+        <div className="work-area personal-area"><MedicationManagement/></div></section>}
+      {view === 'profile' && <section className="screen work-screen"><TopBar title="내 프로필" onBack={() => go('settings')}/>
+        <div className="work-area personal-area"><GardenProfileForm onDone={() => go('settings')}/></div></section>}
+      {view === 'pot-name' && <section className="screen work-screen"><TopBar title="화분 이름 바꾸기" onBack={() => go('settings')}/>
+        <div className="work-area personal-area"><PotNameForm plant={activeCompanion?.id ?? 'bonsai'} onDone={() => go('home')}/></div></section>}
       {view === 'map' && <section className="screen work-screen places-screen"><TopBar title="지도"/><Places energy={normalizeAnswers(daily?.answers)[1]}/></section>}
       {view === 'connections' && <section className="screen work-screen"><TopBar title="연락처" onBack={() => go('settings')}/><ConnectionsScreen/></section>}
       {view === 'guardian' && <section className="screen work-screen"><TopBar title="보호자 공유" onBack={() => go('settings')}/><GuardianSettings records={records}/></section>}

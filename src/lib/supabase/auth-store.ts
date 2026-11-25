@@ -1,6 +1,6 @@
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
 
-export type AuthAction = 'login' | 'signup' | 'reset' | 'update' | 'logout';
+export type AuthAction = 'login' | 'signup' | 'resend' | 'reset' | 'update' | 'logout';
 export type AuthSnapshot = {
   phase: 'loading' | 'signed-out' | 'signed-in' | 'recovery' | 'unavailable';
   user: { id: string; email: string } | null;
@@ -92,7 +92,7 @@ export function createAuthStore() {
     },
     async submit(action: AuthAction, email = '', password = '', origin = '') {
       if (locked || !client || state.phase === 'loading') return false;
-      if ((action === 'login' || action === 'signup' || action === 'reset') && state.phase !== 'signed-out') return false;
+      if (['login', 'signup', 'resend', 'reset'].includes(action) && state.phase !== 'signed-out') return false;
       if (action === 'update' && state.phase !== 'recovery') return false;
       if (action === 'logout' && !state.user) return false;
       locked = true;
@@ -118,6 +118,11 @@ export function createAuthStore() {
             const { error } = await client.auth.resetPasswordForEmail(email.trim(), { redirectTo: redirect.href });
             if (error) throw error;
             if (run === generation && !state.user) publish({ message: '가입된 이메일이라면 재설정 안내를 보냈어요. 이 브라우저에서 메일의 링크를 열어 주세요.' });
+          } else if (action === 'resend') {
+            redirect.searchParams.set('auth', 'confirm');
+            const { error } = await client.auth.resend({ type: 'signup', email: email.trim(), options: { emailRedirectTo: redirect.href } });
+            if (error) throw error;
+            if (run === generation && !state.user) publish({ message: '인증이 필요한 계정이라면 메일을 다시 보냈어요. 같은 브라우저에서 메일의 링크를 열어 주세요.' });
           } else {
             redirect.searchParams.set('auth', 'confirm');
             const { data, error } = action === 'signup'

@@ -181,6 +181,14 @@ Vercel에 배포할 때 `.env.example`의 `NEXT_PUBLIC_SUPABASE_URL`과 `NEXT_PU
 
 사진 미션의 AI 확인을 사용하려면 서버 환경 변수 `OPENAI_API_KEY`를 설정합니다. 로그인한 사용자가 확인할 사진마다 동의하면 크기를 줄인 JPEG를 Responses API로 전송하고 앱에는 판별 결과만 남깁니다. 약 포장 글자는 브라우저에서 읽습니다. 기기 판별과 직접 기록은 AI 환경 변수 없이도 이용할 수 있습니다.
 
+## 계정 설문과 복약 관리
+
+마이그레이션 `202611250001_personal_garden.sql`은 계정의 설문, 복약 목록과 알림 시간, 화분 이름 테이블을 만듭니다. 로그인한 사용자만 자기 행을 읽고 쓸 수 있습니다. 최초 로그인 후 설문을 한 번 저장하고, 설정에서 수정할 수 있습니다.
+
+식약처 검색에는 공공데이터포털 e약은요 서비스 키를 Vercel 서버 환경 변수 `MFDS_EDRUG_SERVICE_KEY`로 설정합니다. 공개 일반의약품 정보의 제품 사진, 효능과 제공 복용법을 보여줍니다. 실제 내 복용 시간대와 안내는 사용자가 약봉투를 보고 등록합니다. 검색 키가 준비되기 전에도 약 이름과 시간대를 직접 등록할 수 있습니다. [공공데이터포털 e약은요](https://www.data.go.kr/data/15075057/openapi.do)
+
+웹앱이 열려 있는 동안 현재 기기 시각으로 시간대별 알림을 확인합니다. 닫힌 동안에는 내보낸 `.ics` 파일을 휴대폰 캘린더에 가져와 반복 알림을 받을 수 있습니다. 가져온 일정의 변경과 삭제는 캘린더에서 관리합니다.
+
 키와 실제 번호는 저장소에 추가하지 않습니다. 주소록과 개별 연락 기록은 기기에 남고, 실계정 공유에는 사용자가 동의한 상태 선택값만 전송됩니다.
 
 [Supabase Redirect URLs](https://supabase.com/docs/guides/auth/redirect-urls) · [Twilio Messages API](https://www.twilio.com/docs/messaging/api/message-resource)

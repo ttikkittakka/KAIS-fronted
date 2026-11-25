@@ -113,7 +113,43 @@ body[data-astryx-theme="matcha"] {
 .diary-details.record-details { margin: 0; padding: 0; }
 .diary-details .record-detail-head { margin: 3px 0 7px; align-items: center; }
 .diary-details .record-detail-head h2 { font-size: 16px; font-weight: 750; }
-.diary-details .diary-write { margin: 0 0 6px; min-height: 43px; border-radius: 12px; padding: 0 13px; color: white; background: var(--garden-pine); }
+.diary-details .diary-write { min-height: 34px; width: auto; border-radius: 10px; padding: 0 9px; font-size: 12px; color: white; background: var(--garden-pine); }
+.diary-detail-actions { margin-left: auto; justify-content: flex-end; gap: 4px; flex-wrap: nowrap; }
+.journal-shortcuts { padding: 4px 0; }
+.garden-history-screen > .journal-shortcuts { margin: 7px 16px; }
+.personal-area { display: flex; flex-direction: column; gap: 12px; }
+.personal-area > * { flex-shrink: 0; }
+.personal-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; }
+.personal-toolbar button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 13px; min-height: 38px; padding-inline: 9px; }
+.personal-form { display: grid; gap: 10px; }
+.personal-form-heading { display: flex; align-items: flex-start; gap: 10px; }
+.personal-form-heading h1 { font-size: 21px; line-height: 1.3; margin: 0 0 5px; }
+.personal-form label { display: grid; gap: 4px; font-size: 13px; }
+.personal-form :is(input:not([type='checkbox']), select, textarea) { width: 100%; min-height: 40px; font: inherit; font-size: 16px; color: inherit; background: #fff; border: 1px solid #a8bcad; border-radius: 8px; padding: 7px 9px; }
+.personal-form input[type='checkbox'] { accent-color: #2b5346; }
+.personal-form fieldset { min-width: 0; padding: 4px 0 0; margin: 0; border: 0; }
+.personal-form legend { font-size: 13px; }
+.personal-form :is(h2, h3, p) { margin: 0; }
+.personal-form :is(h2, h3) { display: flex; align-items: center; gap: 5px; font-size: 16px; }
+.personal-form summary, .drug-details summary { cursor: pointer; }
+.personal-form details[open] > summary { margin-bottom: 8px; }
+.period-choices { display: flex; flex-wrap: wrap; gap: 7px; }
+.personal-form .period-choices label { display: inline-flex; align-items: center; gap: 4px; padding: 6px; border-radius: 8px; background: #eef4ee; }
+.reminder-row { display: grid; grid-template-columns: 1fr minmax(96px, 45%); align-items: center; gap: 8px; }
+.personal-form .reminder-row label { display: flex; align-items: center; gap: 6px; }
+.medication-period h2 { display: flex; align-items: center; gap: 6px; }
+.drug-list, .drug-results { list-style: none; padding: 0; margin: 0; }
+.drug-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; align-items: start; padding: 11px 0; border-top: 1px solid #dce7df; }
+.drug-result { display: flex; text-align: left; align-items: center; width: 100%; gap: 8px; padding-block: 7px; border-top: 1px solid #dce7df; }
+.drug-result span, .drug-details { display: grid; gap: 4px; min-width: 0; overflow-wrap: anywhere; }
+.drug-photo { width: 44px; height: 44px; flex-shrink: 0; border-radius: 9px; display: grid; place-items: center; background: #e9f2ea; color: #2b5346; overflow: hidden; }
+.drug-photo img { width: 100%; height: 100%; object-fit: contain; background: white; }
+.drug-details h3, .drug-details p { margin: 0; }
+.drug-details p { white-space: pre-line; }
+.drug-details small { opacity: .8; }
+.drug-effect { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.drug-actions { display: flex; gap: 2px; }
+.drug-actions button { width: 30px; min-width: 30px; height: 34px; }
 .diary-entry { display: grid; gap: 9px; }
 .diary-entry > * + * { margin-top: 0; }
 .diary-entry .saved-text { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--garden-ink); }
@@ -197,6 +233,8 @@ body[data-astryx-theme="matcha"] {
 .auth-demo-link { color: #285142; margin-top: 5px; }
 .install-toast { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; padding: 5px 8px; color: #203f36; background: #e3eddf; }
 .install-toast a { text-decoration: underline; }
+.medication-toast { position: fixed; z-index: 100; left: 50%; top: auto; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(92vw, 420px); min-height: 43px; border: 1px solid #cedfce; border-radius: 12px; box-shadow: 0 4px 16px #193b2e22; }
+.medication-toast button { min-width: 36px; min-height: 36px; }
 .demo-note { display: flex; justify-content: center; gap: 11px; font-size: 11px; padding: 3px 8px; color: #36564a; background: #e4eee1; }
 .demo-note a { text-decoration: underline; }
 .demo-note + .app-shell { min-height: calc(100dvh - 23px); }
