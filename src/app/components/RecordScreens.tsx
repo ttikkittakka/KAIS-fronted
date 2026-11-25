@@ -148,7 +148,7 @@ export function PhotoEditor({ record, onSave, onPending }: { record: DailyChecki
   return <div className="photo-editor">
     <input ref={input} type="file" accept="image/*" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
     <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
-    {pending ? preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <p role="status">미리보기를 준비하고 있어요.</p> : record.photoId ? <PhotoPreview key={record.photoId} id={record.photoId}/> : <div className="photo-empty"><span aria-hidden="true">▧</span><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
+    {pending ? preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <p role="status">미리보기를 준비하고 있어요.</p> : record.photoId ? <PhotoPreview key={record.photoId} id={record.photoId}/> : <div className="photo-empty"><Icon name="camera" size={34}/><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
     <div className="editor-actions"><button className="secondary-button" disabled={busy || commentFailed} onClick={() => input.current?.click()}>{record.photoId || pending ? '사진 변경' : '사진 선택'}</button><button className="secondary-button camera-button" disabled={busy || commentFailed} onClick={() => void capture()}><Icon name="camera" size={18}/> 사진 촬영</button></div>
     {shooting && <CameraCapture onShot={file => void select(file)} onClose={() => setShooting(false)}/>}
     {pending && <div className="editor-actions"><button className="primary-button" disabled={busy} onClick={() => void store()}>{busy ? '저장하고 있어요…' : '이 사진 저장하기'}</button><button className="text-button" disabled={busy} onClick={() => { changePhotoDraft(key, null); onPending?.(false); }}>선택 취소</button></div>}
@@ -269,7 +269,7 @@ export function AccountPhotoPreview({ onPending, owner, date, onSave, comment }:
   return <div className="photo-editor">
     <input ref={input} type="file" accept="image/*" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
     <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={e => { void select(e.target.files?.[0]); e.target.value = ''; }}/>
-    {saved && owner && date ? <AccountSavedPhoto owner={owner} date={date}/> : preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <div className="photo-empty"><span aria-hidden="true">▧</span><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
+    {saved && owner && date ? <AccountSavedPhoto owner={owner} date={date}/> : preview ? <img className="record-photo" src={preview} alt="저장 전 사진 미리보기"/> : <div className="photo-empty"><Icon name="camera" size={34}/><p>오늘 기억하고 싶은 장면 하나</p><small>하루에 사진 한 장을 남길 수 있어요.</small></div>}
     <div className="editor-actions"><button className="secondary-button" disabled={busy || saved} onClick={() => input.current?.click()}>{preview ? '사진 변경' : '사진 선택'}</button><button className="secondary-button camera-button" disabled={busy || saved} onClick={() => camera.current?.click()}><Icon name="camera" size={18}/> 사진 촬영</button></div>
     {(preview || saved) && comment && <div className={commentStyles.editor}>
       <label className="field-label" htmlFor="photo-comment">사진에 남기는 짧은 말</label>
