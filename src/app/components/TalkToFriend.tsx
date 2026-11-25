@@ -66,12 +66,12 @@ type Message = { id: number; from: 'me' | 'friend' | 'action'; text: string; saf
 type Flags = { safety?: boolean; support?: boolean };
 const REPLY_DELAY_MS = 650; // a short "typing" pause reads as listening, not as a machine
 
-/** The friend's home, filling the screen: help balloon, level and fan-menu button on top, the friend with its
+/** The friend's home, filling the screen: help balloon, level and diary shortcut on top, the friend with its
  *  speech bubble in the middle, the mic + chat bar at the bottom. Sentences live only in memory; only word
  *  counts are saved (voice.ts). */
-export default function TalkToFriend({ id, name, low, intro, sceneClass, children, growth, outfit, news, onOpen }: {
+export default function TalkToFriend({ id, name, low, intro, sceneClass, children, growth, outfit, news, onOpen, onWriteDiary }: {
   id: CompanionId; name: string; low: boolean; intro: string; sceneClass: string; children: ReactNode;
-  growth: Growth; outfit?: Outfit; news?: ReactNode; onOpen: (view: 'dress' | 'support') => void;
+  growth: Growth; outfit?: Outfit; news?: ReactNode; onOpen: (view: 'dress' | 'support') => void; onWriteDiary: () => void;
 }) {
   const [bubble, setBubble] = useState(intro);
   // Once a crisis reply appears, the help link stays until the user leaves this screen, whatever comes next.
@@ -146,8 +146,8 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
         <button type="button" className="pet-level" onClick={event => { remember(event.currentTarget); setHelp(true); }}
           aria-label={`${name} ${growth.tree.stage.name}, 함께 자란 날 ${growth.tree.days}일. 성장 도움말 열기`}>
           <strong>{growth.tree.stage.name}</strong><span aria-hidden="true">{hearts}</span></button>
-        <button type="button" className="pet-menu-toggle" aria-haspopup="menu" aria-expanded={menu} onClick={event => toggleMenu(event.currentTarget)}
-          aria-label={menu ? '함께할 일 메뉴 닫기' : '함께할 일 메뉴 열기'}><Icon name="wave"/></button>
+        <button type="button" className="pet-diary-shortcut" onClick={onWriteDiary} aria-label="오늘 일기 바로가기">
+          <Icon name="journal" size={23}/></button>
       </div>
       {news && <div className="pet-news">{news}</div>}
       {menu && <button type="button" className="pet-menu-backdrop" aria-label="메뉴 닫기" tabIndex={-1} onClick={closeMenu}/>}

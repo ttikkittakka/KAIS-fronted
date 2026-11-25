@@ -1,4 +1,4 @@
-import { appStorage } from './app-storage';
+import { appStorage, isDemo } from './app-storage';
 import { localDay, type DailyCheckin } from './daily-checkin';
 import { isCareId } from './cares';
 import { activeDayCount } from './growth-rewards';
@@ -33,6 +33,7 @@ export function bondRule(): BondRule {
 }
 
 export function bond(records: DailyCheckin[], adoptedOn: string, rule = bondRule(), today = localDay()) {
+  if (isDemo()) return { level: 3 as const, visitDays: Math.max(rule.visitDays, rule.careDays), careDays: rule.careDays };
   const since = records.filter(record => record.date >= adoptedOn);
   const visitDays = activeDayCount(since, today);
   const careDays = new Set(since.filter(record => record.date <= today && (record.completedCareIds.some(isCareId) || record.completedMissionIds?.length)).map(record => record.date)).size;
@@ -69,7 +70,7 @@ export function adoptCompanion(id: CompanionId, records: DailyCheckin[]) {
   const state = readCompanions();
   if (!isCompanionId(id) || state?.adopted.some(a => a.id === id)) throw new Error('이미 함께하는 친구예요.');
   if (!canAdopt(state, records)) throw new Error('지금 친구와 단짝이 되면 새 친구를 데려올 수 있어요.');
-  return save({ version: 1, active: id, adopted: [...(state?.adopted ?? []), { id, adoptedOn: localDay(), seenLevel: 1 }] });
+  return save({ version: 1, active: id, adopted: [...(state?.adopted ?? []), { id, adoptedOn: localDay(), seenLevel: isDemo() ? 3 : 1 }] });
 }
 export function chooseCompanion(id: CompanionId) {
   const state = readCompanions();

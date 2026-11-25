@@ -31,7 +31,7 @@
 .pet-stage .friend-bubble { bottom: calc(42px + var(--pet) * .97); max-width: min(80%, 300px); font-size: 15px; }
 .pet-scene--hat .pet-stage .friend-bubble { bottom: calc(42px + var(--pet) * 1.14); }
 
-/* Top: help balloon (left), level (centre), fan-menu button (right). */
+/* Top: help balloon (left), level (centre), diary shortcut (right). */
 .pet-hud { position: absolute; z-index: 6; top: calc(12px + env(safe-area-inset-top)); left: 12px; right: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pet-help { min-height: 44px; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px 0 11px; border-radius: 22px 22px 22px 6px;
   background: rgba(255, 255, 255, .9); color: var(--deep-green); font-size: 14px; font-weight: 600; box-shadow: 0 4px 14px rgba(52, 56, 50, .12); }
@@ -39,9 +39,9 @@
   background: rgba(255, 255, 255, .78); color: var(--deep-green); line-height: 1.15; box-shadow: 0 2px 8px rgba(52, 56, 50, .08); }
 .pet-level strong { font-size: 15px; font-weight: 700; }
 .pet-level span { color: #c96a7d; font-size: 10px; letter-spacing: 1px; }
-.pet-menu-toggle { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .9); color: var(--deep-green); box-shadow: 0 4px 14px rgba(52, 56, 50, .12); transition: background .2s, color .2s; }
-.pet-menu-toggle[aria-expanded="true"] { background: var(--deep-green); color: #fff; }
-.pet-help:focus-visible, .pet-level:focus-visible, .pet-menu-toggle:focus-visible { outline: 2px solid var(--deep-green); outline-offset: 3px; }
+.pet-diary-shortcut { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 50%; background: rgba(255, 255, 255, .9); color: var(--deep-green); box-shadow: 0 4px 14px rgba(52, 56, 50, .12); transition: background .2s; }
+.pet-diary-shortcut:hover { background: var(--light-green); }
+.pet-help:focus-visible, .pet-level:focus-visible, .pet-diary-shortcut:focus-visible { outline: 2px solid var(--deep-green); outline-offset: 3px; }
 .pet-news { position: absolute; z-index: 6; top: calc(66px + env(safe-area-inset-top)); left: 12px; right: 12px; }
 .pet-news .companion-status { width: 100%; margin: 0; background: rgba(255, 255, 255, .94); box-shadow: var(--shadow); }
 

@@ -87,6 +87,27 @@ test('마음 성숙도 counts days with all four answers; 레벨 adds both meter
   assert.equal(unlocked({ ...growth, level: 4 }, rule('sing')), true);
 });
 
+test('demo starts at maximum growth and grants care milestones in demo storage', async () => {
+  const data = fresh();
+  globalThis.window = { location: { pathname: '/demo' } };
+  try {
+    const state = companions.adoptCompanion('bonsai', []);
+    const growth = petGrowth(state, []);
+    assert.equal(growth.bond.level, 3);
+    assert.equal(growth.mind.level, MIND_STEPS.length);
+    assert.equal(growth.tree.stage.level, TREE_STAGES.at(-1).level);
+    assert.equal(growth.level, 6);
+    assert.ok(INTERACTIONS.every(action => unlocked(growth, action.unlock)));
+    assert.ok(companions.canAdopt(state, []));
+    assert.equal(state.adopted[0].seenLevel, 3);
+    assert.deepEqual(shop.syncGrowthRewards().state.rewards.map(reward => reward.id), ['days-50', 'days-100']);
+    assert.equal(data.size, 0, 'demo purchases and progression use the in-memory scope');
+  } finally {
+    await storage.deleteAllLocalData();
+    delete globalThis.window;
+  }
+});
+
 test('outfits: only owned items of the right slot are worn, per friend, and never placed in the garden', () => {
   const data = fresh();
   const outfits = SHOP_CATALOG.filter(item => item.category === 'outfit');

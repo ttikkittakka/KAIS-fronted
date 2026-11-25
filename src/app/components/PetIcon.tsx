@@ -38,6 +38,7 @@ const ICONS = {
   sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2"/></>,
   moon: <path d="M20 15A9 9 0 0 1 9 4a8.5 8.5 0 1 0 11 11Z"/>,
   note: <><path d="M6 4h12v16H6z"/><path d="M9 8h6m-6 4h6m-6 4h3"/></>,
+  journal: <><path d="M15 5H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10v-4M3 9h3m-3 4h3m-3 4h3m3-8h3"/><path d="m11 17 1-3.5 6-6 2.5 2.5-6 6L11 17Zm5.5-8 2.5 2.5"/></>,
   edit: <><path d="m4 20 4-1 11-11-3-3L5 16l-1 4Zm10-13 3 3"/></>,
   target: <><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/><path d="M12 2v4m0 12v4M2 12h4m12 0h4"/></>,
   bookmark: <path d="M6 4h12v16l-6-4-6 4V4Z"/>,
