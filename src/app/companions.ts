@@ -1,4 +1,5 @@
 import { appStorage, isDemo } from './app-storage';
+import { readDemoPlantSettings } from './demo-plant';
 import { localDay, type DailyCheckin } from './daily-checkin';
 import { isCareId } from './cares';
 import { activeDayCount } from './growth-rewards';
@@ -33,7 +34,11 @@ export function bondRule(): BondRule {
 }
 
 export function bond(records: DailyCheckin[], adoptedOn: string, rule = bondRule(), today = localDay()) {
-  if (isDemo()) return { level: 3 as const, visitDays: Math.max(rule.visitDays, rule.careDays), careDays: rule.careDays };
+  const demo = readDemoPlantSettings();
+  if (demo) {
+    const careDays = demo.bondLevel === 3 ? rule.careDays : 0;
+    return { level: demo.bondLevel, visitDays: demo.bondLevel === 1 ? 0 : Math.max(rule.visitDays, careDays), careDays };
+  }
   const since = records.filter(record => record.date >= adoptedOn);
   const visitDays = activeDayCount(since, today);
   const careDays = new Set(since.filter(record => record.date <= today && (record.completedCareIds.some(isCareId) || record.completedMissionIds?.length)).map(record => record.date)).size;

@@ -62,9 +62,9 @@ function Wear({ id, stage, outfit }: { id: CompanionId; stage: TreeLevel; outfit
 }
 /** The potted tree and its expression move together.
  *  A new `emote.key` plays that emotion once. Tap = hop (+ onTap), stroke = pet, hold still = hug. */
-export function CompanionArt({ id, stage = 1, low = false, celebrate = false, interactive = true, className = '', label, emote = null, outfit, onInteract, onTap }: {
+export function CompanionArt({ id, stage = 1, low = false, celebrate = false, interactive = true, className = '', label, emote = null, expression, outfit, onInteract, onTap }: {
   id: CompanionId; stage?: TreeLevel; low?: boolean; celebrate?: boolean; interactive?: boolean; className?: string; label?: string;
-  emote?: { kind: Emotion; key: number } | null; outfit?: Outfit; onInteract?: (kind: 'pet' | 'hug') => void; onTap?: () => void;
+  emote?: { kind: Emotion; key: number } | null; expression?: typeof FACES[number]; outfit?: Outfit; onInteract?: (kind: 'pet' | 'hug') => void; onTap?: () => void;
 }) {
   const [hopping, setHopping] = useState(false);
   const [petting, setPetting] = useState(false);
@@ -135,7 +135,7 @@ export function CompanionArt({ id, stage = 1, low = false, celebrate = false, in
   };
 
   const playing = run ? EMOTES[run.kind] : null;
-  const face = petting || glow ? 'happy' : playing ? playing.face : celebrate ? 'excited' : low ? 'low' : 'normal';
+  const face = expression ?? (petting || glow ? 'happy' : playing ? playing.face : celebrate ? 'excited' : low ? 'low' : 'normal');
   const classes = ['companion-art', 'companion-art--face-' + face, low && 'companion-art--low', celebrate && 'companion-art--celebrate',
     hopping && 'companion-art--hop', petting && 'companion-art--petting', glow && 'companion-art--glow',
     playing && !petting && 'companion-art--emote-' + playing.motion, className].filter(Boolean).join(' ');

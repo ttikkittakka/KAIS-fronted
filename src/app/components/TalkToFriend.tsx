@@ -8,6 +8,7 @@ import { FEELINGS, INTERACTIONS, friendReply, unlockLabel, type Emotion, type In
 import { recordUtterance } from '../voice';
 import { unlocked, type Growth, type TreeLevel } from '../pet-growth';
 import type { CompanionId } from '../companions';
+import { DEMO_PLANT_MOODS, type DemoPlantControls } from '../demo-plant';
 import type { Outfit } from '../wardrobe';
 import { Icon } from './PetIcon';
 import { HelpSheet, PetMenu, type MenuItem } from './PetMenu';
@@ -69,9 +70,10 @@ const REPLY_DELAY_MS = 650; // a short "typing" pause reads as listening, not as
 /** The friend's home, filling the screen: help balloon, level and diary shortcut on top, the friend with its
  *  speech bubble in the middle, the mic + chat bar at the bottom. Sentences live only in memory; only word
  *  counts are saved (voice.ts). */
-export default function TalkToFriend({ id, name, low, intro, sceneClass, children, growth, outfit, news, onOpen, onWriteDiary }: {
+export default function TalkToFriend({ id, name, low, intro, sceneClass, children, growth, outfit, news, onOpen, onWriteDiary, demoControls }: {
   id: CompanionId; name: string; low: boolean; intro: string; sceneClass: string; children: ReactNode;
   growth: Growth; outfit?: Outfit; news?: ReactNode; onOpen: (view: 'dress' | 'support') => void; onWriteDiary: () => void;
+  demoControls?: DemoPlantControls;
 }) {
   const [bubble, setBubble] = useState(intro);
   // Once a crisis reply appears, the help link stays until the user leaves this screen, whatever comes next.
@@ -81,7 +83,7 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
   const [messages, setMessages] = useState<Message[]>(() => [{ id: 0, from: 'friend', text: intro }]);
   const [typing, setTyping] = useState(false);
   const [open, setOpen] = useState(false);
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenu] = useState<'actions' | 'moods' | null>(null);
   const [help, setHelp] = useState(false);
   const [saveError, setSaveError] = useState('');
   const nextId = useRef(1);
@@ -120,17 +122,30 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
   const remember = (from?: Element | null) => { opener.current = from instanceof HTMLElement ? from : document.activeElement instanceof HTMLElement ? document.activeElement : null; };
   // The bubble re-mounts with every new line, so a detached opener hands focus to the talk bar instead.
   const giveBackFocus = () => requestAnimationFrame(() => (opener.current?.isConnected ? opener.current : document.querySelector<HTMLElement>('.talk-open'))?.focus());
-  const openChat = (from?: Element | null) => { remember(from); setMenu(false); setOpen(true); };
+  const openChat = (from?: Element | null) => { remember(from); setMenu(null); setOpen(true); };
   const closeChat = () => { setOpen(false); giveBackFocus(); };
-  const toggleMenu = (from?: Element | null) => { if (menu) { setMenu(false); giveBackFocus(); } else { remember(from); setOpen(false); setMenu(true); } };
-  const closeMenu = () => { setMenu(false); giveBackFocus(); };
+  const closeMenu = () => { setMenu(null); giveBackFocus(); };
+  const toggleMenu = (from?: Element | null) => { if (menu) closeMenu(); else { remember(from); setOpen(false); setMenu('actions'); } };
+  const openHelp = (from: HTMLElement) => { remember(from); setMenu(null); setHelp(true); };
   const pick = (choice: string) => {
-    setMenu(false);
+    if (choice === 'set-mood' && demoControls) { setMenu('moods'); return; }
+    if (menu === 'moods') {
+      const mood = DEMO_PLANT_MOODS.find(option => option.id === choice);
+      if (mood) demoControls?.onChange({ mood: mood.id });
+      closeMenu();
+      return;
+    }
+    setMenu(null);
     if (choice === 'talk') openChat(opener.current);
     else if (choice === 'dress' || choice === 'support') onOpen(choice);
     else { interact(choice as InteractionId); giveBackFocus(); }
   };
-  const menuItems: MenuItem[] = [
+  const mood = demoControls?.settings.mood;
+  const expression = mood === 'auto' ? undefined : mood;
+  const menuItems: MenuItem[] = menu === 'moods'
+    ? DEMO_PLANT_MOODS.map(option => ({ ...option, selected: option.id === mood }))
+    : [
+    ...(demoControls ? [{ id: 'set-mood', label: '기분', icon: 'smile' } as const] : []),
     ...INTERACTIONS.map(action => ({ id: action.id, label: action.label, icon: action.id, locked: unlocked(growth, action.unlock) ? undefined : unlockLabel(action.unlock!) })),
     { id: 'talk', label: '이야기하기', icon: 'talk' }, { id: 'dress', label: '옷 입히기', icon: 'dress' }, { id: 'support', label: '도움 찾기', icon: 'support' },
   ];
@@ -141,11 +156,11 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
     <div className={sceneClass + (menu ? ' pet-scene--menu' : '') + (open ? ' pet-scene--chat' : '') + (outfit?.head ? ' pet-scene--hat' : '')}>
       <div className="pet-ground" aria-hidden="true"/>
       <div className="pet-hud">
-        <button type="button" className="pet-help" onClick={event => { remember(event.currentTarget); setHelp(true); }} aria-label="도움말: 함께 노는 법과 성장 단계">
+        <button type="button" className="pet-help" onClick={event => openHelp(event.currentTarget)} aria-label="도움말: 함께 노는 법과 성장 단계">
           <Icon name="help" size={20}/><span>도움말</span></button>
-        <button type="button" className="pet-level" onClick={event => { remember(event.currentTarget); setHelp(true); }}
-          aria-label={`${name} ${growth.tree.stage.name}, 함께 자란 날 ${growth.tree.days}일. 성장 도움말 열기`}>
-          <strong>{growth.tree.stage.name}</strong><span aria-hidden="true">{hearts}</span></button>
+        <button type="button" className="pet-level" onClick={event => openHelp(event.currentTarget)} aria-haspopup="dialog"
+          aria-label={demoControls ? `성장 조절 · ${growth.tree.stage.name} · 친밀도 ${growth.bond.level}단계` : `${name} ${growth.tree.stage.name}, 함께 자란 날 ${growth.tree.days}일. 성장 도움말 열기`}>
+          <strong>{growth.tree.stage.name}{demoControls && <Icon name="edit" size={13}/>}</strong><span aria-hidden="true">{hearts}</span></button>
         <button type="button" className="pet-diary-shortcut" onClick={onWriteDiary} aria-label="오늘 일기 바로가기">
           <Icon name="journal" size={23}/></button>
       </div>
@@ -156,9 +171,10 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
         {!menu && <button type="button" key={speech.listening ? 'live' : live} className={'friend-bubble' + (speech.listening ? ' friend-bubble--listening' : '')}
           onClick={event => openChat(event.currentTarget)} aria-label={`${name}: ${live}. 눌러서 대화 열기`}>{live}</button>}
         <p className="sr-only" aria-live="polite">{bubble}</p>
-        <div className="hero-plant"><CompanionArt id={id} stage={growth.tree.stage.level} low={low} emote={emote} outfit={outfit} className="plant-art"
+        <div className="hero-plant"><CompanionArt id={id} stage={growth.tree.stage.level} low={expression ? expression === 'low' : low} expression={expression} emote={emote} outfit={outfit} className="plant-art"
           onInteract={kind => interact(kind, true)} onTap={() => toggleMenu(document.activeElement)}/></div>
-        {menu && <PetMenu items={menuItems} onPick={pick} onClose={closeMenu}/>}
+        {menu && <PetMenu key={menu} items={menuItems} onPick={pick} onClose={closeMenu}
+          label={menu === 'moods' ? '식물 기분' : undefined} onBack={menu === 'moods' ? () => setMenu('actions') : undefined}/>}
       </div>
       <div className="pet-bottom">
         {safety && !open && <a className="friend-help" href="#safety">혼자 견디지 않아도 돼요 · 도움 받을 수 있는 곳 보기 →</a>}
@@ -174,7 +190,7 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
     </div>
     {open && <ChatSheet id={id} stage={growth.tree.stage.level} name={name} messages={messages} typing={typing} speech={speech} saveError={saveError}
       actions={INTERACTIONS.filter(action => unlocked(growth, action.unlock))} onSend={say} onInteract={kind => interact(kind)} onClose={closeChat}/>}
-    {help && <HelpSheet name={name} growth={growth} onClose={() => { setHelp(false); giveBackFocus(); }}/>}
+    {help && <HelpSheet name={name} growth={growth} onDemoChange={demoControls?.onChange} onClose={() => { setHelp(false); giveBackFocus(); }}/>}
   </>;
 }
 

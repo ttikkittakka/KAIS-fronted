@@ -3,11 +3,12 @@
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { INTERACTIONS, unlockLabel } from '../chat';
-import { bondName, bondRule } from '../companions';
-import { TREE_STAGES, unlocked, type Growth } from '../pet-growth';
+import { BOND_LEVELS, bondName, bondRule, type BondLevel } from '../companions';
+import type { DemoPlantControls } from '../demo-plant';
+import { TREE_STAGES, unlocked, type Growth, type TreeLevel } from '../pet-growth';
 import { Icon, type IconName } from './PetIcon';
 
-export type MenuItem = { id: string; label: string; icon: IconName; locked?: string };
+export type MenuItem = { id: string; label: string; icon: IconName; locked?: string; selected?: boolean };
 
 // Escape closes; the latest onClose is read through a ref so re-renders never re-run the focus effect.
 function useEscape(onClose: () => void) {
@@ -22,7 +23,13 @@ function useEscape(onClose: () => void) {
 
 /** Interactions fan out in a ring around the friend, one after another like a folding fan opening.
  *  The parent draws the backdrop that closes it. */
-export function PetMenu({ items, onPick, onClose }: { items: MenuItem[]; onPick: (id: string) => void; onClose: () => void }) {
+export function PetMenu({ items, onPick, onClose, label = '함께할 일', onBack }: {
+  items: MenuItem[];
+  onPick: (id: string) => void;
+  onClose: () => void;
+  label?: string;
+  onBack?: () => void;
+}) {
   const ring = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(0);
   const size = 4;
@@ -38,14 +45,16 @@ export function PetMenu({ items, onPick, onClose }: { items: MenuItem[]; onPick:
     const buttons = Array.from(ring.current?.querySelectorAll('button') ?? []);
     buttons[(buttons.indexOf(document.activeElement as HTMLButtonElement) + delta + buttons.length) % buttons.length]?.focus();
   };
-  return <div className="pet-menu" role="menu" aria-label="함께할 일" ref={ring} onKeyDown={step}>
-      {visible.map((item, i) => <button key={item.id} type="button" role="menuitem" className={'pet-menu__item' + (item.locked ? ' pet-menu__item--locked' : '')}
+  return <div className="pet-menu" role="menu" aria-label={label} ref={ring} onKeyDown={step}>
+      {visible.map((item, i) => <button key={item.id} type="button" role={item.selected === undefined ? 'menuitem' : 'menuitemradio'} aria-checked={item.selected}
+        className={'pet-menu__item' + (item.locked ? ' pet-menu__item--locked' : '')}
         style={{ '--a': (i * 360) / visible.length + 'deg', '--i': i } as CSSProperties}
         aria-label={item.locked ? `${item.label}, ${item.locked}에 열려요` : item.label} onClick={() => onPick(item.id)}>
         <span className="pet-menu__icon"><Icon name={item.icon}/>{item.locked && <i className="pet-menu__lock"><Icon name="lock" size={11}/></i>}</span>
         <span className="pet-menu__label" aria-hidden="true">{item.label}</span>
       </button>)}
-      {pages > 1 && <button className="pet-menu__next" type="button" role="menuitem" aria-label={`다른 펫 동작 보기 (${page + 1}/${pages})`} onClick={() => setPage((page + 1) % pages)}><Icon name="more" size={20}/></button>}
+      {onBack ? <button className="pet-menu__next" type="button" role="menuitem" aria-label="교감 메뉴로 돌아가기" onClick={onBack}><Icon name="back" size={20}/></button>
+        : pages > 1 && <button className="pet-menu__next" type="button" role="menuitem" aria-label={`다른 펫 동작 보기 (${page + 1}/${pages})`} onClick={() => setPage((page + 1) % pages)}><Icon name="more" size={20}/></button>}
   </div>;
 }
 
@@ -57,7 +66,9 @@ const GESTURES: [IconName, string, string][] = [
 ];
 
 /** 도움말 풍선: how to play, how the friend grows, and what opens next. */
-export function HelpSheet({ name, growth, onClose }: { name: string; growth: Growth; onClose: () => void }) {
+export function HelpSheet({ name, growth, onClose, onDemoChange }: {
+  name: string; growth: Growth; onClose: () => void; onDemoChange?: DemoPlantControls['onChange'];
+}) {
   const close = useRef<HTMLButtonElement>(null);
   useEscape(onClose);
   useEffect(() => {
@@ -76,6 +87,19 @@ export function HelpSheet({ name, growth, onClose }: { name: string; growth: Gro
     <header className="chat-head"><div><h2 id="help-title">{name}와 함께하는 법</h2><p>천천히 함께할수록 할 수 있는 일이 늘어나요</p></div>
       <button type="button" ref={close} className="chat-close" onClick={onClose} aria-label="도움말 닫기"><Icon name="close"/></button></header>
     <div className="help-body">
+      {onDemoChange && <fieldset className="demo-growth-controls">
+        <legend>체험 성장 조절</legend>
+        <label>친밀도
+          <select value={bond.level} onChange={event => onDemoChange({ bondLevel: Number(event.currentTarget.value) as BondLevel })}>
+            {BOND_LEVELS.map((label, index) => <option key={label} value={index + 1}>{index + 1}단계 · {label}</option>)}
+          </select>
+        </label>
+        <label>나무 성장 단계
+          <select value={tree.stage.level} onChange={event => onDemoChange({ treeLevel: Number(event.currentTarget.value) as TreeLevel })}>
+            {TREE_STAGES.map(stage => <option key={stage.level} value={stage.level}>{stage.level}단계 · {stage.name}</option>)}
+          </select>
+        </label>
+      </fieldset>}
       <h3>함께 자라요</h3>
       <ul className="help-meters">{meters.map(m => <li key={m.label}><div><strong>{m.label} {m.level}단계</strong><span>{m.note}</span></div>
         <i role="img" aria-label={`${m.label} ${m.level}/${m.max}`} style={{ '--fill': (m.level / m.max) * 100 + '%' } as CSSProperties}/></li>)}</ul>

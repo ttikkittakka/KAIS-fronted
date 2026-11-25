@@ -20,6 +20,7 @@ import { guardianAvailable, syncGuardianShare } from './guardian-share';
 import { moodSnapshot } from './wellbeing';
 import type { RecoveryId } from './mission-policy';
 import TalkToFriend from './components/TalkToFriend';
+import { readDemoPlantSettings, updateDemoPlantSettings, type DemoPlantControls } from './demo-plant';
 import SupportPrograms, { PrivacyPolicy } from './components/SupportPrograms';
 import { SettingsScreen, DeveloperSettings } from './components/DeveloperSettings';
 import { GardenTools } from './components/GardenFeatures';
@@ -120,7 +121,7 @@ function Onboarding({ start }: { start: (firstTime: boolean) => void }) {
 }
 
 // The friend fills the screen. Help, level and the diary shortcut float above the talk bar.
-function HomeScreen({ state, go, shop, companion, growth, outfit, night, news, onWriteDiary }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; growth: Growth | null; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode; onWriteDiary: () => void }) {
+function HomeScreen({ state, go, shop, companion, growth, outfit, night, news, onWriteDiary, demoControls }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; growth: Growth | null; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode; onWriteDiary: () => void; demoControls?: DemoPlantControls }) {
   const garden = usePersonalGarden();
   const background = shop?.layout.background ?? 'default-sky';
   const sceneClass = 'garden-scene pet-scene garden-scene--' + background + (night && background === 'default-sky' ? ' garden-scene--night' : '');
@@ -130,7 +131,7 @@ function HomeScreen({ state, go, shop, companion, growth, outfit, night, news, o
     <ConnectionNudge onOpen={() => go('connections')}/>
     {companion && growth ? <TalkToFriend id={companion.id} name={garden?.names[companion.id] ?? companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass}
       intro={garden?.profile ? garden.profile.displayName + '님, 오늘 하루는 어땠어요?' : GREETING}
-      growth={growth} outfit={outfit} news={news} onOpen={go} onWriteDiary={onWriteDiary}>{ground}</TalkToFriend>
+      growth={growth} outfit={outfit} news={news} onOpen={go} onWriteDiary={onWriteDiary} demoControls={demoControls}>{ground}</TalkToFriend>
       : <div className={sceneClass}><div className="pet-ground" aria-hidden="true"/><div className="pet-stage">{ground}<div className="hero-plant"><Plant state={state} className="plant-art"/></div></div>
         <div className="pet-bottom"><button type="button" className="primary-button" onClick={() => go('companion')}>함께할 친구를 골라 보세요</button></div></div>}
   </section>;
@@ -226,6 +227,7 @@ function storageMessage(error: unknown) {
 
 export default function HomePage() {
   const [view, setView] = useState<View>('onboarding');
+  const [demoPlant, setDemoPlant] = useState(readDemoPlantSettings);
   const [testEnabled, setTestEnabled] = useState(false);
   const [datasetEpoch, setDatasetEpoch] = useState(0);
   const [daily, setDaily] = useState<DailyCheckin | null>(null);
@@ -262,6 +264,7 @@ export default function HomePage() {
     catch { setShopError('브라우저 저장소에 접근하지 못했어요. 저장 권한을 확인해 주세요.'); setCommerce(null); return null; }
     refreshCommerce();
     setCompanions(readCompanions());
+    setDemoPlant(readDemoPlantSettings());
     try {
       const all = readRecords();
       setRecords(all);
@@ -489,6 +492,10 @@ export default function HomePage() {
   };
   useEffect(() => { if (!slide) return; const t = setTimeout(() => setSlide(''), 400); return () => clearTimeout(t); }, [slide]);
   const growth = companions ? petGrowth(companions, records) : null;
+  const demoControls: DemoPlantControls | undefined = demoPlant ? {
+    settings: demoPlant,
+    onChange: changes => setDemoPlant(updateDemoPlantSettings(changes)),
+  } : undefined;
   const activeCompanion: ActiveCompanion = companions && growth ? { id: companions.active, stage: growth.tree.stage.level } : null;
   const owned = commerce ? ownedItemIds(commerce.state) : [];
   void outfitTick; // a new tick re-reads the outfits after a change in 옷 입히기
@@ -524,7 +531,7 @@ export default function HomePage() {
         </div>}
       </div>
       {view === 'onboarding' && <Onboarding start={firstTime => firstTime && !readCompanions() ? show('companion', true) : goHome()}/>}
-      {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} growth={growth} outfit={outfit} night={night} news={bondNews} onWriteDiary={openTodayDiary}/>}
+      {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} growth={growth} outfit={outfit} night={night} news={bondNews} onWriteDiary={openTodayDiary} demoControls={demoControls}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={() => go('garden')} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome} onMore={() => go('missions')}/>}
