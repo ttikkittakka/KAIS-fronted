@@ -75,7 +75,7 @@ export function CompanionArt({ id, stage = 1, low = false, celebrate = false, in
   const [seenEmote, setSeenEmote] = useState(emote?.key ?? 0);
   const [run, setRun] = useState<{ kind: Emotion; key: number } | null>(null);
   if (emote && emote.key !== seenEmote) { setSeenEmote(emote.key); setRun(emote); }
-  const stroke = useRef({ down: false, x: 0, travel: 0, lastHeart: 0, press: 0, held: false });
+  const stroke = useRef({ down: false, x: 0, travel: 0, lastHeart: 0, press: 0, held: false, tapped: false });
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
   const later = (fn: () => void, ms: number) => { const t = setTimeout(() => { timers.current.delete(t); fn(); }, ms); timers.current.add(t); };
   useEffect(() => { const pending = timers.current; return () => pending.forEach(clearTimeout); }, []);
@@ -100,7 +100,7 @@ export function CompanionArt({ id, stage = 1, low = false, celebrate = false, in
   }, [run]); // eslint-disable-line react-hooks/exhaustive-deps -- spawn only schedules state updates
   const down = (event: PointerEvent<HTMLButtonElement>) => {
     const press = stroke.current.press + 1;
-    stroke.current = { down: true, x: event.clientX, travel: 0, lastHeart: 0, press, held: false };
+    stroke.current = { down: true, x: event.clientX, travel: 0, lastHeart: 0, press, held: false, tapped: false };
     later(() => {
       const s = stroke.current;
       if (s.press !== press || !s.down || s.travel >= TAP_SLOP) return;
@@ -124,12 +124,14 @@ export function CompanionArt({ id, stage = 1, low = false, celebrate = false, in
       if (s.travel - s.lastHeart > 120) { s.lastHeart = s.travel; heart(); }
     }
   };
-  const up = () => {
+  const up = (event: PointerEvent<HTMLButtonElement>) => {
     const s = stroke.current;
     if (!s.down) return;
     s.down = false;
+    if (event.type === 'pointercancel') { setPetting(false); setLean(0); return; }
     if (s.held) return; // the hug already played
-    if (s.travel < TAP_SLOP) { setHopping(true); onTap?.(); return; } // mid-air the hop just continues; the menu still opens
+    // A touch click arrives after pointerup. Opening the ring now would let it intercept that click.
+    if (s.travel < TAP_SLOP) { s.tapped = true; return; }
     if (petting) { setPetting(false); setGlow(true); later(() => setGlow(false), GLOW_MS); onInteract?.('pet'); }
     else setLean(0);
   };
@@ -154,7 +156,12 @@ export function CompanionArt({ id, stage = 1, low = false, celebrate = false, in
     ? <button type="button" className={classes} style={style}
         aria-label={`${name}. ${onTap ? '누르면 함께할 일을 골라요' : '누르면 점프해요'}. 옆으로 쓸어 주면 쓰다듬고, 꾹 누르고 있으면 안아 줘요.`} aria-haspopup={onTap ? 'menu' : undefined}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-        onClick={event => { if (event.detail === 0) { setHopping(true); onTap?.(); } }}>{figure}</button>
+        onClick={event => {
+          if (event.detail !== 0 && !stroke.current.tapped) return;
+          stroke.current.tapped = false;
+          setHopping(true);
+          onTap?.();
+        }}>{figure}</button>
     : <div className={classes} style={style} role="img" aria-label={name}>{figure}</div>;
 }
 
