@@ -119,8 +119,8 @@ function Onboarding({ start }: { start: (firstTime: boolean) => void }) {
   </section>;
 }
 
-// The friend fills the screen. The help balloon, level and fan menu float on top; the talk bar sits above the tab bar.
-function HomeScreen({ state, go, shop, companion, growth, outfit, night, news }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; growth: Growth | null; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode }) {
+// The friend fills the screen. Help, level and the diary shortcut float above the talk bar.
+function HomeScreen({ state, go, shop, companion, growth, outfit, night, news, onWriteDiary }: { state: PlantState; go: (v: View) => void; shop: ShopState | null; companion: ActiveCompanion; growth: Growth | null; outfit?: ReturnType<typeof readOutfit>; night: boolean; news?: React.ReactNode; onWriteDiary: () => void }) {
   const garden = usePersonalGarden();
   const background = shop?.layout.background ?? 'default-sky';
   const sceneClass = 'garden-scene pet-scene garden-scene--' + background + (night && background === 'default-sky' ? ' garden-scene--night' : '');
@@ -130,7 +130,7 @@ function HomeScreen({ state, go, shop, companion, growth, outfit, night, news }:
     <ConnectionNudge onOpen={() => go('connections')}/>
     {companion && growth ? <TalkToFriend id={companion.id} name={garden?.names[companion.id] ?? companionInfo(companion.id).name} low={state === 'low'} sceneClass={sceneClass}
       intro={garden?.profile ? garden.profile.displayName + '님, 오늘 하루는 어땠어요?' : GREETING}
-      growth={growth} outfit={outfit} news={news} onOpen={go}>{ground}</TalkToFriend>
+      growth={growth} outfit={outfit} news={news} onOpen={go} onWriteDiary={onWriteDiary}>{ground}</TalkToFriend>
       : <div className={sceneClass}><div className="pet-ground" aria-hidden="true"/><div className="pet-stage">{ground}<div className="hero-plant"><Plant state={state} className="plant-art"/></div></div>
         <div className="pet-bottom"><button type="button" className="primary-button" onClick={() => go('companion')}>함께할 친구를 골라 보세요</button></div></div>}
   </section>;
@@ -456,6 +456,15 @@ export default function HomePage() {
     assertNoDrafts(); await setDeveloperMode(enabled, password, signal); setTestEnabled(enabled); refreshDataset();
   };
   const go = (target: View) => show(target);
+  const openTodayDiary = () => {
+    const record = readToday();
+    if (record?.stage === 'care' && normalizeAnswers(record.answers).every(Boolean)) {
+      show('garden', false, record);
+      return;
+    }
+    const stage = record?.stage;
+    show(stage === 'photo' || stage === 'growth' ? stage : 'checkin', false, record);
+  };
   const goHome = () => show('home', viewRef.current === 'onboarding' || viewRef.current === 'checkin');
   const companionAction = (action: () => unknown, next?: View) => {
     try { action(); setCompanions(readCompanions()); if (next) show(next); }
@@ -515,13 +524,13 @@ export default function HomePage() {
         </div>}
       </div>
       {view === 'onboarding' && <Onboarding start={firstTime => firstTime && !readCompanions() ? show('companion', true) : goHome()}/>}
-      {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} growth={growth} outfit={outfit} night={night} news={bondNews}/>}
+      {view === 'home' && <HomeScreen shop={commerce?.state ?? null} state={plantState} go={go} companion={activeCompanion} growth={growth} outfit={outfit} night={night} news={bondNews} onWriteDiary={openTodayDiary}/>}
       {view === 'checkin' && <CheckinScreen key={localDay()} onBack={() => go('garden')} onDone={startCare} initialRecord={daily} onDraft={saveDraft}/>}
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome} onMore={() => go('missions')}/>}
       {view === 'garden' && <section className="screen garden-history-screen work-screen"><TopBar title="일기"/>
         <div className="work-area journal-area"><RecordsCalendar records={records} onSave={save}
-          onToday={() => go(daily?.stage === 'photo' || daily?.stage === 'growth' ? daily.stage : 'checkin')}
+          onToday={openTodayDiary}
           onMissions={() => go(daily?.stage === 'care' && todayCares ? 'care' : 'missions')} onMedications={() => go('medications')}/>
           {giftPending && <GrowthProgress snapshot={commerce} onOpen={() => go('rewards')}/>}
           {testEnabled && <details className="quiet-card"><summary>개발용 돌봄 확인</summary>

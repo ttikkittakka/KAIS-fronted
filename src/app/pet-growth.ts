@@ -1,4 +1,5 @@
 import { bond, type CompanionState } from './companions';
+import { isDemo } from './app-storage';
 import { localDay, type DailyCheckin } from './daily-checkin';
 import { validRecordDate } from './record-store';
 import { isCareId } from './cares';
@@ -26,6 +27,10 @@ export function treeGrowth(
   today = localDay(),
   legacyMissions: Record<string, readonly string[]> = {},
 ) {
+  if (isDemo()) {
+    const stage = TREE_STAGES.at(-1)!;
+    return { stage, days: stage.days, next: undefined };
+  }
   const eligibleDate = (date: string) => date >= adoptedOn && date <= today && validRecordDate(date);
   const days = new Set(Object.entries(legacyMissions).filter(([date, done]) => eligibleDate(date) && done.length > 0).map(([date]) => date));
   for (const record of records) {
@@ -40,6 +45,7 @@ export function treeGrowth(
 }
 
 export function mindGrowth(records: DailyCheckin[], today = localDay()) {
+  if (isDemo()) return { level: MIND_STEPS.length, days: MIND_STEPS.at(-1)!, next: undefined };
   const days = new Set(records.filter(r => r.date <= today && normalizeAnswers(r.answers).every(Boolean)).map(r => r.date)).size;
   const level = MIND_STEPS.filter(step => days >= step).length;
   return { level, days, next: MIND_STEPS[level] as number | undefined };

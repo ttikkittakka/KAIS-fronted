@@ -1,8 +1,8 @@
-import { appStorage } from './app-storage';
+import { appStorage, isDemo } from './app-storage';
 import { testSunshineBalance, simulatedActivityDays, checkTestPurchaseFailure, developerUnlimited } from './developer-state';
 import { localOwner, readRecords, recordStorageWarning } from './record-store';
 import { sunshineBalance } from './sunshine';
-import { activeDayCount, growthMilestone, missingGrowthGrants, validGrowthGrants, type GrowthGrant, type GrowthRewardId } from './growth-rewards';
+import { activeDayCount, GROWTH_MILESTONES, growthMilestone, missingGrowthGrants, validGrowthGrants, type GrowthGrant, type GrowthRewardId } from './growth-rewards';
 import { SHOP_CATALOG, shopItem } from './shop-catalog';
 import { GARDEN_SLOTS, assignGardenSlot, clearGardenSlot, emptyGardenLayout, layoutItemIds, migrateGardenLayout, validateGardenLayout, compatibleSlot, type GardenLayout } from './garden-layout';
 
@@ -47,7 +47,8 @@ export function shopSnapshot() {
   if (warning) throw new Error(warning);
   const balance = sunshineBalance(records) + testSunshineBalance() - spentSunshine(state);
   if (!Number.isSafeInteger(balance) || balance < 0) throw new Error('햇살 적립 기록과 구매 내역이 맞지 않아요. 데이터를 보호하기 위해 구매를 멈췄어요.');
-  return { state, balance, activeDays: simulatedActivityDays() ?? activeDayCount(records), unlimited: developerUnlimited() };
+  const activeDays = isDemo() ? GROWTH_MILESTONES.at(-1)!.days : simulatedActivityDays() ?? activeDayCount(records);
+  return { state, balance, activeDays, unlimited: developerUnlimited() };
 }
 function commit(state: ShopState) {
   // One synchronous setItem commits the debit receipt AND item ownership together.
