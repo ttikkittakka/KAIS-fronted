@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from 'react';
 import { getAuthClient } from '../../lib/supabase/auth-client';
 import { createAuthStore, INITIAL_AUTH, type AuthAction } from '../../lib/supabase/auth-store';
 import { developerToolsAvailable, setAccountScope, setDeveloperMode } from '../app-storage';
@@ -12,11 +12,50 @@ import AccountGarden from './AccountGarden';
 import GardenLoading from './GardenLoading';
 import { FirstGardenSetup } from './GardenProfile';
 import { PersonalGardenProvider } from './PersonalGarden';
+import { Icon } from './PetIcon';
 
 function clearAuthRedirect() {
   const url = new URL(window.location.href);
   for (const key of ['auth', 'code', 'error', 'error_code', 'error_description']) url.searchParams.delete(key);
   window.history.replaceState(window.history.state, '', url);
+}
+
+function PasswordField({ name, label, newPassword, disabled }: {
+  name: 'password' | 'passwordAgain';
+  label: string;
+  newPassword: boolean;
+  disabled: boolean;
+}) {
+  const inputId = useId();
+  const [visible, setVisible] = useState(false);
+
+  return <div className="auth-password-field">
+    <label htmlFor={inputId}>{label}</label>
+    <div className="auth-password-control">
+      <input
+        id={inputId}
+        name={name}
+        type={visible ? 'text' : 'password'}
+        autoComplete={newPassword ? 'new-password' : 'current-password'}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        required
+        minLength={newPassword ? 8 : 1}
+        maxLength={128}
+        disabled={disabled}
+        aria-describedby={newPassword ? 'auth-password-help' : undefined}
+      />
+      <button
+        className="auth-password-toggle"
+        type="button"
+        aria-label={`${label} ${visible ? '숨기기' : '표시'}`}
+        aria-controls={inputId}
+        disabled={disabled}
+        onClick={() => setVisible(current => !current)}
+      ><Icon name={visible ? 'eye-off' : 'eye'} size={20}/></button>
+    </div>
+  </div>;
 }
 
 export default function AuthBoundary({ children, serverAccount = false }: { children: ReactNode; serverAccount?: boolean }) {
@@ -32,7 +71,6 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
   const [smsError, setSmsError] = useState('');
   const [smsStatus, setSmsStatus] = useState('');
   const [authFormError, setAuthFormError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const emailField = useRef<HTMLInputElement>(null);
   const pinLock = useRef(false);
   const panel = useRef<HTMLDivElement>(null);
@@ -202,9 +240,8 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
         <form key={`${state.phase}-${mode}-${state.user?.id ?? ''}`} onSubmit={submit} className="auth-form">
           {!recovery && <label>이메일<input ref={emailField} name="email" type="email" autoComplete="email" inputMode="email" autoCapitalize="none" spellCheck={false} required maxLength={254} disabled={state.busy || pinBusy} placeholder="garden@example.com" /></label>}
           {(mode !== 'reset' || recovery) && <>
-            <label>{recovery ? '새 비밀번호' : '비밀번호'}<input name="password" type={showPassword ? 'text' : 'password'} autoComplete={mode === 'signup' || recovery ? 'new-password' : 'current-password'} required minLength={mode === 'signup' || recovery ? 8 : 1} maxLength={128} disabled={state.busy || pinBusy} aria-describedby={mode === 'signup' || recovery ? 'auth-password-help' : undefined}/></label>
-            {(mode === 'signup' || recovery) && <label>비밀번호 확인<input name="passwordAgain" type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} maxLength={128} disabled={state.busy || pinBusy}/></label>}
-            <label className="quiet-check"><input type="checkbox" checked={showPassword} onChange={event => setShowPassword(event.target.checked)}/>비밀번호 표시</label>
+            <PasswordField name="password" label={recovery ? '새 비밀번호' : '비밀번호'} newPassword={mode === 'signup' || recovery} disabled={state.busy || pinBusy}/>
+            {(mode === 'signup' || recovery) && <PasswordField name="passwordAgain" label="비밀번호 확인" newPassword disabled={state.busy || pinBusy}/>}
           </>}
           {(mode === 'signup' || recovery) && <p className="auth-help" id="auth-password-help">비밀번호는 8자 이상으로 입력해 주세요.</p>}
           {mode === 'signup' && !recovery && <div className="signup-install">
@@ -221,8 +258,8 @@ export default function AuthBoundary({ children, serverAccount = false }: { chil
         </form>
         <div className="auth-links">
           {recovery ? <button disabled={state.busy} onClick={logout}>취소하고 로그아웃</button> : <>
-            <button disabled={state.busy || pinBusy} onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setShowPassword(false); setAuthFormError(''); }}>{mode === 'signup' ? '로그인으로 돌아가기' : '회원가입'}</button>
-            <button disabled={state.busy || pinBusy} onClick={() => { setMode(mode === 'reset' ? 'login' : 'reset'); setShowPassword(false); setAuthFormError(''); }}>{mode === 'reset' ? '로그인으로 돌아가기' : '비밀번호를 잊으셨나요?'}</button>
+            <button disabled={state.busy || pinBusy} onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setAuthFormError(''); }}>{mode === 'signup' ? '로그인으로 돌아가기' : '회원가입'}</button>
+            <button disabled={state.busy || pinBusy} onClick={() => { setMode(mode === 'reset' ? 'login' : 'reset'); setAuthFormError(''); }}>{mode === 'reset' ? '로그인으로 돌아가기' : '비밀번호를 잊으셨나요?'}</button>
           </>}
         </div>
       </>}

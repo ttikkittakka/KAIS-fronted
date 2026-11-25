@@ -128,6 +128,7 @@ function boundary(environment = 'development', serverAccount = true) {
       if (name === './GardenLoading') return { default: 'GardenLoading' };
       if (name === './GardenProfile') return { FirstGardenSetup: 'first-garden-setup' };
       if (name === './PersonalGarden') return { PersonalGardenProvider: 'personal-garden' };
+      if (name === './PetIcon') return { Icon: props => jsx('icon', props) };
       throw Error(name);
     },
   });
