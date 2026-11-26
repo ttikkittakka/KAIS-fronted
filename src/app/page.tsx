@@ -31,6 +31,7 @@ import { shopItem, type OutfitSlot, type ShopItem } from './shop-catalog';
 
 import { DAILY_KEY, localDay, resolveView, type DailyCheckin, type GardenView } from './daily-checkin';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from './questions';
+import { diaryEditValues, sameDiaryEdit, type DiaryEdit } from './diary-edit';
 import type { CareRecommendation } from './recommend-cares';
 import { displayCareRecommendation, ensureCareHistory } from './daily-cares';
 import { cleanupPhotos, emptyRecord, readRecords, recordStorageWarning, RECORDS_KEY, saveRecord } from './record-store';
@@ -469,6 +470,13 @@ export default function HomePage() {
     const stage = record?.stage;
     show(stage === 'photo' || stage === 'growth' ? stage : 'checkin', false, record);
   };
+  const editDiary = (original: DailyCheckin, values: DiaryEdit) => {
+    const latest = readRecords().find(record => record.date === original.date);
+    if (!latest || latest.userId !== original.userId || latest.stage !== 'care' || !sameDiaryEdit(diaryEditValues(latest), diaryEditValues(original)))
+      throw new Error('기록이 바뀌었어요. 일기를 다시 열어 최신 내용을 확인해 주세요.');
+    if (!save({ ...latest, ...values, plantState: plantStateForAnswers(values.answers) }))
+      throw new Error('수정한 일기를 저장하지 못했어요. 작성한 내용을 확인하고 다시 시도해 주세요.');
+  };
   const goHome = () => show('home', viewRef.current === 'onboarding' || viewRef.current === 'checkin');
   const companionAction = (action: () => unknown, next?: View) => {
     try { action(); setCompanions(readCompanions()); if (next) show(next); }
@@ -537,7 +545,7 @@ export default function HomePage() {
       {(view === 'photo' || view === 'growth') && daily && <ReflectionExtras key={daily.date + view} kind={view} record={daily} onSave={save} onBack={() => go(view === 'photo' ? 'checkin' : 'photo')} onNext={() => advance(view === 'photo' ? 'growth' : 'care')}/>}
       {view === 'care' && daily && todayCares && <CareScreen state={plantState} companion={activeCompanion} answers={daily.answers} recommendation={displayCareRecommendation(todayCares)} completed={completedCare} completedIds={daily.completedCareIds} onComplete={completeCare} onShowList={() => setCompletedCare(null)} goHome={goHome} onMore={() => go('missions')}/>}
       {view === 'garden' && <section className="screen garden-history-screen work-screen"><TopBar title="일기"/>
-        <div className="work-area journal-area"><RecordsCalendar records={records} onSave={save}
+        <div className="work-area journal-area"><RecordsCalendar records={records} onSave={save} onEditDiary={editDiary}
           onToday={openTodayDiary}
           onMissions={() => go(daily?.stage === 'care' && todayCares ? 'care' : 'missions')} onMedications={() => go('medications')}/>
           {giftPending && <GrowthProgress snapshot={commerce} onOpen={() => go('rewards')}/>}

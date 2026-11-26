@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { CompanionArt } from './Companions';
-import { FEELINGS, INTERACTIONS, friendReply, unlockLabel, type Emotion, type InteractionId } from '../chat';
+import { FEELINGS, GREETING, INTERACTIONS, friendReply, unlockLabel, type Emotion, type InteractionId } from '../chat';
 import { recordUtterance } from '../voice';
 import { unlocked, type Growth, type TreeLevel } from '../pet-growth';
 import type { CompanionId } from '../companions';
@@ -13,6 +13,10 @@ import type { Outfit } from '../wardrobe';
 import { Icon } from './PetIcon';
 import { HelpSheet, PetMenu, type MenuItem } from './PetMenu';
 import PlantBriefing from './PlantBriefing';
+import { usePersonalGarden } from './PersonalGarden';
+import { EDRUG_KEY_HEADER, GOV24_KEY_HEADER, OPENAI_KEY_HEADER } from '../../lib/provider-keys';
+import { medicineDetailUrl } from '../plant-briefing';
+import { PLANT_CHAT_HISTORY_LIMIT, PLANT_CHAT_TEXT_LIMIT, type PlantChatReply, type PlantChatSource } from '../plant-chat';
 
 // Minimal shape of the browser's speech API (Chrome/Edge/Safari prefix it as webkitSpeechRecognition).
 type Recognition = { lang: string; interimResults: boolean; continuous: boolean; start(): void; stop(): void; abort(): void;
@@ -59,14 +63,89 @@ function useSpeech(onFinal: (text: string) => void) {
 }
 type Speech = ReturnType<typeof useSpeech>;
 
-function MicButton({ speech, className }: { speech: Speech; className: string }) {
-  return <button type="button" className={className} aria-pressed={speech.listening} onClick={speech.toggle}
+function MicButton({ speech, className, disabled }: { speech: Speech; className: string; disabled?: boolean }) {
+  return <button type="button" className={className} disabled={disabled && !speech.listening} aria-pressed={speech.listening} onClick={speech.toggle}
     aria-label={speech.listening ? '듣고 있어요. 누르면 말하기를 마쳐요' : '마이크로 말하기'}><Icon name="mic"/></button>;
 }
 
-type Message = { id: number; from: 'me' | 'friend' | 'action'; text: string; safety?: boolean; support?: boolean };
-type Flags = { safety?: boolean; support?: boolean };
+type Message = PlantChatReply & { id: number; from: 'me' | 'friend' | 'action' };
+type Flags = Omit<PlantChatReply, 'text'>;
 const REPLY_DELAY_MS = 650; // a short "typing" pause reads as listening, not as a machine
+
+function useConversation(intro: string, trackWords: boolean, onReply?: (text: string, emotion: Emotion, flags: Flags, play: boolean) => void) {
+  const keys = usePersonalGarden()?.apiKeys;
+  const [messages, setMessages] = useState<Message[]>(() => [{ id: 0, from: 'friend', text: intro }]);
+  const [typing, setTyping] = useState(false);
+  const [error, setError] = useState('');
+  const nextId = useRef(1);
+  const pending = useRef<AbortController | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => { pending.current?.abort(); clearTimeout(timer.current); }, []);
+
+  const add = (from: Message['from'], text: string, flags: Flags = {}) =>
+    setMessages(all => [...all.slice(-60), { id: nextId.current++, from, text, ...flags }]);
+  const respond = (text: string, emotion: Emotion, flags: Flags = {}, play = true) => {
+    add('friend', text, flags);
+    onReply?.(text, emotion, flags, play);
+  };
+  const say = (raw: string) => {
+    const full = raw.trim();
+    if (!full) return false;
+    const reply = friendReply(full); // Screen the whole dictation before limiting what can be sent.
+    if (pending.current && !reply.safety) return false;
+    pending.current?.abort();
+    clearTimeout(timer.current);
+    const text = full.slice(0, PLANT_CHAT_TEXT_LIMIT);
+    add('me', text, { safety: reply.safety });
+    setError('');
+    if (trackWords) try { recordUtterance(text); } catch { setError('이야기의 단어 수를 저장하지 못했어요.'); }
+    const defaultReply = () => respond(reply.text, reply.emotion, { safety: reply.safety, support: reply.support });
+    if (reply.safety) {
+      pending.current = null;
+      setTyping(false);
+      defaultReply();
+      return true;
+    }
+
+    const run = new AbortController();
+    pending.current = run;
+    setTyping(true);
+    const done = () => {
+      if (pending.current === run) { pending.current = null; setTyping(false); }
+    };
+    if (!keys?.openai) {
+      timer.current = setTimeout(() => { done(); defaultReply(); }, REPLY_DELAY_MS);
+      return true;
+    }
+
+    const turns = messages.filter(message => message.id !== 0 && message.from !== 'action' && !message.safety)
+      .slice(-(PLANT_CHAT_HISTORY_LIMIT - 1)).map(message => ({
+        role: message.from === 'me' ? 'user' : 'assistant', text: message.text.slice(0, PLANT_CHAT_TEXT_LIMIT),
+      }));
+    void fetch('/api/plant-chat', {
+      method: 'POST', cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json', [OPENAI_KEY_HEADER]: keys.openai,
+        ...(keys.edrug ? { [EDRUG_KEY_HEADER]: keys.edrug } : {}),
+        ...(keys.gov24 ? { [GOV24_KEY_HEADER]: keys.gov24 } : {}),
+      },
+      body: JSON.stringify({ turns: [...turns, { role: 'user', text }] }),
+      signal: AbortSignal.any([run.signal, AbortSignal.timeout(32_000)]),
+    }).then(async response => {
+      if (!response.ok) throw new Error('chat-unavailable');
+      const answer = await response.json() as PlantChatReply;
+      if (!answer.text || typeof answer.text !== 'string') throw new Error('invalid-reply');
+      if (!run.signal.aborted) respond(answer.text, reply.emotion, answer);
+    }).catch(() => {
+      if (!run.signal.aborted) {
+        setError('OpenAI 연결을 확인해 주세요. 지금은 기본 답변으로 이어가요.');
+        defaultReply();
+      }
+    }).finally(done);
+    return true;
+  };
+  return { messages, typing, error, connected: !!keys?.openai, add, respond, say };
+}
 
 /** The friend's home, filling the screen: help balloon, level and diary shortcut on top, the friend with its
  *  speech bubble in the middle, the mic + chat bar at the bottom. Sentences live only in memory; only word
@@ -81,37 +160,16 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
   const [safety, setSafety] = useState(false);
   const [support, setSupport] = useState(false);
   const [emote, setEmote] = useState<{ kind: Emotion; key: number } | null>(null);
-  const [messages, setMessages] = useState<Message[]>(() => [{ id: 0, from: 'friend', text: intro }]);
-  const [typing, setTyping] = useState(false);
   const [open, setOpen] = useState(false);
   const [menu, setMenu] = useState<'actions' | 'moods' | null>(null);
   const [help, setHelp] = useState(false);
-  const [saveError, setSaveError] = useState('');
-  const nextId = useRef(1);
   const opener = useRef<HTMLElement | null>(null);
-  const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
-  useEffect(() => { const pending = timers.current; return () => pending.forEach(clearTimeout); }, []);
-
-  const add = (from: Message['from'], text: string, flags: Flags = {}) =>
-    setMessages(all => [...all.slice(-60), { id: nextId.current++, from, text, ...flags }]);
-  const respond = (text: string, emotion: Emotion, flags: Flags = {}, play = true) => {
-    add('friend', text, flags);
-    setBubble(text);
+  const { messages, typing, error, connected, add, respond, say } = useConversation(intro, true, (text, emotion, flags, play) => {
+    setBubble(text.length > 105 ? text.slice(0, 105) + '…' : text);
     if (flags.safety) setSafety(true);
     if (flags.support) setSupport(true);
     if (play) setEmote({ kind: emotion, key: Date.now() });
-  };
-  const say = (raw: string) => {
-    const full = raw.trim();
-    if (!full) return;
-    const reply = friendReply(full); // screened before the cap, so a long dictation cannot hide a crisis phrase
-    const text = full.slice(0, 300);
-    add('me', text);
-    try { recordUtterance(text); setSaveError(''); } catch { setSaveError('이야기의 단어 수를 저장하지 못했어요. 대화는 계속할 수 있어요.'); }
-    setTyping(true);
-    const timer = setTimeout(() => { timers.current.delete(timer); setTyping(false); respond(reply.text, reply.emotion, { safety: reply.safety, support: reply.support }); }, REPLY_DELAY_MS);
-    timers.current.add(timer);
-  };
+  });
   // A gesture on the character already played its own animation, so only the words follow.
   const interact = (kind: InteractionId, byGesture = false) => {
     const action = INTERACTIONS.find(entry => entry.id === kind)!;
@@ -183,22 +241,38 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
         {support && !open && <a className="friend-help friend-help--support" href="#support">지원 제도 신청 도우미 열기 →</a>}
         {speech.error && !open && <p className="talk-error" role="alert">{speech.error}</p>}
         <div className="talk-bar">
-          {speech.supported && <MicButton speech={speech} className="talk-mic"/>}
+          {speech.supported && <MicButton speech={speech} className="talk-mic" disabled={typing}/>}
           <button type="button" className="talk-open" onClick={event => openChat(event.currentTarget)}>
             <Icon name="chat"/><span>{speech.listening ? '듣고 있어요. 다 말하면 마이크를 한 번 더 눌러요' : `${name}에게 이야기하기`}</span>
           </button>
         </div>
       </div>
     </div>
-    {open && <ChatSheet id={id} stage={growth.tree.stage.level} name={name} messages={messages} typing={typing} speech={speech} saveError={saveError}
+    {open && <ChatSheet id={id} stage={growth.tree.stage.level} name={name} messages={messages} typing={typing} speech={speech} error={error} connected={connected}
       actions={INTERACTIONS.filter(action => unlocked(growth, action.unlock))} onSend={say} onInteract={kind => interact(kind)} onClose={closeChat}/>}
     {help && <HelpSheet name={name} growth={growth} onDemoChange={demoControls?.onChange} onClose={() => { setHelp(false); giveBackFocus(); }}/>}
   </>;
 }
 
-function ChatSheet({ id, stage, name, messages, typing, speech, saveError, actions, onSend, onInteract, onClose }: {
-  id: CompanionId; stage: TreeLevel; name: string; messages: Message[]; typing: boolean; speech: Speech; saveError: string;
-  actions: readonly (typeof INTERACTIONS)[number][]; onSend: (text: string) => void; onInteract: (kind: InteractionId) => void; onClose: () => void;
+export function HomePlantChat({ name, onSupport }: { name: string; onSupport: () => void }) {
+  const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const conversation = useConversation(GREETING, false);
+  const speech = useSpeech(conversation.say);
+  const close = () => { setOpen(false); requestAnimationFrame(() => trigger.current?.focus()); };
+  return <>
+    <button ref={trigger} type="button" className="plant-briefing-trigger" aria-haspopup="dialog" onClick={() => setOpen(true)}>
+      <Icon name="chat" size={17}/>화분과 대화하기
+    </button>
+    {open && <ChatSheet id="bonsai" stage={1} name={name} {...conversation} speech={speech} onSend={conversation.say}
+      onClose={close} onSupport={() => { close(); onSupport(); }} safetyHref="/demo#safety"/>}
+  </>;
+}
+
+function ChatSheet({ id, stage, name, messages, typing, speech, error, connected, actions, onSend, onInteract, onClose, onSupport, safetyHref = '#safety' }: {
+  id: CompanionId; stage: TreeLevel; name: string; messages: Message[]; typing: boolean; speech: Speech; error: string; connected: boolean;
+  actions?: readonly (typeof INTERACTIONS)[number][]; onSend: (text: string) => boolean; onInteract?: (kind: InteractionId) => void; onClose: () => void;
+  onSupport?: () => void; safetyHref?: string;
 }) {
   const [text, setText] = useState('');
   const log = useRef<HTMLOListElement>(null);
@@ -212,35 +286,57 @@ function ChatSheet({ id, stage, name, messages, typing, speech, saveError, actio
     return () => window.removeEventListener('keydown', esc);
   }, []);
   useEffect(() => { const el = log.current; if (el) el.scrollTop = el.scrollHeight; }, [messages.length, typing, speech.heard]);
-  const error = speech.error || saveError;
+  const notice = speech.error || error;
   // Portal: the screen's entry animation (a transform) would otherwise trap the sheet inside the scroller.
   return createPortal(<section className="chat-sheet" role="dialog" aria-modal="false" aria-labelledby="chat-title">
     <header className="chat-head">
       <Image className="chat-avatar" src={`/trees/${id}-${stage}.webp`} alt="" width={44} height={44} unoptimized/>
-      <div><h2 id="chat-title">{name}</h2><p>대화는 저장되지 않아요 · 자주 쓴 단어 수만 기기에 남아요</p></div>
+      <div><h2 id="chat-title">{name}</h2><p>{connected ? 'OpenAI 연결 · 보낸 말과 최근 대화로 답해요' : '기기에서 기본 답변을 사용해요'}</p></div>
       <button type="button" ref={close} className="chat-close" onClick={onClose} aria-label="대화 닫기"><Icon name="close"/></button>
     </header>
     <ol className="chat-log" ref={log} aria-live="polite">
       {messages.map(m => <li key={m.id} className={'chat-msg chat-msg--' + m.from}>{m.text}
-        {m.safety && <a className="chat-help" href="#safety">도움 받을 수 있는 곳 보기</a>}
-        {m.support && <a className="chat-help" href="#support">지원 제도 신청 도우미 열기</a>}</li>)}
+        {m.source && <ChatSources source={m.source} typing={typing} onSend={onSend}/>}
+        {m.from === 'friend' && m.safety && <a className="chat-help" href={safetyHref}>도움 받을 수 있는 곳 보기</a>}
+        {m.support && (onSupport ? <button type="button" className="chat-help" onClick={onSupport}>지원 제도 조회 열기</button>
+          : <a className="chat-help" href="#support">지원 제도 신청 도우미 열기</a>)}</li>)}
       {speech.listening && speech.heard && <li className="chat-msg chat-msg--me chat-msg--live">{speech.heard}</li>}
       {typing && <li className="chat-msg chat-msg--friend chat-typing" aria-label={`${name}가 답을 쓰고 있어요`}><i/><i/><i/></li>}
     </ol>
     <div className="chat-feelings" role="group" aria-label="지금 마음 전하기">
-      {FEELINGS.map(feeling => <button key={feeling.label} type="button" onClick={() => onSend(feeling.text)}>{feeling.label}</button>)}
+      {FEELINGS.map(feeling => <button key={feeling.label} type="button" disabled={typing} onClick={() => onSend(feeling.text)}>{feeling.label}</button>)}
     </div>
-    <div className="chat-actions" role="group" aria-label={`${name}와 함께하기`}>
-      {actions.map(action => <button key={action.id} type="button" onClick={() => onInteract(action.id)}><Icon name={action.id} size={20}/><span>{action.label}</span></button>)}
-    </div>
-    {error && <p className="chat-error" role="alert">{error}</p>}
-    <form className="chat-compose" onSubmit={event => { event.preventDefault(); onSend(text); setText(''); }}>
-      {speech.supported && <MicButton speech={speech} className="chat-mic"/>}
+    {!!actions?.length && <div className="chat-actions" role="group" aria-label={`${name}와 함께하기`}>
+      {actions.map(action => <button key={action.id} type="button" onClick={() => onInteract?.(action.id)}><Icon name={action.id} size={20}/><span>{action.label}</span></button>)}
+    </div>}
+    {notice && <p className="chat-error" role="alert">{notice}</p>}
+    <form className="chat-compose" onSubmit={event => { event.preventDefault(); if (onSend(text)) setText(''); }}>
+      {speech.supported && <MicButton speech={speech} className="chat-mic" disabled={typing}/>}
       <label htmlFor="chat-text" className="sr-only">{name}에게 보낼 말</label>
-      <input id="chat-text" value={text} maxLength={300} enterKeyHint="send" autoComplete="off" onChange={event => setText(event.target.value)}
+      <input id="chat-text" value={text} maxLength={PLANT_CHAT_TEXT_LIMIT} enterKeyHint="send" autoComplete="off" onChange={event => setText(event.target.value)}
         placeholder={speech.listening ? '듣고 있어요…' : '마음을 편하게 적어 보세요'}/>
       <button type="submit" className="chat-send" disabled={!text.trim()} aria-label="보내기"><Icon name="send"/></button>
     </form>
     <p className="chat-note">음성은 브라우저가 글자로 바꿔요(Chrome은 Google 서버 사용). 위급하면 109 · 112 · 119로 연락해 주세요.</p>
   </section>, document.querySelector('.phone-frame') ?? document.body);
+}
+
+function ChatSources({ source, typing, onSend }: { source: PlantChatSource; typing: boolean; onSend: (text: string) => boolean }) {
+  if (source.kind === 'medicine-options') return <ul className="chat-sources">{source.names.map(name => <li key={name}>
+    <button type="button" className="shop-secondary" disabled={typing} onClick={() => onSend(name + ' 약 정보 알려줘')}>{name}</button>
+  </li>)}</ul>;
+  if (source.kind === 'policies') return <ul className="chat-sources">{source.items.map(item => <li key={item.id}>
+    <strong>{item.name}</strong>{item.agency && <small>{item.agency}</small>}{item.summary && <p>{item.summary}</p>}
+    <a href={item.url || 'https://www.gov.kr/'} target="_blank" rel="noreferrer">정부24 공식 안내 ↗</a>
+  </li>)}</ul>;
+  const product = source.product;
+  const sections = [['효능', product.effect], ['공식 복용 방법', product.howToUse],
+    ['알레르기·사용상 주의사항', product.precautions], ['함께 복용할 때 주의사항', product.interactions]];
+  return <div className="chat-sources">
+    <strong>{product.name}</strong>{product.manufacturer && <small>{product.manufacturer}</small>}
+    {sections.map(([label, value]) => <details key={label}>
+      <summary>{label}</summary><p>{value || '제품의 상세 허가사항이나 포장을 확인해 주세요.'}</p>
+    </details>)}
+    <a href={medicineDetailUrl(product.code)} target="_blank" rel="noreferrer">식약처 제품 정보 ↗</a>
+  </div>;
 }

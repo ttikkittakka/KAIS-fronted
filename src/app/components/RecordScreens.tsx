@@ -2,9 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element -- Private blob URLs stay on device and cannot use the server image optimizer. */
 
-import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { localDay, type DailyCheckin } from '../daily-checkin';
 import { QUESTIONS, normalizeAnswers } from '../questions';
+import { diaryEditValues, validDiaryAnswers, type DiaryEdit } from '../diary-edit';
 import { Button } from '@astryxdesign/core/Button';
 import { diaryTags, MOOD_LABELS, OUTING_LABELS, OUTINGS } from '../wellbeing';
 import { CARES, presentTodayCare } from '../cares';
@@ -348,15 +349,18 @@ function DiaryPeriods({ records, month, onMonth }: { records: DailyCheckin[]; mo
   </section>;
 }
 
-export function RecordsCalendar({ records, onSave, onToday, onMissions, onMedications, readOnly = false, today = localDay(), initialDate, onDate, status, recordedDates = [], accountPhotos = false, rewardSummary }: {
+export function RecordsCalendar({ records, onSave, onToday, onMissions, onMedications, readOnly = false, today = localDay(), initialDate, onDate, status, recordedDates = [], accountPhotos = false, rewardSummary, onEditDiary, recordRevision }: {
   records: DailyCheckin[]; onSave: (record: DailyCheckin) => boolean; onToday?: () => void; readOnly?: boolean;
   onMissions?: () => void; onMedications?: () => void;
   today?: string; initialDate?: string; onDate?: (date: string) => void; status?: React.ReactNode;
   recordedDates?: string[]; accountPhotos?: boolean; rewardSummary?: React.ReactNode;
+  onEditDiary?: (record: DailyCheckin, values: DiaryEdit, revision?: number) => void | Promise<void>;
+  recordRevision?: number;
 }) {
   const [month, setMonth] = useState(() => { const d = new Date((initialDate ?? today) + 'T12:00:00'); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [selected, setSelected] = useState(initialDate ?? today);
   const [editing, setEditing] = useState(false);
+  const [fullEdit, setFullEdit] = useState<{ record: DailyCheckin; revision?: number } | null>(null);
   const byDate = new Map(records.map(record => [record.date, record]));
   const record = byDate.get(selected);
   const recommendation = readOnly && record?.careRecommendations?.find(row => row.date === selected);
@@ -404,6 +408,8 @@ export function RecordsCalendar({ records, onSave, onToday, onMissions, onMedica
       <div className="record-detail-head"><h2>{DAY_LABEL(selected)}{selected === today ? ' 오늘의 나' : '의 나'}</h2>
         <div className="quiet-actions diary-detail-actions">
           {record && !readOnly && <Button label={editing ? '수정 닫기' : '일기 수정'} isIconOnly icon={<Icon name={editing ? 'check' : 'edit'} size={19}/>} onClick={() => setEditing(!editing)}/>}
+          {!status && record?.stage === 'care' && onEditDiary && <button type="button" className="diary-write diary-full-edit" disabled={editing}
+            onClick={() => setFullEdit({ record, revision: recordRevision })}>일기 전체 수정하기</button>}
           {onToday && selected === today && (!answers.every(Boolean) || record?.stage === 'photo' || record?.stage === 'growth') && <Button className="diary-write" label={record?.answers.some(Boolean) ? '일기 이어 쓰기' : '오늘 일기 쓰기'} variant="primary" icon={<Icon name="edit" size={15}/>} onClick={onToday}/>}
 
         </div></div>
@@ -433,5 +439,63 @@ export function RecordsCalendar({ records, onSave, onToday, onMissions, onMedica
         {displayCareRecommendation(recommendation).cares.map(care => <li key={care.id}><span>{(selected === today ? presentTodayCare(care) : care).title}</span><strong>{record?.completedCareIds.includes(care.id) ? '✓ 완료했어요' : '남겨둔 돌봄'}</strong></li>)}
       </ul></article>}
     </section>
+    {fullEdit && onEditDiary && <DiaryEditDialog record={fullEdit.record} showOuting={!readOnly}
+      onClose={() => setFullEdit(null)} onSave={values => onEditDiary(fullEdit.record, values, fullEdit.revision)}/>}
   </>;
+}
+
+function DiaryEditDialog({ record, showOuting, onSave, onClose }: {
+  record: DailyCheckin; showOuting: boolean; onSave: (values: DiaryEdit) => void | Promise<void>; onClose: () => void;
+}) {
+  const [values, setValues] = useState(() => diaryEditValues(record));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const pending = useRef(false);
+  const dialog = useRef<HTMLDialogElement>(null);
+  const titleId = useId();
+  useEffect(() => { if (!dialog.current?.open) dialog.current?.showModal(); }, []);
+  const close = () => { dialog.current?.close(); onClose(); };
+
+  return <dialog className="diary-edit-sheet" ref={dialog} aria-labelledby={titleId} onCancel={event => {
+    event.preventDefault();
+    if (!pending.current) close();
+  }}>
+    <header className="diary-edit-head"><div><h2 id={titleId}>일기 전체 수정하기</h2><p>{DAY_LABEL(record.date)}</p></div>
+      <button type="button" className="icon-button" aria-label="일기 수정 닫기" disabled={busy} onClick={close}><Icon name="close" size={20}/></button>
+    </header>
+    <form className="diary-edit-form" onSubmit={async event => {
+      event.preventDefault();
+      if (pending.current || !validDiaryAnswers(values.answers)) return;
+      pending.current = true; setBusy(true); setError('');
+      try { await onSave(values); close(); }
+      catch (cause) { setError(cause instanceof Error ? cause.message : '수정 내용을 저장하지 못했어요.'); }
+      finally { pending.current = false; setBusy(false); }
+    }}>
+      {QUESTIONS.map((question, index) => <label key={question.id}>
+        {['수면', '에너지', '식사', '마음'][index]}
+        <select value={values.answers[index] ?? ''} required disabled={busy} onChange={event => {
+          const answer = event.target.value;
+          setValues(current => ({ ...current, answers: current.answers.map((value, position) => position === index ? answer : value) }));
+        }}>
+          <option value="" disabled>선택해 주세요</option>
+          {question.options.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </label>)}
+      {showOuting && <label>외출
+        <select value={values.outing ?? ''} disabled={busy} onChange={event => {
+          const outing = OUTINGS.find(value => value === event.target.value);
+          setValues(current => ({ ...current, outing }));
+        }}>
+          <option value="">기록하지 않기</option>
+          {OUTINGS.map(outing => <option key={outing} value={outing}>{OUTING_LABELS[outing]}</option>)}
+        </select>
+      </label>}
+      <label>일기 내용<textarea rows={4} maxLength={300} value={values.note} disabled={busy}
+        onChange={event => setValues({ ...values, note: event.target.value })}/></label>
+      <label>사진 한마디<textarea rows={2} maxLength={100} value={values.photoComment} disabled={busy}
+        onChange={event => setValues({ ...values, photoComment: event.target.value })}/></label>
+      {error && <p className="record-error" role="alert">{error}</p>}
+      <button type="submit" className="primary-button" disabled={busy || !validDiaryAnswers(values.answers)}>{busy ? '저장 중…' : '수정한 일기 저장'}</button>
+    </form>
+  </dialog>;
 }
