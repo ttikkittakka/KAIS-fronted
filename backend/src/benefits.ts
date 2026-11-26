@@ -22,20 +22,30 @@ export function pickBenefits(rows: Row[]): Benefit[] {
     .slice(0, 30);
 }
 
-// shortcut: not yet run against the live API (needs a key); confirm the field names and perPage limit with a real key.
-export function gov24Source(key = process.env.GOV24_SERVICE_KEY, fetcher: typeof fetch = fetch): BenefitSource | null {
+export async function readGov24Page(key: string, page: number, perPage: number, signal?: AbortSignal, fetcher = fetch) {
+  let serviceKey = key.trim();
+  try { serviceKey = decodeURIComponent(serviceKey); } catch { /* Accept a decoded key as well. */ }
+  const url = new URL(BASE);
+  url.search = new URLSearchParams({ page: String(page), perPage: String(perPage), returnType: 'JSON', serviceKey }).toString();
+  const timeout = AbortSignal.timeout(10_000);
+  const options = { cache: 'no-store' as const, redirect: 'error' as const, signal: signal ? AbortSignal.any([signal, timeout]) : timeout };
+  const response = await fetcher(url, options);
+  if (!response.ok) throw new Error('gov24 ' + response.status);
+  const result = await response.json() as { data?: Row[]; totalCount?: number };
+  if (!Array.isArray(result?.data)) throw new Error('invalid-gov24-response');
+  return { rows: result.data, totalCount: result.totalCount ?? result.data.length };
+}
+
+export function gov24Source(key = process.env.GOV24_SERVICE_KEY, fetcher: typeof fetch = fetch, signal?: AbortSignal): BenefitSource | null {
   if (!key) return null;
   let cache: { at: number; items: Benefit[] } | null = null;
   let pending: Promise<Benefit[]> | null = null;
   const scan = async () => {
     const rows: Row[] = [];
     for (let page = 1; page <= PAGES; page++) {
-      // Use the "Decoding" key from 공공데이터포털; it is encoded here once.
-      const response = await fetcher(`${BASE}?page=${page}&perPage=${PER_PAGE}&returnType=JSON&serviceKey=${encodeURIComponent(key)}`, { signal: AbortSignal.timeout(10_000) });
-      if (!response.ok) throw new Error('gov24 ' + response.status);
-      const data = await response.json() as { data?: Row[]; totalCount?: number };
-      rows.push(...(data.data ?? []));
-      if (!data.data?.length || rows.length >= (data.totalCount ?? 0)) break;
+      const result = await readGov24Page(key, page, PER_PAGE, signal, fetcher);
+      rows.push(...result.rows);
+      if (!result.rows.length || rows.length >= result.totalCount) break;
     }
     cache = { at: Date.now(), items: pickBenefits(rows) };
     return cache.items;

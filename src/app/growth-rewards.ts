@@ -7,8 +7,11 @@ export const GROWTH_MILESTONES = [
   { id: 'days-100', days: 100, itemIds: ['anniversary-sky', 'anniversary-flower'], title: '함께한 시간만큼 정원에도 새로운 모습이 생겼어요.', description: '차곡차곡 쌓인 100일에 고마움을 담았어요. 새 배경과 기념 꽃으로 정원을 꾸며 보세요. 더 많은 돌봄을 하지 않아도 괜찮아요.' },
 ] as const;
 export type GrowthRewardId = typeof GROWTH_MILESTONES[number]['id'];
-export type GrowthGrant = { id: GrowthRewardId; grantedAt: string; activeDays: number; seenAt?: string };
+export type GrowthGrant = { id: GrowthRewardId; grantedAt: string; activeDays: number; seenAt?: string; receivedItemIds?: string[] };
 export const growthMilestone = (id: string) => GROWTH_MILESTONES.find(milestone => milestone.id === id);
+// Previously issued gifts were added to inventory automatically.
+export const receivedGrowthGiftIds = (grant: GrowthGrant): readonly string[] => grant.receivedItemIds ?? growthMilestone(grant.id)!.itemIds;
+export const hasPendingGrowthGifts = (grant: GrowthGrant) => receivedGrowthGiftIds(grant).length < growthMilestone(grant.id)!.itemIds.length;
 export function activeDayCount(records: DailyCheckin[], today = localDay()): number {
   const days = new Set<string>();
   for (const record of records) {
@@ -29,12 +32,17 @@ export function validGrowthGrants(value: unknown): value is GrowthGrant[] {
     const milestone = growthMilestone(grant.id);
     if (!milestone || seen.has(grant.id) || !Number.isSafeInteger(grant.activeDays) || grant.activeDays < milestone.days || typeof grant.grantedAt !== 'string' || !Number.isFinite(Date.parse(grant.grantedAt))) return false;
     if (grant.seenAt !== undefined && (typeof grant.seenAt !== 'string' || !Number.isFinite(Date.parse(grant.seenAt)))) return false;
+    if (grant.receivedItemIds !== undefined) {
+      const eligible = new Set<string>(milestone.itemIds);
+      if (!Array.isArray(grant.receivedItemIds) || new Set(grant.receivedItemIds).size !== grant.receivedItemIds.length ||
+        grant.receivedItemIds.some((id: string) => !eligible.has(id))) return false;
+    }
     seen.add(grant.id); return true;
   });
 }
 export function missingGrowthGrants(activeDays: number, existing: GrowthGrant[], now = new Date().toISOString()): GrowthGrant[] {
   return GROWTH_MILESTONES.filter(milestone => activeDays >= milestone.days && !existing.some(grant => grant.id === milestone.id))
-    .map(milestone => ({ id: milestone.id, activeDays, grantedAt: now }));
+    .map(milestone => ({ id: milestone.id, activeDays, grantedAt: now, receivedItemIds: [] }));
 }
 // Optional extension registry. These entries never join the three daily recommendations,
 // grant sunshine, or add daily completion requirements.

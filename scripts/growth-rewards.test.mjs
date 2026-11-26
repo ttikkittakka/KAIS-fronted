@@ -17,12 +17,32 @@ test('distinct completed local dates count once; gaps, legacy answers and care-o
  assert.equal(growth.activeDayCount([first,care,legacy],'2026-10-16'),3);
 });
 test('49/50/99/100 thresholds and retrospective grants are exact and free',()=>{
- for(const [days,grants] of [[49,0],[50,1],[99,1],[100,2],[120,2]]){const {data}=setup(days);const raw=data.get(store.RECORDS_KEY);const before=shop.shopSnapshot().balance;const synced=shop.syncGrowthRewards();assert.equal(synced.activeDays,days);assert.equal(synced.state.rewards.length,grants);assert.equal(synced.balance,before);assert.equal(synced.state.purchases.length,0);assert.equal(data.get(store.RECORDS_KEY),raw);assert.equal(shop.ownedItemIds(synced.state).includes('anniversary-friend'),days>=50);assert.equal(shop.ownedItemIds(synced.state).includes('anniversary-flower'),days>=100);assert.equal(growth.extraCareUnlocked(synced.state.rewards),days>=100);}
+ for(const [days,grants] of [[49,0],[50,1],[99,1],[100,2],[120,2]]){const {data}=setup(days);const raw=data.get(store.RECORDS_KEY);const before=shop.shopSnapshot().balance;const synced=shop.syncGrowthRewards();assert.equal(synced.activeDays,days);assert.equal(synced.state.rewards.length,grants);assert.equal(synced.balance,before);assert.equal(synced.state.purchases.length,0);assert.equal(data.get(store.RECORDS_KEY),raw);assert.ok(synced.state.rewards.every(growth.hasPendingGrowthGifts));assert.ok(shop.ownedItemIds(synced.state).every(id=>!id.startsWith('anniversary-')));assert.equal(growth.extraCareUnlocked(synced.state.rewards),days>=100);}
 });
-test('repeated sync, acknowledgements and process-style reload do not duplicate or revoke rewards',()=>{
+test('each item can be received once and keeps its own status after reload',()=>{
  const {data}=setup(100);const first=shop.syncGrowthRewards();const raw=data.get(shop.SHOP_KEY);shop.syncGrowthRewards();assert.equal(data.get(shop.SHOP_KEY),raw);
- const seen=shop.acknowledgeGrowthReward('days-50');assert.ok(seen.state.rewards[0].seenAt);const after=data.get(shop.SHOP_KEY);shop.acknowledgeGrowthReward('days-50');assert.equal(data.get(shop.SHOP_KEY),after);
- const copy=new Map(data);globalThis.localStorage={getItem:k=>copy.get(k)??null,setItem:(k,v)=>copy.set(k,v)};assert.equal(shop.syncGrowthRewards().state.rewards.length,2);setRecords(copy,[]);const retained=shop.syncGrowthRewards();assert.equal(retained.activeDays,0);assert.deepEqual(retained.state.rewards,seen.state.rewards);assert.equal(first.state.purchases.length,0);
+ const received=shop.receiveGrowthGift('anniversary-sky');
+ assert.deepEqual(growth.receivedGrowthGiftIds(received.state.rewards[1]),['anniversary-sky']);
+ assert.ok(growth.hasPendingGrowthGifts(received.state.rewards[1]));
+ assert.ok(shop.ownedItemIds(received.state).includes('anniversary-sky'));
+ assert.ok(!shop.ownedItemIds(received.state).includes('anniversary-flower'));
+ assert.equal(received.balance,first.balance);
+ const after=data.get(shop.SHOP_KEY);shop.receiveGrowthGift('anniversary-sky');assert.equal(data.get(shop.SHOP_KEY),after);
+ const copy=new Map(data);globalThis.localStorage={getItem:k=>copy.get(k)??null,setItem:(k,v)=>copy.set(k,v)};assert.equal(shop.syncGrowthRewards().state.rewards.length,2);setRecords(copy,[]);const retained=shop.syncGrowthRewards();assert.equal(retained.activeDays,0);assert.deepEqual(retained.state.rewards,received.state.rewards);assert.equal(first.state.purchases.length,0);
+ const complete=shop.receiveGrowthGift('anniversary-flower');assert.ok(!growth.hasPendingGrowthGifts(complete.state.rewards[1]));
+});
+test('automatically issued gifts and existing layouts still load',()=>{
+ const {data}=setup(50);
+ const snapshot=shop.syncGrowthRewards();
+ const layout=garden.assignGardenSlot(snapshot.state.layout,'anniversary-friend','friend-right');
+ const legacy={...snapshot.state,layout,placed:garden.layoutItemIds(layout),rewards:snapshot.state.rewards.map(({receivedItemIds,...grant})=>grant)};
+ const raw=JSON.stringify(legacy);
+ data.set(shop.SHOP_KEY,raw);
+ const state=shop.readShop();
+ assert.ok(shop.ownedItemIds(state).includes('anniversary-friend'));
+ assert.equal(state.layout['friend-right'],'anniversary-friend');
+ shop.receiveGrowthGift('anniversary-friend');
+ assert.equal(data.get(shop.SHOP_KEY),raw);
 });
 test('bundle grant is atomic on quota failure; later retry preserves prior purchases and slots',()=>{
  const {data}=setup(100);shop.buyItem('momo');shop.placeItem('momo',true);const before=shop.shopSnapshot();const raw=data.get(shop.SHOP_KEY);const set=localStorage.setItem;localStorage.setItem=(k,v)=>{if(k===shop.SHOP_KEY)throw new Error('quota');set(k,v);};
@@ -36,9 +56,17 @@ test('v1/v2 shops and pre-sunshine activity migrate without losing purchased ite
  for(const version of [1,2]){const {data,records}=setup(100);shop.buyItem('momo');shop.placeItem('momo',true);const old=shop.readShop();const {rewards,...legacy}=old;void rewards;data.set(shop.SHOP_KEY,JSON.stringify({...legacy,version}));const migrated=shop.syncGrowthRewards();assert.equal(migrated.state.version,3);assert.equal(migrated.state.rewards.length,2);assert.deepEqual(migrated.state.purchases,old.purchases);assert.deepEqual(migrated.state.layout,old.layout);assert.equal(records.length,100);}
  const {data,records}=setup(50);setRecords(data,records.map(({sunshine,...record})=>{void sunshine;return record;}));assert.equal(shop.syncGrowthRewards().state.rewards.length,1);assert.equal(shop.shopSnapshot().balance,0);
 });
-test('anniversary gifts cannot be bought early, can be placed after grant and survive removal',()=>{
- setup(49);for(const id of ['anniversary-friend','anniversary-sky','anniversary-flower']){assert.throws(()=>shop.buyItem(id),/기념 선물/);assert.throws(()=>shop.placeItem(id,true));}
- setup(100);let snap=shop.syncGrowthRewards();let layout=snap.state.layout;for(const [id,slot] of [['anniversary-friend','friend-right'],['anniversary-sky','background'],['anniversary-flower','flower-left']])layout=garden.assignGardenSlot(layout,id,slot);snap=shop.saveGardenLayout(layout,snap.state.revision);assert.equal(snap.state.layout.background,'anniversary-sky');shop.placeItem('anniversary-friend',false);assert.ok(shop.ownedItemIds(shop.readShop()).includes('anniversary-friend'));
+test('anniversary gifts can be placed after receipt and survive removal',()=>{
+ setup(49);for(const id of ['anniversary-friend','anniversary-sky','anniversary-flower']){assert.throws(()=>shop.buyItem(id),/기념 선물/);assert.throws(()=>shop.receiveGrowthGift(id),/아직 받을 수 없는/);assert.throws(()=>shop.placeItem(id,true));}
+ setup(100);
+ let snap=shop.syncGrowthRewards();
+ let layout=snap.state.layout;
+ for(const [id,slot] of [['anniversary-friend','friend-right'],['anniversary-sky','background'],['anniversary-flower','flower-left']]){
+  assert.throws(()=>shop.placeItem(id,true));
+  snap=shop.receiveGrowthGift(id);
+  layout=garden.assignGardenSlot(layout,id,slot);
+ }
+ snap=shop.saveGardenLayout(layout,snap.state.revision);assert.equal(snap.state.layout.background,'anniversary-sky');shop.placeItem('anniversary-friend',false);assert.ok(shop.ownedItemIds(shop.readShop()).includes('anniversary-friend'));
 });
 test('damaged records or duplicated grant receipts block changes without erasing data',()=>{
  const {data}=setup(100);shop.syncGrowthRewards();const raw=data.get(shop.SHOP_KEY);const bad=JSON.parse(raw);bad.rewards.push(bad.rewards[0]);data.set(shop.SHOP_KEY,JSON.stringify(bad));assert.throws(()=>shop.syncGrowthRewards());assert.equal(data.get(shop.SHOP_KEY),JSON.stringify(bad));data.set(shop.SHOP_KEY,raw);data.set(store.RECORDS_KEY,'{');assert.throws(()=>shop.syncGrowthRewards());assert.equal(data.get(shop.SHOP_KEY),raw);

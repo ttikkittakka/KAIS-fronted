@@ -18,6 +18,7 @@ import { createAccountWritingStore } from '../../lib/account-writing/store';
 import { AccountSettingsScreen } from './DeveloperSettings';
 import RecoveryMissions from './RecoveryMissions';
 import MedicationManagement from './MedicationManagement';
+import { OfficialPrograms } from './SupportPrograms';
 import { GardenProfileForm, PotNameForm } from './GardenProfile';
 import { usePersonalGarden } from './PersonalGarden';
 import { CompanionArt } from './Companions';
@@ -273,6 +274,8 @@ export default function AccountGarden({ userId, onLogout, onDeveloper, developer
         <div className="work-area personal-area"><RecoveryMissions deviceOnly key={data!.today}/></div></section>}
       {view === 'medications' && <section className="screen work-screen"><TopBar title="복약 관리" onBack={() => go('garden')}/>
         <div className="work-area personal-area"><MedicationManagement/></div></section>}
+      {view === 'support' && <section className="screen work-screen"><TopBar title="지원 제도 조회" onBack={() => go('settings')}/>
+        <div className="work-area"><OfficialPrograms/></div></section>}
       {view === 'profile' && <section className="screen work-screen"><TopBar title="내 프로필" onBack={() => go('settings')}/>
         <div className="work-area personal-area"><GardenProfileForm onDone={() => go('settings')}/></div></section>}
       {view === 'pot-name' && <section className="screen work-screen"><TopBar title="화분 이름 바꾸기" onBack={() => go('settings')}/>
@@ -283,7 +286,7 @@ export default function AccountGarden({ userId, onLogout, onDeveloper, developer
       {view === 'settings' && <section className="screen"><TopBar title="설정" onBack={home}/>
         <div className="personal-toolbar journal-shortcuts"><button className="secondary-button" type="button" onClick={() => go('profile')}>내 프로필</button>
           <button className="secondary-button" type="button" onClick={() => go('pot-name')}>화분 이름 바꾸기</button></div>
-        <AccountSettingsScreen account onRefresh={reload} onLogout={logout} onDeveloper={onDeveloper} developerEntry={developerEntry}/></section>}
+        <AccountSettingsScreen account onRefresh={reload} onLogout={logout} onDeveloper={onDeveloper} developerEntry={developerEntry} onSupport={() => go('support')}/></section>}
       {['home', 'garden', 'shop', 'decorate', 'rewards', 'extra-care'].includes(view) && <BottomNav active={view === 'garden' ? 'garden' : 'home'} go={go}/>}
     </>}
     <div className="sunshine-notifications" role="status" aria-live="polite" aria-atomic="true">{sunshine && <div key={sunshine.id} className={'sunshine-feedback ' + sunshineStyles.notice}><span className="sunshine-feedback-icon" aria-hidden="true">☀️</span><strong>햇살 +{sunshine.amount}</strong><span className={sunshineStyles.message}>오늘도 나를 돌봐 주었어요.</span></div>}</div>

@@ -1,10 +1,11 @@
 import { getAuthClient } from '../lib/supabase/auth-client';
+import { PROVIDER_KEY_HEADER } from '../lib/provider-keys';
 import { appStorage } from './app-storage';
 import { ADDITIONAL_CARE_IDS, type RecoveryId } from './mission-policy';
 import { MAX_MISSION_PHOTO_BASE64, PHOTO_EVIDENCE, photoVerdict, type PhotoEvidence, type PhotoKind } from './mission-photo';
 import { loadPhotoFrame } from './photo-frame';
 
-export async function verifyPhotoWithAI(file: File, kind: PhotoKind, signal: AbortSignal) {
+export async function verifyPhotoWithAI(file: File, kind: PhotoKind, signal: AbortSignal, personalKey?: string) {
   const session = await getAuthClient()?.auth.getSession();
   const token = session?.data.session?.access_token;
   if (!token) throw new Error('로그인한 뒤 AI 사진 확인을 사용할 수 있어요.');
@@ -16,7 +17,10 @@ export async function verifyPhotoWithAI(file: File, kind: PhotoKind, signal: Abo
     if (!image || image.length > MAX_MISSION_PHOTO_BASE64) throw new Error('사진을 조금 작게 찍어서 다시 올려 주세요.');
   } finally { frame.width = 0; frame.height = 0; }
   const response = await fetch('/api/mission-photo', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    method: 'POST', headers: {
+      'Content-Type': 'application/json', Authorization: 'Bearer ' + token,
+      ...(personalKey ? { [PROVIDER_KEY_HEADER]: personalKey } : {}),
+    },
     body: JSON.stringify({ kind, image, consent: true }), cache: 'no-store',
     signal: AbortSignal.any([signal, AbortSignal.timeout(20_000)]),
   });

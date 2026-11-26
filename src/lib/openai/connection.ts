@@ -102,7 +102,7 @@ export async function requestOpenAIJson(
 
 /** 가상 기록 전용 연결 확인. 명시적 실행 전에는 네트워크를 사용하지 않습니다. */
 export async function testOpenAIConnection(
-  { execute = false }: { execute?: boolean } = {},
+  { execute = false, signal }: { execute?: boolean; signal?: AbortSignal } = {},
   dependencies: Parameters<typeof requestOpenAIJson>[1] = {},
 ): Promise<ConnectionResult> {
   if (!execute) return { status: 'not_run', model: CONNECTION_MODEL, errorCode: null };
@@ -110,7 +110,7 @@ export async function testOpenAIConnection(
     instructions: '연결 확인용 가상 기록입니다. 진단하거나 조언하지 말고 {"connection":"ok"}만 반환하세요.',
     input: JSON.stringify({ synthetic: true, answers: { sleep: 'low', energy: 'normal', meal: 'good', mood: 'low' },
       note: '가상 인물의 테스트 기록: 조금 피곤하지만 잠깐 쉬고 싶어요.', photoComment: '가상의 화분 사진을 떠올렸어요.' }),
-    name: 'connection_check', maxOutputTokens: 512,
+    name: 'connection_check', maxOutputTokens: 512, signal,
     schema: { type: 'object', additionalProperties: false, required: ['connection'], properties: { connection: { type: 'string', enum: ['ok'] } } },
   }, dependencies);
   if (response.status === 'success' && !z.object({ connection: z.literal('ok') }).strict().safeParse(response.value).success)

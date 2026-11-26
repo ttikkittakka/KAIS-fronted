@@ -221,6 +221,7 @@ test('account navigation reuses full screens, starts only on explicit entry and 
   if (name === './GardenShop') return { default: 'shop' };
   if (name === './Companions') return { CompanionArt: 'tree' };
   if (name === './DeveloperSettings') return { AccountSettingsScreen: 'settings' };
+  if (name === './SupportPrograms') return { OfficialPrograms: 'official-programs' };
   if (name === './GrowthRewards') return { GrowthRewardsScreen: 'rewards', OptionalCareScreen: 'optional' };
   if (name === './GardenLoading') return { default: 'GardenLoading' };
   if (name === './RecordSunshine') return { default: 'RecordSunshine' };

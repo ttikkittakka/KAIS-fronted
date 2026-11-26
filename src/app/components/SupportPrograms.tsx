@@ -3,6 +3,8 @@
 import Image from 'next/image';
 import { useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { getAuthClient } from '../../lib/supabase/auth-client';
+import { PROVIDER_KEY_HEADER } from '../../lib/provider-keys';
+import { usePersonalGarden } from './PersonalGarden';
 import { beginStorageOperation, dataScope, type DataScope } from '../app-storage';
 import type { CompanionId } from '../companions';
 import type { TreeLevel } from '../pet-growth';
@@ -59,21 +61,27 @@ function ProgramList({ programs, onSelect }: { programs: readonly SupportProgram
   </li>)}</ul>;
 }
 
-function OfficialPrograms() {
+export function OfficialPrograms() {
+  const personalKey = usePersonalGarden()?.apiKeys?.gov24;
   const [topic, setTopic] = useState<SupportTopic | 'all'>('all');
   const [live, setLive] = useState<LiveBenefit[]>([]);
+  const [liveUnavailable, setLiveUnavailable] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/api/v1/benefits', {
-      cache: 'no-store', credentials: 'omit', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(12000)]),
+    fetch(personalKey ? '/api/benefits' : '/api/v1/benefits', {
+      headers: personalKey ? { [PROVIDER_KEY_HEADER]: personalKey } : undefined,
+      cache: 'no-store', credentials: 'omit', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(personalKey ? 23_000 : 12_000)]),
     })
-      .then(response => response.ok ? response.json() : null)
-      .then(data => {
-        if (!controller.signal.aborted && Array.isArray(data?.items)) setLive(data.items);
+      .then(response => {
+        if (!response.ok) throw new Error('benefits-unavailable');
+        return response.json();
       })
-      .catch(() => { /* The static catalog remains available. */ });
+      .then(data => {
+        if (!controller.signal.aborted && Array.isArray(data?.items)) { setLive(data.items); setLiveUnavailable(false); }
+      })
+      .catch(() => { if (!controller.signal.aborted && personalKey) { setLive([]); setLiveUnavailable(true); } });
     return () => controller.abort();
-  }, []);
+  }, [personalKey]);
   const shown = SUPPORT_PROGRAMS.filter(program => topic === 'all' || program.topic === topic);
   return <section className="support-official" aria-labelledby="support-official-title">
     <h2 id="support-official-title">공식 안내에서 직접 찾아보기</h2>
@@ -81,6 +89,7 @@ function OfficialPrograms() {
       {SUPPORT_TOPICS.map(t => <button key={t.id} type="button" aria-pressed={topic === t.id} onClick={() => setTopic(t.id)}>{t.label}</button>)}
     </div>
     <ProgramList programs={shown}/>
+    {liveUnavailable && <p className="privacy-note" role="status">정부24 정보를 불러오지 못했어요. 설정에서 연결을 다시 확인해 주세요.</p>}
     {live.length > 0 && <section className="support-live" aria-labelledby="support-live-title">
       <h3 id="support-live-title">정부24에서 찾은 마음·상담 관련 제도</h3>
       <ul className="support-list">{live.map(benefit => <li key={benefit.id} className="support-card">

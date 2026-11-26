@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import { getAuthClient } from '../../lib/supabase/auth-client';
+import { PROVIDER_KEY_HEADER } from '../../lib/provider-keys';
 import { localDay } from '../daily-checkin';
 import { allowMedicationNotifications, medicationCalendar } from '../medication-alarms';
 import { emptyMedicine, medicineSchema, PERIODS, PERIOD_LABELS, type Medicine, type MedicineCatalogItem, type MedicineInput, type Reminders } from '../personal-garden';
@@ -21,6 +22,7 @@ function DrugPhoto({ product }: { product: MedicineCatalogItem | null }) {
 
 function MedicineForm({ medicine, onClose }: { medicine: Medicine | null; onClose: () => void }) {
   const garden = usePersonalGarden();
+  const personalKey = garden?.apiKeys?.edrug;
   const [draft, setDraft] = useState<MedicineInput>(() => {
     if (!medicine) return emptyMedicine();
     const { name, strength, directions, periods, catalog } = medicine;
@@ -42,16 +44,21 @@ function MedicineForm({ medicine, onClose }: { medicine: Medicine | null; onClos
     request.current = run;
     setLookupBusy(true); setNotice(''); setFound([]);
     try {
-      const session = await getAuthClient()?.auth.getSession();
-      const token = session?.data.session?.access_token;
-      if (!token) throw new Error('로그인한 뒤 식약처 정보를 검색할 수 있어요.');
+      const headers = new Headers({ 'Content-Type': 'application/json' });
+      if (personalKey) headers.set(PROVIDER_KEY_HEADER, personalKey);
+      else {
+        const session = await getAuthClient()?.auth.getSession();
+        const token = session?.data.session?.access_token;
+        if (!token) throw new Error('설정에서 e약은요 키를 연결하거나 로그인해 주세요.');
+        headers.set('Authorization', 'Bearer ' + token);
+      }
       const response = await fetch('/api/medicines', {
-        method: 'POST', headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+        method: 'POST', headers,
         body: JSON.stringify({ name }), cache: 'no-store', signal: AbortSignal.any([run.signal, AbortSignal.timeout(10000)]),
       });
       if (run.signal.aborted) return;
       if (!response.ok) throw new Error(response.status === 503
-        ? '식약처 검색 키가 아직 설정되지 않았어요. 약봉투를 보고 직접 추가할 수 있어요.'
+        ? '설정에서 e약은요 API 키를 연결하거나 약봉투를 보고 직접 추가해 주세요.'
         : '제품을 검색하지 못했어요. 다시 시도하거나 직접 추가해 주세요.');
       const result = await response.json() as { items: MedicineCatalogItem[] };
       if (run.signal.aborted) return;
@@ -80,7 +87,7 @@ function MedicineForm({ medicine, onClose }: { medicine: Medicine | null; onClos
       request.current?.abort(); setLookupBusy(false); setFound([]); setNotice('');
       setDraft({ ...draft, name: event.target.value, catalog: null });
     }} disabled={saving}/></label>
-    {garden?.signedIn && <button type="button" className="secondary-button" disabled={lookupBusy || saving} onClick={() => void lookup()}>
+    {(garden?.signedIn || personalKey) && <button type="button" className="secondary-button" disabled={lookupBusy || saving} onClick={() => void lookup()}>
       {lookupBusy ? '식약처 정보 검색 중…' : '식약처 e약은요에서 검색'}</button>}
     {found.length > 0 && <ul className="drug-results" aria-label="식약처 검색 결과">{found.map(product =>
       <li key={product.code}><button type="button" className="drug-result" onClick={() => {

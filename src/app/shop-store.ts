@@ -2,7 +2,7 @@ import { appStorage, isDemo } from './app-storage';
 import { testSunshineBalance, simulatedActivityDays, checkTestPurchaseFailure, developerUnlimited } from './developer-state';
 import { localOwner, readRecords, recordStorageWarning } from './record-store';
 import { sunshineBalance } from './sunshine';
-import { activeDayCount, GROWTH_MILESTONES, growthMilestone, missingGrowthGrants, validGrowthGrants, type GrowthGrant, type GrowthRewardId } from './growth-rewards';
+import { activeDayCount, GROWTH_MILESTONES, growthMilestone, missingGrowthGrants, receivedGrowthGiftIds, validGrowthGrants, type GrowthGrant } from './growth-rewards';
 import { SHOP_CATALOG, shopItem } from './shop-catalog';
 import { GARDEN_SLOTS, assignGardenSlot, clearGardenSlot, emptyGardenLayout, layoutItemIds, migrateGardenLayout, validateGardenLayout, compatibleSlot, type GardenLayout } from './garden-layout';
 
@@ -11,7 +11,7 @@ export type Purchase = { itemId: string; cost: number; purchasedAt: string };
 export type ShopState = { version: 3; rewards: GrowthGrant[]; owner: string; purchases: Purchase[]; placed: string[]; layout: GardenLayout; revision: number };
 export const ownedQuantities = (state: ShopState): Record<string, number> => Object.fromEntries(ownedItemIds(state).map(id => [id, 1]));
 const damaged = '상점 저장 정보를 읽지 못했어요. 기존 데이터를 보호하기 위해 구매와 배치를 멈췄어요. 브라우저 데이터를 지우지 말고 다시 열어 주세요.';
-export const ownedItemIds = (state: Pick<ShopState, 'purchases' | 'rewards'>) => [...SHOP_CATALOG.filter(item => item.defaultOwned).map(item => item.id), ...state.purchases.map(p => p.itemId), ...state.rewards.flatMap(grant => growthMilestone(grant.id)!.itemIds)];
+export const ownedItemIds = (state: Pick<ShopState, 'purchases' | 'rewards'>) => [...SHOP_CATALOG.filter(item => item.defaultOwned).map(item => item.id), ...state.purchases.map(p => p.itemId), ...state.rewards.flatMap(receivedGrowthGiftIds)];
 export const spentSunshine = (state: ShopState) => state.purchases.reduce((total, p) => total + p.cost, 0);
 export function readShop(): ShopState {
   const owner = localOwner();
@@ -59,7 +59,7 @@ function commit(state: ShopState) {
 export function buyItem(id: string) {
   const item = shopItem(id);
   if (!item) throw new Error('찾을 수 없는 상품이에요.');
-  if (item.rewardDays) throw new Error('누적 활동일을 달성하면 자동으로 받는 기념 선물이에요.');
+  if (item.rewardDays) throw new Error('누적 활동일을 채우면 선물함에서 받을 수 있는 기념 선물이에요.');
   const snapshot = shopSnapshot();
   // Item ID is a stable idempotency key: a retry never creates a second debit.
   if (ownedItemIds(snapshot.state).includes(id)) return snapshot;
@@ -93,21 +93,26 @@ export function placeItem(id: string, place: boolean) {
   return saveGardenLayout(layout, snapshot.state.revision);
 }
 
-// Sync only after record commits or session acquisition. Existing users receive all
-// reached milestones, once, without changing their earned sunshine or placement.
+// Record each reached milestone once. The user collects its gifts individually.
 export function syncGrowthRewards() {
   const snapshot = shopSnapshot();
   const grants = missingGrowthGrants(snapshot.activeDays, snapshot.state.rewards);
   if (!grants.length) return snapshot;
   const state: ShopState = { ...snapshot.state, rewards: [...snapshot.state.rewards, ...grants], revision: snapshot.state.revision + 1 };
-  commit(state); // Grant receipt is ownership: one atomic write for the whole bundle.
+  commit(state);
   return { ...snapshot, state };
 }
-export function acknowledgeGrowthReward(id: GrowthRewardId) {
+export function receiveGrowthGift(itemId: string) {
   const snapshot = shopSnapshot();
-  const grant = snapshot.state.rewards.find(entry => entry.id === id);
-  if (!grant || grant.seenAt) return snapshot;
-  const state = { ...snapshot.state, revision: snapshot.state.revision + 1, rewards: snapshot.state.rewards.map(entry => entry.id === id ? { ...entry, seenAt: new Date().toISOString() } : entry) };
+  const grant = snapshot.state.rewards.find(entry => growthMilestone(entry.id)!.itemIds.some(id => id === itemId));
+  if (!grant) throw new Error('아직 받을 수 없는 선물이에요.');
+  const received = receivedGrowthGiftIds(grant);
+  if (received.includes(itemId)) return snapshot;
+  const state: ShopState = {
+    ...snapshot.state,
+    revision: snapshot.state.revision + 1,
+    rewards: snapshot.state.rewards.map(entry => entry.id === grant.id ? { ...entry, receivedItemIds: [...received, itemId] } : entry),
+  };
   commit(state);
   return { ...snapshot, state };
 }
