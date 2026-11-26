@@ -36,18 +36,20 @@ export async function readGov24Page(key: string, page: number, perPage: number, 
   return { rows: result.data, totalCount: result.totalCount ?? result.data.length };
 }
 
-export function gov24Source(key = process.env.GOV24_SERVICE_KEY, fetcher: typeof fetch = fetch, signal?: AbortSignal): BenefitSource | null {
+export function gov24Source(key = process.env.GOV24_SERVICE_KEY, fetcher: typeof fetch = fetch, signal?: AbortSignal, limit = 30): BenefitSource | null {
   if (!key) return null;
   let cache: { at: number; items: Benefit[] } | null = null;
   let pending: Promise<Benefit[]> | null = null;
   const scan = async () => {
-    const rows: Row[] = [];
+    const matches = new Map<string, Benefit>();
+    let visited = 0;
     for (let page = 1; page <= PAGES; page++) {
       const result = await readGov24Page(key, page, PER_PAGE, signal, fetcher);
-      rows.push(...result.rows);
-      if (!result.rows.length || rows.length >= result.totalCount) break;
+      visited += result.rows.length;
+      for (const item of pickBenefits(result.rows)) if (!matches.has(item.id)) matches.set(item.id, item);
+      if (matches.size >= limit || !result.rows.length || visited >= result.totalCount) break;
     }
-    cache = { at: Date.now(), items: pickBenefits(rows) };
+    cache = { at: Date.now(), items: Array.from(matches.values()).slice(0, limit) };
     return cache.items;
   };
   return () => {

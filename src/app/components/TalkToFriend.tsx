@@ -12,6 +12,7 @@ import { DEMO_PLANT_MOODS, type DemoPlantControls } from '../demo-plant';
 import type { Outfit } from '../wardrobe';
 import { Icon } from './PetIcon';
 import { HelpSheet, PetMenu, type MenuItem } from './PetMenu';
+import PlantBriefing from './PlantBriefing';
 
 // Minimal shape of the browser's speech API (Chrome/Edge/Safari prefix it as webkitSpeechRecognition).
 type Recognition = { lang: string; interimResults: boolean; continuous: boolean; start(): void; stop(): void; abort(): void;
@@ -177,6 +178,7 @@ export default function TalkToFriend({ id, name, low, intro, sceneClass, childre
           label={menu === 'moods' ? '식물 기분' : undefined} onBack={menu === 'moods' ? () => setMenu('actions') : undefined}/>}
       </div>
       <div className="pet-bottom">
+        <PlantBriefing name={name}/>
         {safety && !open && <a className="friend-help" href="#safety">혼자 견디지 않아도 돼요 · 도움 받을 수 있는 곳 보기 →</a>}
         {support && !open && <a className="friend-help friend-help--support" href="#support">지원 제도 신청 도우미 열기 →</a>}
         {speech.error && !open && <p className="talk-error" role="alert">{speech.error}</p>}

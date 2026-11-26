@@ -48,6 +48,7 @@ export const medicineSchema = z.object({
   directions: z.string().trim().max(400),
   periods: z.array(z.enum(PERIODS)).min(1).max(3).refine(values => new Set(values).size === values.length),
   catalog: catalogSchema.nullable(),
+  ingredients: z.array(z.string().trim().min(1).max(80)).max(12).optional(),
 }).strict();
 export type MedicineInput = z.infer<typeof medicineSchema>;
 export type Medicine = MedicineInput & { id: string };

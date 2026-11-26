@@ -4,10 +4,13 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Image from 'next/image';
 import { getAuthClient } from '../../lib/supabase/auth-client';
 import { PROVIDER_KEY_HEADER } from '../../lib/provider-keys';
+import { isDemo } from '../app-storage';
 import { localDay } from '../daily-checkin';
 import { allowMedicationNotifications, medicationCalendar } from '../medication-alarms';
 import { emptyMedicine, medicineSchema, PERIODS, PERIOD_LABELS, type Medicine, type MedicineCatalogItem, type MedicineInput, type Reminders } from '../personal-garden';
 import { newLocalId } from '../record-store';
+import { reviewMedicineOverlap } from '../plant-briefing';
+import { ColdMedicineExample } from './PlantBriefing';
 import MedicationMission from './MedicationMission';
 import { usePersonalGarden } from './PersonalGarden';
 import { Icon, type IconName } from './PetIcon';
@@ -28,6 +31,7 @@ function MedicineForm({ medicine, onClose }: { medicine: Medicine | null; onClos
     const { name, strength, directions, periods, catalog } = medicine;
     return { name, strength, directions, periods, catalog };
   });
+  const [ingredients, setIngredients] = useState(() => medicine?.ingredients?.join(', ') ?? '');
   const [found, setFound] = useState<MedicineCatalogItem[]>([]);
   const [lookupBusy, setLookupBusy] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -71,7 +75,9 @@ function MedicineForm({ medicine, onClose }: { medicine: Medicine | null; onClos
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!garden?.ready || saving) return;
-    const parsed = medicineSchema.safeParse(draft);
+    const listed = ingredients.split(/[,，\n]/).map(value => value.trim()).filter(Boolean);
+    if (listed.length > 12 || listed.some(value => value.length > 80)) { setNotice('유효성분은 12개까지 각각 80자 이내로 입력해 주세요.'); return; }
+    const parsed = medicineSchema.safeParse({ ...draft, ingredients: listed.length ? listed : undefined });
     if (!parsed.success) { setNotice('약 이름을 적고, 복용하는 시간대를 하나 이상 선택해 주세요.'); return; }
     setSaving(true); setNotice('');
     try {
@@ -85,15 +91,20 @@ function MedicineForm({ medicine, onClose }: { medicine: Medicine | null; onClos
     <h2>{medicine ? '약 정보 수정' : '약 등록'}</h2>
     <label>약 이름<input value={draft.name} maxLength={180} required onChange={event => {
       request.current?.abort(); setLookupBusy(false); setFound([]); setNotice('');
+      setIngredients('');
       setDraft({ ...draft, name: event.target.value, catalog: null });
     }} disabled={saving}/></label>
     {(garden?.signedIn || personalKey) && <button type="button" className="secondary-button" disabled={lookupBusy || saving} onClick={() => void lookup()}>
       {lookupBusy ? '식약처 정보 검색 중…' : '식약처 e약은요에서 검색'}</button>}
     {found.length > 0 && <ul className="drug-results" aria-label="식약처 검색 결과">{found.map(product =>
       <li key={product.code}><button type="button" className="drug-result" onClick={() => {
+        if (draft.catalog?.code !== product.code) setIngredients('');
         setDraft({ ...draft, name: product.name, catalog: product }); setFound([]); setNotice('');
       }}><DrugPhoto product={product}/><span><strong>{product.name}</strong><small>{product.manufacturer}</small></span></button></li>)}</ul>}
     {draft.catalog && <p className="quiet-note">식약처 정보 연결 · {draft.catalog.manufacturer || draft.catalog.code}</p>}
+    <label>포장에 적힌 유효성분 (선택)
+      <input value={ingredients} maxLength={972} placeholder="성분이 여러 개면 쉼표로 구분" onChange={event => setIngredients(event.target.value)} disabled={saving}/>
+    </label>
     <label>표시 함량 (선택)<input value={draft.strength} maxLength={50} onChange={event => setDraft({ ...draft, strength: event.target.value })} disabled={saving}/></label>
     <fieldset><legend>복용하는 시간대</legend><div className="period-choices">{PERIODS.map(period => <label key={period}>
       <Icon name={periodIcon[period]} size={17}/><input type="checkbox" checked={draft.periods.includes(period)} disabled={saving}
@@ -163,6 +174,13 @@ export default function MedicationManagement() {
     <p>{garden?.error ? '복약 정보를 불러오지 못했어요.' : '복약 정보를 불러오고 있어요.'}</p>
     {garden?.error && <button type="button" className="secondary-button" onClick={garden.reload}>다시 시도</button>}
   </div>;
+  const findings = reviewMedicineOverlap(garden.medications.map(({ name, ingredients, catalog }) => ({ name, ingredients, code: catalog?.code })));
+  const overlapping = new Map(garden.medications.flatMap((medication, index) => {
+    const finding = findings[index];
+    if (!finding.duplicateProduct && !finding.sharedIngredients.length) return [];
+    const label = finding.sharedIngredients.length ? '겹치는 성분 · ' + finding.sharedIngredients.join(', ') : '같은 제품 중복 등록';
+    return [[medication.id, label] as const];
+  }));
   return <>
     <div className="personal-toolbar">
       <button type="button" className="secondary-button" onClick={() => setEdit(edit === 'new' ? null : 'new')}><Icon name="plus" size={17}/>약 등록</button>
@@ -170,6 +188,7 @@ export default function MedicationManagement() {
       <button type="button" className="secondary-button" aria-expanded={labels} onClick={() => setLabels(!labels)}><Icon name="camera" size={17}/>포장 확인</button>
     </div>
     <p className="quiet-note">처방과 약사 안내에 맞춰 내 복용 시간대를 등록해 주세요.</p>
+    {overlapping.size > 0 && <p className="quiet-note plant-briefing-warning" role="status">겹치는 제품이나 성분이 있어요. 함께 복용하기 전 약사에게 확인해 주세요.</p>}
     {edit && <MedicineForm key={edit === 'new' ? edit : edit.id} medicine={edit === 'new' ? null : edit} onClose={() => setEdit(null)}/>}
     {alarms && <ReminderForm initial={garden.reminders}/>}
     {labels && <MedicationMission day={localDay()} key={localDay()} planned={garden.medications}/>}
@@ -184,6 +203,7 @@ export default function MedicationManagement() {
           <li key={medicine.id} className="drug-row">
             <DrugPhoto key={medicine.catalog?.code ?? 'manual'} product={medicine.catalog}/>
             <div className="drug-details"><h3>{medicine.name}{medicine.strength && <small> · {medicine.strength}</small>}</h3>
+              {overlapping.has(medicine.id) && <p className="plant-briefing-warning">{overlapping.get(medicine.id)}</p>}
               {medicine.directions && <p>{medicine.directions}</p>}
               {medicine.catalog && <><p className="drug-effect">{medicine.catalog.effect}</p>
                 {medicine.catalog.howToUse && <details><summary>식약처 제공 복용법</summary><p>{medicine.catalog.howToUse}</p>
@@ -201,5 +221,6 @@ export default function MedicationManagement() {
           </li>)}</ul>}
       </section>;
     })}
+    {isDemo() && <section className="quiet-card medication-example"><ColdMedicineExample/></section>}
   </>;
 }

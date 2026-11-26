@@ -26,11 +26,14 @@ export function parseEDrug(body: unknown): MedicineCatalogItem[] {
   return Array.from(found.values());
 }
 
-export async function findEDrugs(name: string, key: string, signal: AbortSignal, request = fetch) {
+export async function findEDrugs(query: string | { code: string }, key: string, signal: AbortSignal, request = fetch) {
   let serviceKey = key.trim();
   try { serviceKey = decodeURIComponent(serviceKey); } catch { /* The portal also supplies a decoded key. */ }
   const url = new URL(endpoint);
-  url.search = new URLSearchParams({ serviceKey, itemName: name, pageNo: '1', numOfRows: '8', type: 'json' }).toString();
+  const params = new URLSearchParams({ serviceKey, pageNo: '1', numOfRows: '8', type: 'json' });
+  if (typeof query === 'string') params.set('itemName', query);
+  else params.set('itemSeq', query.code);
+  url.search = params.toString();
   const response = await request(url, { cache: 'no-store', redirect: 'error', signal: AbortSignal.any([signal, AbortSignal.timeout(7000)]) });
   if (!response.ok) throw new Error('catalog-unavailable');
   return parseEDrug(await response.json());
