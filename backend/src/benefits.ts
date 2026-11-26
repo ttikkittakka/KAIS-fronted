@@ -10,9 +10,15 @@ type Row = Record<string, unknown>;
 const text = (value: unknown, max = 200) => (typeof value === 'string' ? value.trim() : '').slice(0, max);
 
 /** Keeps mental-health and counselling services and only the fields the app shows. */
-export function pickBenefits(rows: Row[]): Benefit[] {
+export function pickBenefits(rows: Row[], terms: readonly string[] = []): Benefit[] {
   return rows
-    .filter(row => KEYWORDS.some(k => `${text(row['서비스명'])} ${text(row['서비스목적요약'], 400)}`.includes(k)))
+    .filter(row => {
+      const description = text(row['서비스명']) + ' ' + text(row['서비스목적요약'], 400);
+      if (!terms.length) return KEYWORDS.some(keyword => description.includes(keyword));
+      const searchable = (description + ' ' + text(row['지원대상']) + ' ' + text(row['소관기관명']) + ' ' + text(row['서비스분야']))
+        .normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+      return terms.every(term => searchable.includes(term));
+    })
     .map(row => ({
       id: text(row['서비스ID'], 40), name: text(row['서비스명'], 80), summary: text(row['서비스목적요약']),
       target: text(row['지원대상']), how: text(row['신청방법'], 120), agency: text(row['소관기관명'], 60),
@@ -36,7 +42,7 @@ export async function readGov24Page(key: string, page: number, perPage: number, 
   return { rows: result.data, totalCount: result.totalCount ?? result.data.length };
 }
 
-export function gov24Source(key = process.env.GOV24_SERVICE_KEY, fetcher: typeof fetch = fetch, signal?: AbortSignal, limit = 30): BenefitSource | null {
+export function gov24Source(key = process.env.GOV24_SERVICE_KEY, fetcher: typeof fetch = fetch, signal?: AbortSignal, limit = 30, terms: readonly string[] = []): BenefitSource | null {
   if (!key) return null;
   let cache: { at: number; items: Benefit[] } | null = null;
   let pending: Promise<Benefit[]> | null = null;
@@ -46,7 +52,7 @@ export function gov24Source(key = process.env.GOV24_SERVICE_KEY, fetcher: typeof
     for (let page = 1; page <= PAGES; page++) {
       const result = await readGov24Page(key, page, PER_PAGE, signal, fetcher);
       visited += result.rows.length;
-      for (const item of pickBenefits(result.rows)) if (!matches.has(item.id)) matches.set(item.id, item);
+      for (const item of pickBenefits(result.rows, terms)) if (!matches.has(item.id)) matches.set(item.id, item);
       if (matches.size >= limit || !result.rows.length || visited >= result.totalCount) break;
     }
     cache = { at: Date.now(), items: Array.from(matches.values()).slice(0, limit) };

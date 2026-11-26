@@ -11,6 +11,7 @@ import { SunshineBalance, GardenTools } from './GardenFeatures';
 import GardenPlacement from './GardenPlacement';
 import { GrowthProgress } from './GrowthRewards';
 import PlantBriefing from './PlantBriefing';
+import { HomePlantChat } from './TalkToFriend';
 import { StepHeader, RecordsCalendar } from './RecordScreens';
 import { QUESTIONS, normalizeAnswers, plantStateForAnswers } from '../questions';
 import type { DailyCheckin, GardenView } from '../daily-checkin';
@@ -64,6 +65,7 @@ export function HomeScreen({ state, go, recorded, completedCount, resume, balanc
     <div className={"garden-scene garden-scene--" + (shop?.layout.background ?? "default-sky")}><div className="scene-weather"><span className="cloud-shape one"/><span className="cloud-shape two"/></div><span className="scene-date">{(today ? new Date(today + 'T12:00:00+09:00') : new Date()).toLocaleDateString('ko-KR', { ...(today ? { timeZone: 'Asia/Seoul' } : {}), month: 'long', day: 'numeric', weekday: 'long' })}</span><SunshineBalance balance={balance}/><div className="hero-plant"><Plant state={state} className="plant-art" /></div><div className="soil-floor"/><GardenPlacement layout={shop?.layout ?? null}/></div>
     <GardenTools onOpen={go} account/>
     <PlantBriefing name={potName}/>
+    <HomePlantChat name={potName ?? '새싹'} onSupport={() => go('support')}/>
     <GrowthProgress snapshot={growthSnapshot} onOpen={() => go('rewards')}/>
     <div className="today-copy"><span className="eyebrow">오늘의 모습</span><h2>{state === 'low' ? '조금 지쳐 보여요.' : '편안하게 기다리고 있어요.'}</h2><p>{state === 'low' ? '오늘은 천천히 가도 괜찮아요.' : '오늘의 나를 가볍게 살펴볼까요?'}</p></div>
     {recorded && <p className="home-care-status">오늘의 작은 돌봄 {completedCount}/3 완료</p>}

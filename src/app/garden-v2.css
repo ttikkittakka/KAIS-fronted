@@ -115,6 +115,25 @@ body[data-astryx-theme="matcha"] {
 .diary-details .record-detail-head h2 { font-size: 16px; font-weight: 750; }
 .diary-details .diary-write { min-height: 34px; width: auto; border-radius: 10px; padding: 0 9px; font-size: 12px; color: white; background: var(--garden-pine); }
 .diary-detail-actions { margin-left: auto; justify-content: flex-end; gap: 4px; flex-wrap: nowrap; }
+.diary-details .diary-full-edit { min-height:44px; flex:none; font-weight:650; white-space:nowrap; }
+.diary-full-edit:disabled { opacity:.65; }
+.diary-edit-sheet { position:fixed; inset:auto 0 max(12px,env(safe-area-inset-bottom)); margin:0 auto; width:min(500px,calc(100% - 24px)); max-height:min(84dvh,740px); overflow:auto; overscroll-behavior:contain; border:1px solid #bdcfbf; border-radius:22px; background:#fbfcf5; color:#284736; box-shadow:0 12px 40px #102b2240; }
+.diary-edit-sheet::backdrop { background:#152b2266; }
+.diary-edit-head { position:sticky; z-index:1; top:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 16px; border-bottom:1px solid #d9e3d4; background:#fbfcf5; }
+.diary-edit-head h2 { margin:0; font-size:17px; font-weight:700; }.diary-edit-head p { margin:4px 0 0; color:#425d4a; font-size:12px; }
+.diary-edit-head .icon-button { min-width:44px; min-height:44px; }
+.diary-edit-form { display:grid; gap:12px; padding:14px 16px 20px; }
+.diary-edit-form label { display:grid; gap:5px; font-size:13px; font-weight:650; }
+.diary-edit-form :is(select,textarea) { min-height:44px; width:100%; padding:9px 11px; border:1px solid #a8bda9; border-radius:10px; background:#fff; color:#224334; font-size:16px; font-weight:400; }
+.diary-edit-form textarea { resize:vertical; }
+.diary-edit-form .record-error { margin:0; }
+.chat-msg:has(.chat-sources) { max-width:100%; }
+.chat-sources { display:grid; gap:7px; margin:8px 0 0; padding:0; list-style:none; font-size:13px; color:#284736; }
+.chat-sources > li { display:grid; gap:5px; padding:8px; border-radius:10px; background:#f1f6ed; }
+.chat-sources summary { min-height:44px; align-content:center; cursor:pointer; color:#245640; font-weight:650; }
+.chat-sources p { margin:0; white-space:pre-line; }
+.chat-sources a { color:#245640; font-weight:650; text-decoration:underline; }
+.chat-sources .shop-secondary { min-height:44px; text-align:left; }
 .journal-shortcuts { padding: 4px 0; }
 .garden-history-screen > .journal-shortcuts { margin: 7px 16px; }
 .personal-area { display: flex; flex-direction: column; gap: 12px; }
