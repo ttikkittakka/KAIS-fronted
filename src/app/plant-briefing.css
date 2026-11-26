@@ -1,0 +1,24 @@
+.plant-briefing-trigger { min-height:44px; display:inline-flex; width:max-content; align-items:center; gap:7px; margin:8px 13px; padding:0 14px; border:1px solid #9db8a3; border-radius:999px; background:#f3f7ed; color:#204d38; font-size:13px; font-weight:650; }
+.pet-bottom .plant-briefing-trigger { justify-self:end; margin:0; }
+.plant-briefing-dialog { position:fixed; inset:auto 0 max(12px,env(safe-area-inset-bottom)); margin:0 auto; width:min(500px,calc(100% - 24px)); max-height:min(78dvh,680px); overflow:auto; overscroll-behavior:contain; border:1px solid #bfcfbf; border-radius:22px; background:#fbfcf5; color:#284736; box-shadow:0 12px 40px #102b2240; }
+.plant-briefing-dialog::backdrop { background:#152b2266; }
+.plant-briefing-head { position:sticky; z-index:1; top:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:8px 16px; border-bottom:1px solid #d9e3d4; background:#fbfcf5; }
+.plant-briefing-head h2 { margin:0; font-size:17px; font-weight:700; }
+.plant-briefing-head .icon-button { flex:none; min-width:44px; min-height:44px; color:#244b38; }
+.plant-briefing-body { display:grid; gap:10px; padding:14px 16px 20px; }
+.plant-briefing-body h3,.plant-briefing-body h4,.cold-medicine-example h3 { margin:0; color:#244b38; font-size:15px; font-weight:700; }
+.plant-briefing-body p,.cold-medicine-example p { margin:0; color:#425d4a; font-size:13px; line-height:1.6; }
+.plant-briefing-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; padding:4px; border-radius:14px; background:#e9f0e4; }
+.plant-briefing-tabs button { min-height:44px; padding:6px; border-radius:11px; color:#2d5841; font-size:13px; font-weight:650; }
+.plant-briefing-tabs button[aria-pressed="true"] { background:#286044; color:#fff; }
+.plant-briefing-list,.cold-medicine-example ul { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.plant-briefing-list li,.cold-medicine-example li { display:grid; gap:5px; padding:10px 12px; border:1px solid #d4e0d0; border-radius:14px; background:#fff; overflow-wrap:anywhere; }
+.plant-briefing-list a,.cold-medicine-example a,.plant-briefing-source { color:#23583f; font-size:12px; font-weight:650; }
+.plant-briefing-list small,.cold-medicine-example small { color:#476452; font-size:12px; }
+.plant-briefing-action { min-height:44px; justify-self:start; }
+.plant-briefing-action:disabled { opacity:.6; cursor:default; }
+.plant-briefing-personal,.cold-medicine-example { display:grid; gap:8px; color:#284736; }
+.plant-briefing-personal { border-top:1px solid #d4e0d0; padding-top:8px; }
+.plant-briefing-personal select { min-height:44px; margin-left:6px; font:inherit; }
+.plant-briefing-body p.plant-briefing-warning,.plant-briefing-warning { color:#803e22; font-weight:650; }
+.medication-example { margin-top:14px; }

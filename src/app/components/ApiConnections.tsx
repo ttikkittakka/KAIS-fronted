@@ -5,9 +5,9 @@ import { MAX_PROVIDER_KEY_LENGTH, parseProviderKey, type ApiProvider } from '../
 import { usePersonalGarden } from './PersonalGarden';
 
 const services = [
-  { id: 'openai', name: 'OpenAI', detail: '로그인 후 동의한 사진 미션의 AI 확인에 사용해요.' },
-  { id: 'edrug', name: '식약처 e약은요', detail: '복약 관리에서 의약품을 찾을 때 사용해요.' },
-  { id: 'gov24', name: '행안부 정부24', detail: '지원 제도에서 공공서비스 정보를 조회해요.' },
+  { id: 'openai', name: 'OpenAI', detail: '식물의 조회 노트에서 정보를 정리해요. 로그인하면 사진 확인에도 쓸 수 있어요.' },
+  { id: 'edrug', name: '식약처 e약은요', detail: '홈의 복약 확인과 복약 관리에서 제품을 조회해요.' },
+  { id: 'gov24', name: '행안부 정부24', detail: '홈에서 마음·상담 지원 정책을 조회해요.' },
 ] as const satisfies readonly { id: ApiProvider; name: string; detail: string }[];
 
 export default function ApiConnections() {

@@ -8,6 +8,7 @@ import "./globals.css";
 import "./auth.css";
 import "./companions.css";
 import "./pet-home.css";
+import "./plant-briefing.css";
 import "./support.css";
 import "./garden-v2.css";
 
