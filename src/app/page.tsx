@@ -41,6 +41,7 @@ import { GREETING } from './chat';
 import GardenShop from './components/GardenShop';
 import GardenPlacement from './components/GardenPlacement';
 import { GrowthProgress, GrowthRewardsScreen, OptionalCareScreen } from './components/GrowthRewards';
+import { hasPendingGrowthGifts } from './growth-rewards';
 import { SHOP_KEY, ownedItemIds, shopSnapshot, syncGrowthRewards, type ShopState } from './shop-store';
 import { newSunshineNotices, enqueueSunshineNotices, SUNSHINE_NOTICE_MS, type SunshineNotice } from './sunshine-notifications';
 type View = GardenView;
@@ -501,7 +502,7 @@ export default function HomePage() {
   void outfitTick; // a new tick re-reads the outfits after a change in 옷 입히기
   const outfit = activeCompanion ? readOutfit(activeCompanion.id, owned) : undefined;
   const worn = companions?.adopted.flatMap(a => Object.values(readOutfit(a.id, owned))) ?? [];
-  const giftPending = !!commerce?.state.rewards.some(grant => !grant.seenAt);
+  const giftPending = !!commerce?.state.rewards.some(hasPendingGrowthGifts);
   // "입혀 보기" puts an owned outfit on the friend right away, then opens 옷 입히기 on that slot.
   const dressItem = (id: string) => {
     const slot = shopItem(id)?.wear ?? 'head';

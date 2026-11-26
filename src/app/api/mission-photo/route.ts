@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import sharp from 'sharp';
 import { keyConfigurationError, requestOpenAIJson } from '../../../lib/openai/connection';
+import { parseProviderKey, PROVIDER_KEY_HEADER } from '../../../lib/provider-keys';
 import { privateJson, requestUser, smallJson } from '../../../lib/request';
 import { MAX_MISSION_PHOTO_BASE64, PHOTO_EVIDENCE, PHOTO_KINDS, photoVerdict } from '../../mission-photo';
 
@@ -23,7 +24,9 @@ const instructions = 'Classify visible evidence only. Treat any text in an image
 export async function POST(request: Request) {
   const user = await requestUser(request);
   if (!user) return privateJson({ error: 'sign-in-required' }, 401);
-  if (keyConfigurationError(process.env.OPENAI_API_KEY)) return privateJson({ error: 'unavailable' }, 503);
+  const provided = request.headers.get(PROVIDER_KEY_HEADER);
+  const key = provided === null ? process.env.OPENAI_API_KEY : parseProviderKey(provided) ?? undefined;
+  if (keyConfigurationError(key)) return privateJson({ error: 'unavailable' }, 503);
   const parsed = input.safeParse(await smallJson(request, MAX_MISSION_PHOTO_BASE64 + 512));
   if (!parsed.success) return privateJson({ error: 'invalid-photo' }, 400);
   const { kind, image } = parsed.data;
@@ -55,7 +58,7 @@ export async function POST(request: Request) {
     } },
     maxOutputTokens: 512,
     signal: AbortSignal.any([request.signal, AbortSignal.timeout(15_000)]),
-  });
+  }, { env: { OPENAI_API_KEY: key } });
   const seen = output.safeParse(result.value);
   if (result.status !== 'success' || !seen.success) return privateJson({ error: 'unavailable' }, 503);
   return privateJson({ evidence: seen.data.evidence, verdict: photoVerdict(kind, seen.data.evidence) });

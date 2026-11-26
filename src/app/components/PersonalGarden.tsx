@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { getAuthClient } from '../../lib/supabase/auth-client';
+import type { ApiProvider } from '../../lib/provider-keys';
 import { appStorage } from '../app-storage';
 import {
   DEFAULT_REMINDERS, PERIODS, PLANT_IDS, displayNameSchema, medicineSchema, profileSchema, remindersSchema,
@@ -72,6 +73,8 @@ type PersonalGarden = GardenData & {
   ready: boolean;
   error: boolean;
   signedIn: boolean;
+  apiKeys: Partial<Record<ApiProvider, string>>;
+  setApiKey: (provider: ApiProvider, key?: string) => void;
   reload: () => void;
   saveProfile: (profile: GardenProfile) => Promise<void>;
   saveMedicine: (id: string, input: MedicineInput) => Promise<void>;
@@ -86,6 +89,8 @@ export function PersonalGardenProvider({ userId = null, children }: { userId?: s
   const [data, setData] = useState<GardenData>(empty);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [version, setVersion] = useState(0);
+  // The keyed provider keeps these credentials in this tab and drops them on account changes.
+  const [apiKeys, setApiKeys] = useState<Partial<Record<ApiProvider, string>>>({});
   useEffect(() => {
     const controller = new AbortController();
     void loadData(userId, controller.signal).then(next => {
@@ -158,6 +163,7 @@ export function PersonalGardenProvider({ userId = null, children }: { userId?: s
 
   return <PersonalGardenContext.Provider value={{
     ...data, ready: status === 'ready', error: status === 'error', signedIn: !!userId,
+    apiKeys, setApiKey: (provider, key) => setApiKeys(current => ({ ...current, [provider]: key })),
     reload: () => { setStatus('loading'); setVersion(value => value + 1); },
     saveProfile, saveMedicine, removeMedicine, saveReminders, saveName,
   }}>

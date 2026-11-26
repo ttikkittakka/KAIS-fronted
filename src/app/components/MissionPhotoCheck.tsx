@@ -7,6 +7,7 @@ import { dataScope } from '../app-storage';
 import { localDay } from '../daily-checkin';
 import { checkMissionPhoto } from '../local-vision';
 import { readPhotoLabel, savePhotoLabel, verifyPhotoWithAI } from '../mission-photo-client';
+import { usePersonalGarden } from './PersonalGarden';
 import type { VisionKind } from '../mission-photo';
 import MissionPhotoInput from './MissionPhotoInput';
 import { Icon } from './PetIcon';
@@ -22,6 +23,7 @@ const hints: Record<VisionKind, string> = {
 export default function MissionPhotoCheck({ kind, day, onDone, onClose }: {
   kind: VisionKind; day: string; onDone: () => boolean; onClose: () => void;
 }) {
+  const personalKey = usePersonalGarden()?.apiKeys?.openai;
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState('');
   const [unknown, setUnknown] = useState(false);
@@ -75,7 +77,7 @@ export default function MissionPhotoCheck({ kind, day, onDone, onClose }: {
     pending.current = controller;
     setBusy(true); setConsent(false); setUnknown(false); setStatus('AI가 사진 속 내용을 확인하고 있어요.');
     try {
-      const { evidence, verdict } = await verifyPhotoWithAI(preview.file, kind, controller.signal);
+      const { evidence, verdict } = await verifyPhotoWithAI(preview.file, kind, controller.signal, personalKey);
       if (controller.signal.aborted) return;
       if (verdict === 'match') { finish(); return; }
       setUnknown(evidence === 'unclear' || evidence === 'other');

@@ -10,6 +10,7 @@ import { readMissionLog } from '../missions';
 import { gardenPreferences, setGardenPreferences } from '../preferences';
 import { guardianStatus, revokeGuardianShare } from '../guardian-share';
 import { MISSION_PACES } from '../mission-policy';
+import ApiConnections from './ApiConnections';
 export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { onDeveloper: () => void; records: DailyCheckin[]; snapshot: ReturnType<typeof shopSnapshot> | null; canDelete: () => void }) {
   const [confirm, setConfirm] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -62,6 +63,7 @@ export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { 
       {scope === 'account' && <><label className="quiet-check"><input type="checkbox" checked={preferences.ai} onChange={event => updatePreferences({ ai: event.target.checked })}/><span>AI 맞춤 추천 허용 (선택)</span></label>
         <p className="privacy-note">동의하면 응답 범주와 마음 단어 범주 또는 기능을 켠 연락 횟수만 모델이 사용해요. 일기 원문과 연락처는 기기에 남아요.</p></>}
     </section>
+    <ApiConnections/>
     <section className="settings-card"><h2>내 데이터</h2><p>일기 원문과 사진은 이 기기의 브라우저에 보관돼요. 보호자와 공유한 상태는 설정에서 닫을 수 있어요.</p>
       <dl className="data-summary">
         <div><dt>기록</dt><dd>{records.length}일</dd></div>
@@ -81,8 +83,13 @@ export function SettingsScreen({ onDeveloper, records, snapshot, canDelete }: { 
   </div>;
 }
 
-export function AccountSettingsScreen({ onDeveloper, developerEntry, account = false, onRefresh, onLogout }: { onDeveloper?: () => void; developerEntry?: ReactNode; account?: boolean; onRefresh?: () => void; onLogout?: () => void }) {
+export function AccountSettingsScreen({ onDeveloper, developerEntry, account = false, onRefresh, onLogout, onSupport }: {
+  onDeveloper?: () => void; developerEntry?: ReactNode; account?: boolean;
+  onRefresh?: () => void; onLogout?: () => void; onSupport?: () => void;
+}) {
   return <div className="settings-content"><section className="settings-card"><h2>나의 정원 설정</h2><p>{account ? '기록과 햇살은 로그인한 계정에 보관돼요. 선택한 사진 미리보기는 저장되지 않아요.' : '기록과 사진은 이 브라우저에 보관돼요.'}</p></section>
+    <ApiConnections/>
+    {onSupport && <button type="button" className="settings-menu" onClick={onSupport}><strong>지원 제도 조회</strong><span>정부24 공공서비스 <span aria-hidden="true">→</span></span></button>}
     {account && <><button className="settings-menu" onClick={onRefresh}><strong>기록 새로고침</strong><span aria-hidden="true">→</span></button><button className="settings-menu" onClick={onLogout}><strong>로그아웃</strong><span aria-hidden="true">→</span></button></>}
     {developerToolsAvailable() && onDeveloper && <><button type="button" className="settings-menu" onClick={onDeveloper}><strong>개발자 테스트</strong><span>격리된 테스트 모드 ON / OFF <span aria-hidden="true">→</span></span></button>{developerEntry}</>}
   </div>;
