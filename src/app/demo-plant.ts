@@ -20,7 +20,7 @@ export type DemoPlantControls = {
 };
 
 const KEY = 'little-garden.demo-plant.v1';
-const DEFAULTS: DemoPlantSettings = { bondLevel: 3, treeLevel: 4, mood: 'auto' };
+const DEFAULTS: DemoPlantSettings = { bondLevel: 3, treeLevel: 1, mood: 'auto' };
 
 export function readDemoPlantSettings(): DemoPlantSettings | null {
   if (!isDemo()) return null;

@@ -10,7 +10,7 @@ for(const [width,height] of [[1280,900],[390,844],[320,568],[320,480]])test(`war
  try{
   const p=await context.newPage();await p.goto(baseURL);await ready(p);await p.locator('.home-cta').click();
   for(const index of [0,1,2]){
-   await p.locator('.care-card').nth(index).locator(':scope > button').click();await p.getByRole('button',{name:'해볼게요',exact:true}).click();await p.getByRole('button',{name:'돌봄 마쳤어요',exact:true}).click();
+   await p.locator('.care-card').nth(index).locator(':scope > button').click();await p.getByRole('button',{name:'시작하기',exact:true}).click();await p.getByRole('button',{name:'돌봄 마쳤어요',exact:true}).click();
    await expect(p.locator('.completion-screen')).toBeVisible();await expect(p.locator('.completion-scene .rive-plant--ready')).toBeVisible();
    await expect(p.locator('.completion-status')).toHaveText(`오늘 ${index+1}/3 완료`);await expect(p.locator('.completion-dots .is-complete')).toHaveCount(index+1);
    await p.waitForTimeout(5000);

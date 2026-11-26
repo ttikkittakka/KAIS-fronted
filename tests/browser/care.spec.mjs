@@ -23,8 +23,8 @@ test('care completion: verified reward, Rive, duplicate click, reload and new se
       if(visit===1){
         for(let i=0;i<2;i++){
           await page.locator('.care-card').nth(i).locator(':scope > button').click();
-          const button=page.getByRole('button',{name:'해볼게요',exact:true});
-          await button.click(); // Original "해볼게요" only starts locally.
+          const button=page.getByRole('button',{name:'시작하기',exact:true});
+          await button.click(); // Starting the timer only changes local UI state.
           const pending=posts;
           await page.locator('[data-care-timer] .primary-button').dblclick();
           await expect.poll(()=>posts).toBe(pending+1);
@@ -72,7 +72,7 @@ test('care ambiguous response: one POST, read-only recovery, no replayed celebra
   try{
     const page=await context.newPage();await page.goto(baseURL);await ready(page);await page.locator('.home-cta').click();
     await page.locator('.care-card').first().locator(':scope > button').click();
-    await page.getByRole('button',{name:'해볼게요',exact:true}).click();
+    await page.getByRole('button',{name:'시작하기',exact:true}).click();
     await page.locator('[data-care-timer] .primary-button').click();
     await expect(page.getByRole('button',{name:'서버 기록 확인',exact:true})).toBeVisible();
     await expect.poll(()=>readsAfterPost).toBeGreaterThan(0);

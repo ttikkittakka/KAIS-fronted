@@ -57,6 +57,7 @@ function mount(owner,db,{sealed=false,failRefresh=false,bookmarkStorage,activity
   if(name.startsWith('../../lib/'))return name.endsWith('/auth-client')?{}:loadTs(new URL('../src/'+name.slice(6)+'.ts',import.meta.url));
   if(name==='../daily-cares')return {displayCareRecommendation};
   if(name==='./AccountReflection')return {default:'Reflection'};
+  if(name==='./PersonalGarden')return {usePersonalGarden:()=>null};
   return new Proxy({},{get:(_,key)=>String(key)});
  }});
  const flatten=n=>!n||typeof n!=='object'?[]:[n,...[n.props?.children].flat().flatMap(flatten)];

@@ -17,7 +17,7 @@ function contextFor(answers: unknown) {
   const [sleep, energy, meal, mood] = values;
   const complete = values.every(Boolean);
   const comfortable = complete && !values.some(low) && good(energy) && good(mood);
-  const minimalOnly = !complete || energy === 'very_low' || (sleep === 'very_low' && low(energy));
+  const minimalOnly = !complete || energy === 'very_low' || mood === 'very_low' || (sleep === 'very_low' && low(energy));
   const tags: CareTag[] = [];
   if (low(sleep)) tags.push('low_sleep');
   if (low(energy)) tags.push('low_energy');
@@ -28,7 +28,9 @@ function contextFor(answers: unknown) {
     : sleep === 'very_low' && low(energy) ? 'sleep' : meal === 'very_low' ? 'meal'
     : low(mood) ? 'mood' : low(sleep) ? 'sleep' : low(energy) ? 'energy'
     : low(meal) ? 'meal' : comfortable ? 'comfortable' : 'general';
-  return { complete, comfortable, minimalOnly, tags, profile };
+  const severity: Partial<Record<CareTag, number>> = { comfortable: 3, ...Object.fromEntries(['low_sleep', 'low_energy', 'low_meal', 'low_mood'].map((tag, index) =>
+    [tag, values[index] === 'very_low' ? 2 : 1])) };
+  return { complete, comfortable, minimalOnly, tags, profile, severity, values };
 }
 
 export function getCareCandidates(answers: unknown) {
@@ -55,24 +57,30 @@ function seededRandom(seed: string) {
 export type CareRecommendation = { title: string; cares: Care[] };
 export function recommendCares(answers: unknown, { date, recentIds = [] }: { date: string; recentIds?: readonly CareId[] }): CareRecommendation {
   const context = contextFor(answers);
-  const random = seededRandom(`${date}:cares`);
+  const random = seededRandom(`${date}:cares:${context.values.join(':')}`);
   const candidates = getCareCandidates(answers);
   const selected: CareRecommendation['cares'] = [];
   const recent = new Set(recentIds);
   while (selected.length < 3) {
-    const remaining = candidates.filter(care => !selected.some(item => item.id === care.id));
-    // Balance categories first, then avoid repeating similar actions where possible.
+    // Similar actions are excluded across categories too (e.g. resting and pausing).
+    const remaining = candidates.filter(care => !selected.some(item => item.id === care.id ||
+      (care.similarity && item.similarity === care.similarity)));
     const diverse = remaining.filter(care => !selected.some(item => item.category === care.category));
     const varied = diverse.length ? diverse : remaining;
-    const different = varied.filter(care => !selected.some(item => item.similarity === care.similarity));
-    const eligible = different.length ? different : varied;
+    // Pick categories, never fixed mission IDs. Each category retains daily/history variation.
+    const preferredCategory = context.comfortable ? ['change', 'understanding', 'connection'][selected.length]
+      : selected.length === 0 ? (context.minimalOnly ? 'rest' : context.tags.some(tag => tag !== 'low_mood') ? 'body' : undefined)
+      : undefined;
+    const preferred = varied.filter(care => care.category === preferredCategory);
+    const eligible = preferred.length ? preferred : varied;
     // Cover unmet needs rather than repeatedly selecting for the same answer.
-    const uncovered = context.tags.filter(tag => !selected.some(care => (care.weights?.[tag] ?? 0) > 0));
+    const uncovered = context.comfortable && selected.length === 2 ? ['comfortable'] as const
+      : context.tags.filter(tag => !selected.some(care => (care.weights?.[tag] ?? 0) > 0));
     const related = eligible.filter(care => uncovered.some(tag => (care.weights?.[tag] ?? 0) > 0));
     const pool = related.length ? related : eligible;
     if (!pool.length) break;
-    // Preference weights, never a clinical assessment: base 1 + 5 per matching need.
-    const weights = pool.map(care => (1 + context.tags.reduce((sum, tag) => sum + (care.weights?.[tag] ?? 0), 0)) * (recent.has(care.id as CareId) ? 0.2 : 1));
+    // Catalog preference weights scaled by answer severity, never a clinical assessment.
+    const weights = pool.map(care => (1 + context.tags.reduce((sum, tag) => sum + (care.weights?.[tag] ?? 0) * (context.severity[tag] ?? 1), 0)) * (recent.has(care.id as CareId) ? 0.2 : 1));
     let draw = random() * weights.reduce((sum, weight) => sum + weight, 0);
     const index = weights.findIndex(weight => { draw -= weight; return draw < 0; });
     selected.push(pool[index < 0 ? pool.length - 1 : index]);

@@ -9,6 +9,22 @@ export const PREVIEW_DATA_KEY = 'little-garden.sandbox.preview.v1';
 // unscoped device garden, kept untouched and never shown to an account.
 export type DataScope = 'real' | 'account' | 'test' | 'preview' | 'demo';
 const demoValues = new Map<string, string>();
+const DEMO_SESSION_KEY = 'little-garden.demo-session.v1';
+function demoStorage() {
+  if (typeof sessionStorage === 'undefined') return demoValues;
+  const raw = sessionStorage.getItem(DEMO_SESSION_KEY);
+  if (raw) {
+    const values: unknown = JSON.parse(raw);
+    if (!values || typeof values !== 'object' || Array.isArray(values) || !Object.values(values).every(v => typeof v === 'string')) throw new Error('체험 기록을 읽지 못했어요.');
+    return new Map(Object.entries(values) as [string, string][]);
+  }
+  return demoValues;
+}
+export function resetDemoSession() {
+  if (!isDemo()) throw new Error('체험 모드에서만 새 체험을 시작할 수 있어요.');
+  demoValues.clear();
+  if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(DEMO_SESSION_KEY);
+}
 export const isDemo = () => typeof window !== 'undefined' && window.location.pathname === '/demo';
 let pendingOperations = 0;
 // Never restore authorization from browser storage (including the legacy mode key).
@@ -82,7 +98,7 @@ function readSandbox(key: string): Sandbox {
 export const appStorage = {
   getItem(key: string): string | null {
     const scope = dataScope();
-    if (scope === 'demo') return demoValues.get(key) ?? null;
+    if (scope === 'demo') return demoStorage().get(key) ?? null;
     if (scope === 'real') return localStorage.getItem(key);
     if (scope === 'account') return localStorage.getItem(accountPrefix() + key);
     const values = readSandbox(sandboxKey(scope)).values;
@@ -90,7 +106,12 @@ export const appStorage = {
   },
   setItem(key: string, value: string) {
     const scope = dataScope();
-    if (scope === 'demo') { demoValues.set(key, value); return; }
+    if (scope === 'demo') {
+      const values = demoStorage(); values.set(key, value);
+      if (typeof sessionStorage !== 'undefined') sessionStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(Object.fromEntries(values)));
+      else demoValues.set(key, value);
+      return;
+    }
     if (scope === 'real') { localStorage.setItem(key, value); return; }
     if (scope === 'account') { localStorage.setItem(accountPrefix() + key, value); return; }
     const target = sandboxKey(scope);
@@ -119,7 +140,7 @@ export function saveConsent() {
 /** Deletes this scope's garden data and photos. Keeps the login session and other scopes' sandboxes. */
 export async function deleteAllLocalData() {
   assertIdle();
-  if (isDemo()) { demoValues.clear(); return; }
+  if (isDemo()) { resetDemoSession(); return; }
   // Whose data this is gets fixed before the first await: an account switch meanwhile must not redirect the delete.
   const scope = dataScope(), prefix = accountPrefix(), database = photoDatabaseName(), sandbox = scope === 'test' || scope === 'preview' ? sandboxKey(scope) : '';
   // Photos first: if this fails, records still point at them and the user can retry.

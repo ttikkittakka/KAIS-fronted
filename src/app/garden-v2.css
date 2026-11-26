@@ -249,8 +249,14 @@ body[data-astryx-theme="matcha"] {
 .install-toast a { text-decoration: underline; }
 .medication-toast { position: fixed; z-index: 100; left: 50%; top: auto; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); width: min(92vw, 420px); min-height: 43px; border: 1px solid #cedfce; border-radius: 12px; box-shadow: 0 4px 16px #193b2e22; }
 .medication-toast button { min-width: 36px; min-height: 36px; }
-.demo-note { display: flex; justify-content: center; gap: 11px; font-size: 11px; padding: 3px 8px; color: #36564a; background: #e4eee1; }
+.demo-note { position: relative; z-index: 1000; flex-shrink: 0; display: flex; justify-content: center; gap: 11px; font-size: 11px; padding: 3px 8px; color: #36564a; background: #e4eee1; }
 .demo-note a { text-decoration: underline; }
+.demo-note details { position: relative; }
+.demo-note summary { cursor: pointer; }
+.demo-note form { position: absolute; right: 0; top: 22px; z-index: 100; width: min(330px, 90vw); padding: 16px; background: #f7faf3; border: 1px solid #c8d8c2; border-radius: 12px; box-shadow: 0 6px 24px #24432b26; }
+.demo-note label { display: block; margin: 10px 0; }
+.demo-note select { display: block; width: 100%; margin-top: 4px; padding: 6px; }
+.demo-note form button { padding: 7px; margin: 3px; border: 1px solid #c8d8c2; border-radius: 8px; }
 .demo-note + .app-shell { min-height: calc(100dvh - 23px); }
 .demo-note + .app-shell .phone-frame { max-height: calc(100dvh - 23px); }
 @media (max-width: 363px) {

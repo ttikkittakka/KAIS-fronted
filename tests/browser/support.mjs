@@ -42,8 +42,13 @@ export async function installSession(context, auth) {
 /** Default-deny writes before navigation. Fixtures may fulfill locally, never forward a mutation. */
 export async function guard(context, fixture) {
   const audit = { blockedWrites: [], blockedDiagnostics: 0, blockedAssetHosts: [], consoleCategories: [], fixtureWrites: [], readErrors: [], pageErrors: 0 };
+  const riveVersion = JSON.parse(fs.readFileSync('node_modules/@rive-app/canvas/package.json', 'utf8')).version;
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url()), method = request.method();
+    // Use the installed runtime's exact WASM, so CDN availability cannot mask animation regressions.
+    if (method === 'GET' && url.hostname === 'unpkg.com' && url.pathname === `/@rive-app/canvas@${riveVersion}/rive.wasm`) {
+      return route.fulfill({ path: path.resolve('node_modules/@rive-app/canvas/rive.wasm'), contentType: 'application/wasm' });
+    }
     if (url.origin === baseURL && url.pathname === '/__nextjs_original-stack-frames') { audit.blockedDiagnostics++; return route.abort('blockedbyclient'); }
     const accountApi = url.origin === baseURL && url.pathname.startsWith('/api/account/');
     const personalGardenRead = method === 'GET' && url.protocol === 'https:' && url.hostname.endsWith('.supabase.co') &&

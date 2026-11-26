@@ -88,7 +88,7 @@ test('마음 성숙도 counts days with all four answers; 레벨 adds both meter
   assert.equal(unlocked({ ...growth, level: 4 }, rule('sing')), true);
 });
 
-test('demo starts at maximum growth and keeps adjustments and rewards in demo storage', async () => {
+test('demo starts with a young tree and keeps adjustments and rewards in demo storage', async () => {
   const data = fresh();
   globalThis.window = { location: { pathname: '/demo' } };
   try {
@@ -96,7 +96,8 @@ test('demo starts at maximum growth and keeps adjustments and rewards in demo st
     const growth = petGrowth(state, []);
     assert.equal(growth.bond.level, 3);
     assert.equal(growth.mind.level, MIND_STEPS.length);
-    assert.equal(growth.tree.stage.level, TREE_STAGES.at(-1).level);
+    assert.equal(growth.tree.stage.level, 1);
+    assert.equal(growth.tree.stage.name, '어린나무');
     assert.equal(growth.level, 6);
     assert.ok(INTERACTIONS.every(action => unlocked(growth, action.unlock)));
     assert.ok(companions.canAdopt(state, []));
